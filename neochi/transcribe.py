@@ -1,4 +1,4 @@
-"""文字起こし(faster-whisper)。前半 front_min 分 + 中盤のランダム区間 mid_min 分。"""
+"""文字起こし(faster-whisper)。冒頭 front_min 分(+ mid_min > 0 なら中盤のランダム区間)。"""
 from __future__ import annotations
 
 import random
@@ -14,6 +14,8 @@ def plan_segments(duration_sec: float, cfg: dict, rng: random.Random | None = No
     front, mid = t["front_min"] * 60, t["mid_min"] * 60
     if duration_sec <= front + mid:
         return [(0.0, duration_sec)]
+    if mid <= 0:
+        return [(0.0, float(front))]
     rng = rng or random.Random()
     lo, hi = front, duration_sec - mid
     start = rng.uniform(lo, hi) if hi > lo else lo

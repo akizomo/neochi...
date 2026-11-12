@@ -61,7 +61,7 @@ def test_z_rank(zcfg):
 def test_plan_segments(cfg):
     assert transcribe.plan_segments(600, cfg) == [(0.0, 600)]
     segs = transcribe.plan_segments(3600, cfg)
-    assert segs[0] == (0.0, 1200.0) and 1200 <= segs[1][0] <= 3300 and segs[1][1] == 300
+    assert segs == [(0.0, 1800.0)]  # 冒頭30分だけ(中盤のランダム区間は使わない)
 
 
 def test_rate_is_plateau_not_slower_is_better(cfg):
@@ -73,7 +73,7 @@ def test_rate_is_plateau_not_slower_is_better(cfg):
 
 def test_rate_profile_weights_front(cfg):
     # 前半(0〜10分)はゆっくり、中盤は速い。前半の重みが大きいので、単純平均より遅く出る
-    spans = [(m * 60, m * 60 + 60, "あ" * 200) for m in range(10)] + [(m * 60, m * 60 + 60, "あ" * 400) for m in range(30, 35)]
+    spans = [(m * 60, m * 60 + 60, "あ" * 200) for m in range(10)] + [(m * 60, m * 60 + 60, "あ" * 400) for m in range(20, 25)]
     p = features.rate_profile(spans, "ja", cfg)
     simple = (200 * 10 + 400 * 5) / 15
     assert p["speech_rate"] < simple
