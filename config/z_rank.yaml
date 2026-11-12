@@ -1,0 +1,5 @@
+# 掲載ランク。sleep_log の実測(source=watch)だけで決める。★・主観・自己申告は入れない。
+threshold_min: 30          # 「寝落ちした」とみなす線(分)
+z:   {min_ratio: null, min_count: 1}   # 30分未満が1件以上
+zz:  {min_ratio: 0.5,  min_count: 1}   # 実測の半分以上が30分未満
+zzz: {min_ratio: 0.8,  min_count: 5}   # 8割以上が30分未満、かつ件数が一定以上

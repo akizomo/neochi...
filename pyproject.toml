@@ -1,0 +1,17 @@
+[project]
+name = "neochi"
+version = "0.1.0"
+description = "neochi… 解析パイプライン: ポッドキャストの寝落ち適性(🎯🌊🎧)を測る"
+requires-python = ">=3.11"
+dependencies = ["pyyaml", "numpy", "requests"]
+
+[project.optional-dependencies]
+asr = ["faster-whisper"]
+llm = ["anthropic"]
+dev = ["pytest"]
+
+[tool.setuptools]
+packages = ["neochi"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

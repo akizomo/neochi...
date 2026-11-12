@@ -1,0 +1,41 @@
+# 採点ルール(初期値は仮)。コードに数値を埋め込まず、ここだけを直す。
+# 人の手で個別の番組の★を動かさない。変えるのはルールだけ。
+
+transcribe:
+  front_min: 15        # 前半からこの分数を文字起こし
+  mid_min: 5           # 中盤のランダム区間の長さ
+  whisper_model: base
+  whisper_compute_type: int8
+
+acoustic:
+  sample_rate: 8000
+  frame_sec: 1.0
+  silence_floor_db: -60      # これ未満のフレームは音量ばらつきに含めない
+  sudden_over_median_db: 10  # 中央値より+10dB超
+  sudden_over_prev_db: 6     # かつ直前から+6dB超
+  warn_sudden_per_10min: 100 # 超えたら警告ログ(異常値)
+
+# 🎧 耳のゆるさ: 各指標を best→worst で 1→0 に線形変換し、重み付き平均 → ★1〜5
+ear:
+  weights: {rate: 0.4, volume: 0.3, sudden: 0.3}
+  rate:
+    ja: {best: 250, worst: 450}   # 字/分
+    en: {best: 110, worst: 180}   # 語/分
+  volume_std_db: {best: 4, worst: 12}
+  sudden_per_10min: {best: 0, worst: 10}
+
+# 😴 要因の総合(AI解析)。🎯は mid を最良とする(興味が強すぎても弱すぎても落ちにくい)
+total:
+  weights: {interest: 0.3, calm: 0.4, ear: 0.3}
+  interest_star: {low: 3.0, mid: 5.0, high: 2.0}
+
+# 最終★: みんなの評価が入ったらAI解析と混ぜる。みんなが0件の間は AI解析のみ。
+final:
+  community_prior_n: 10     # w = n / (n + prior_n)
+  community_max_weight: 0.5
+  divergence_threshold: 1.0 # AI解析とみんなの差がこの★以上なら final_reason に一行
+
+llm:
+  model: claude-sonnet-5-5
+  max_tokens: 400
+  max_chars: 12000          # LLMに渡す文字起こしの上限
