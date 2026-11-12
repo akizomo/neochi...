@@ -1,18 +1,18 @@
 """表示文字列の唯一の置き場。ラベルやコメントはここだけを直す。
 
-眠りの記号は 💤 と Z。診断に見える語は使わない(tests/test_strings.py が検査する)。
+画面とスコアカードに絵文字は使わない。眠りは Z で表す。診断に見える語は使わない(tests/test_strings.py が検査する)。
 """
 
 PRODUCT = "neochi…"
 TAGLINE = "寝落ちまでを、番組ごとに測る。"
 
-LABEL_TOTAL = "😴 寝落ち適性"
-LABEL_INTEREST = "🎯 程よい興味"
-LABEL_CALM = "🌊 起伏の少なさ"
-LABEL_EAR = "🎧 耳のゆるさ"
-LABEL_RESULT = "💤 寝落ちまで"
+LABEL_TOTAL = "寝落ち適性"
+LABEL_INTEREST = "程よい興味"
+LABEL_CALM = "起伏の少なさ"
+LABEL_EAR = "耳のゆるさ"
+LABEL_RESULT = "寝落ちまで"
 
-NO_RESULT = "💤 ―"
+NO_RESULT = "寝落ちまで ―"
 NO_RESULT_NOTE = "寝落ちの記録を確認中です"
 RESEARCHING = "調査中"
 

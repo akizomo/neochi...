@@ -33,6 +33,8 @@ class Show:
     rss_url: str
     genre: str
     lang: str = "ja"
+    artwork_url: str | None = None  # RSS の itunes:image。複製せず URL だけ持つ
+    link_url: str | None = None  # 配信元の番組のサイト(RSS の channel/link)
 
 
 @dataclass
@@ -44,6 +46,7 @@ class Episode:
     duration_sec: int | None
     published_at: str | None
     description: str = ""
+    link_url: str | None = None  # 配信元の回のページ(RSS の item/link)
 
 
 def load_shows(csv_path: str | Path) -> list[Show]:
@@ -63,6 +66,11 @@ def load_shows(csv_path: str | Path) -> list[Show]:
                 lang=(row.get("lang") or "ja").strip() or "ja",
             ))
     return shows
+
+
+def _http(url: str | None) -> str | None:
+    url = (url or "").strip()
+    return url if url.startswith(("http://", "https://")) else None
 
 
 def _duration(text: str | None) -> int | None:
@@ -103,9 +111,26 @@ def parse_feed(xml_bytes: bytes, sid: str) -> list[Episode]:
             duration_sec=_duration(item.findtext("itunes:duration", namespaces=NS)),
             published_at=pub,
             description=(item.findtext("description") or "").strip(),
+            link_url=_http(item.findtext("link")),
         ))
     items.sort(key=lambda e: datetime.fromisoformat(e.published_at) if e.published_at else datetime.min.astimezone(), reverse=True)
     return items
+
+
+def parse_artwork(xml_bytes: bytes) -> str | None:
+    """番組のカバー画像の URL(itunes:image、なければ channel/image/url)。"""
+    root = ET.fromstring(xml_bytes)
+    img = root.find("./channel/itunes:image", NS)
+    if img is not None and (img.get("href") or "").strip():
+        return img.get("href").strip()
+    url = (root.findtext("./channel/image/url") or "").strip()
+    return url or None
+
+
+def parse_link(xml_bytes: bytes) -> str | None:
+    """配信元の番組のサイト(channel/link)。http(s) 以外は捨てる。"""
+    url = (ET.fromstring(xml_bytes).findtext("./channel/link") or "").strip()
+    return url if url.startswith(("http://", "https://")) else None
 
 
 def fetch_episodes(show: Show, timeout: int = 20) -> list[Episode]:
@@ -115,6 +140,8 @@ def fetch_episodes(show: Show, timeout: int = 20) -> list[Episode]:
         if r.status_code != 200:
             log.warning("RSS 取得に失敗(%s): %s %s", r.status_code, show.title, show.rss_url)
             return []
+        show.artwork_url = parse_artwork(r.content)
+        show.link_url = parse_link(r.content)
         return parse_feed(r.content, show.id)
     except (requests.RequestException, ET.ParseError) as e:
         log.warning("RSS を読めません: %s %s (%s)", show.title, show.rss_url, e)

@@ -62,10 +62,11 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
     final, final_reason = scoring.final_star(total, crowd, n, cfg)
 
     store.upsert("show", {"id": show.id, "title": show.title, "publisher": show.publisher,
-                          "rss_url": show.rss_url, "genre": show.genre, "lang": show.lang})
+                          "rss_url": show.rss_url, "genre": show.genre, "lang": show.lang,
+                          "artwork_url": show.artwork_url, "link_url": show.link_url})
     store.upsert("episode", {"id": ep.id, "show_id": show.id, "title": ep.title, "audio_url": ep.audio_url,
                              "duration_sec": ep.duration_sec or (int(feat["duration_sec"]) if feat.get("duration_sec") else None),
-                             "published_at": ep.published_at})
+                             "published_at": ep.published_at, "link_url": ep.link_url})
     row = {
         "episode_id": ep.id, "input_depth": input_depth, "interest_level": level,
         "calm_star": calm, "ear_star": ear, "total_star": total,

@@ -12,6 +12,13 @@ def test_no_banned_words():
     assert not hits, hits
 
 
+def test_no_emoji_in_display_strings():
+    import re
+
+    s = (ROOT / "neochi" / "strings.py").read_text(encoding="utf-8")
+    assert not re.search("[\U0001F300-\U0001FAFF]", s)
+
+
 def test_no_exclamation_in_copy():
     s = (ROOT / "neochi" / "strings.py").read_text(encoding="utf-8")
     assert "！" not in s

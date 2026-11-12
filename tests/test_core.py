@@ -98,6 +98,20 @@ RSS = b"""<?xml version="1.0"?><rss xmlns:itunes="http://www.itunes.com/dtds/pod
 <enclosure url="https://x/b.mp3"/></item><item><title>no audio</title></item></channel></rss>"""
 
 
+def test_parse_artwork():
+    x = b'<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel><itunes:image href=" https://x/a.jpg "/></channel></rss>'
+    assert feeds.parse_artwork(x) == "https://x/a.jpg"
+    y = b"<rss><channel><image><url>https://x/b.png</url></image></channel></rss>"
+    assert feeds.parse_artwork(y) == "https://x/b.png"
+    assert feeds.parse_artwork(b"<rss><channel></channel></rss>") is None
+
+
+def test_parse_link_only_http():
+    assert feeds.parse_link(b"<rss><channel><link> https://example.com/show </link></channel></rss>") == "https://example.com/show"
+    assert feeds.parse_link(b"<rss><channel><link>javascript:alert(1)</link></channel></rss>") is None
+    assert feeds.parse_link(b"<rss><channel></channel></rss>") is None
+
+
 def test_parse_feed_newest_first_and_stable_ids():
     sid = feeds.show_id("https://x/feed")
     eps = feeds.parse_feed(RSS, sid)
