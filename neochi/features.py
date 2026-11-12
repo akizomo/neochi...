@@ -64,3 +64,44 @@ def speech_rate(text: str, lang: str, minutes: float) -> tuple[float | None, str
     if lang == "ja":
         return len(_JA_JUNK.sub("", text)) / minutes, "chars_per_min"
     return len(text.split()) / minutes, "words_per_min"
+
+
+def _count(text: str, lang: str) -> int:
+    return len(_JA_JUNK.sub("", text)) if lang == "ja" else len(text.split())
+
+
+def rate_profile(spans: list[tuple[float, float, str]], lang: str, cfg: dict) -> dict:
+    """前半に重みを付けた話す速さと、速さのばらつき(1分ごとの変動係数)。
+
+    spans は (開始秒, 終了秒, 文字)。速さは発話していた時間で割る(無音を除く)。
+    重み: front_weight.window_min 分ごとに weights を順に当て、それより後(中盤)は mid_weight。
+    """
+    fw = cfg["front_weight"]
+    win = fw["window_min"] * 60
+    front_end = win * len(fw["weights"])
+
+    def weight(t: float) -> float:
+        return fw["weights"][int(t // win)] if t < front_end else fw["mid_weight"]
+
+    num = den = 0.0
+    per_min: dict[int, list[float]] = {}
+    for a, b, text in spans:
+        dur = b - a
+        if dur <= 0:
+            continue
+        n = _count(text, lang)
+        w = weight(a)
+        num += w * n
+        den += w * dur / 60
+        m = per_min.setdefault(int(a // 60), [0.0, 0.0])
+        m[0] += n
+        m[1] += dur / 60
+    out: dict = {}
+    if den > 0:
+        out["speech_rate"] = num / den
+    rates = [c / d for c, d in per_min.values() if d >= 0.25]
+    if len(rates) >= 3:
+        arr = np.array(rates)
+        if arr.mean() > 0:
+            out["speech_rate_cv"] = float(arr.std() / arr.mean())
+    return out

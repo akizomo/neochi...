@@ -34,10 +34,14 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
             if feat["sudden_per_10min"] is not None and feat["sudden_per_10min"] > cfg["acoustic"]["warn_sudden_per_10min"]:
                 log.warning("突発音が異常値です(%.0f回/10分): %s / %s", feat["sudden_per_10min"], show.title, ep.title)
             try:
-                text, minutes = deps.transcribe(path, feat["duration_sec"], show.lang, cfg)
+                res = deps.transcribe(path, feat["duration_sec"], show.lang, cfg)
+                text, minutes = res[0], res[1]
+                spans = res[2] if len(res) > 2 else []
                 if text.strip():
                     rate, unit = features.speech_rate(text, show.lang, minutes)
                     feat["speech_rate"], feat["speech_rate_unit"] = rate, unit
+                    if spans:  # 前半に重みを付けた速さと、速さのばらつき
+                        feat.update(features.rate_profile(spans, show.lang, cfg))
                     input_depth = "transcript"
             except Exception as e:  # noqa: BLE001 - 文字起こしの失敗は特徴量だけで続行
                 log.warning("文字起こしに失敗(音響特徴量のみで続行): %s (%s)", ep.title, e)

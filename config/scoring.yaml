@@ -2,7 +2,7 @@
 # 人の手で個別の番組の★を動かさない。変えるのはルールだけ。
 
 transcribe:
-  front_min: 15        # 前半からこの分数を文字起こし
+  front_min: 20        # 前半からこの分数を文字起こし(寝落ちまでに聞く可能性が高い区間)
   mid_min: 5           # 中盤のランダム区間の長さ
   whisper_model: base
   whisper_compute_type: int8
@@ -15,12 +15,25 @@ acoustic:
   sudden_over_prev_db: 6     # かつ直前から+6dB超
   warn_sudden_per_10min: 100 # 超えたら警告ログ(異常値)
 
-# 🎧 耳のゆるさ: 各指標を best→worst で 1→0 に線形変換し、重み付き平均 → ★1〜5
+# 前半の重み: 寝つきに関わる指標(話す速さ・速さのばらつき)は、冒頭からの区間ごとに重みを付けて平均する。
+# 健康な成人の平均入眠は10〜20分程度なので、前半20分を重く見る。数値は仮。
+# 途中で起こさないための指標(突発音・音量のばらつき)は全編で同じ重み。
+front_weight:
+  window_min: 10
+  weights: [3, 2]           # 0〜10分 ×3、10〜20分 ×2。20分以降は文字起こししない中盤のみ ×1
+  mid_weight: 1
+
+# 🎧 耳のゆるさ: 各指標を 0〜1 にして重み付き平均 → ★1〜5
 ear:
-  weights: {rate: 0.4, volume: 0.3, sudden: 0.3}
+  weights: {rate: 0.3, rate_cv: 0.2, volume: 0.25, sudden: 0.25}
+  # 話す速さ: 「遅いほど良い」ではなく、best_max 以下を満点にする(台形)。
+  # 遅すぎ側の減点は根拠がないので、実測が溜まるまで入れない(slow_floor: null)。
+  # best_max は基準データ48本の上位(★4以上)が収まった範囲から仮置き(Whisper base・無音除きの字/分)。
   rate:
-    ja: {best: 250, worst: 450}   # 字/分
-    en: {best: 110, worst: 180}   # 語/分
+    ja: {best_max: 290, worst: 450, slow_floor: null}   # 字/分
+    en: {best_max: 130, worst: 200, slow_floor: null}   # 語/分
+  # 速さのばらつき: 1分ごとの話す速さの変動係数。速さの変化が小さいほど聞き取りやすいという研究(睡眠ではない)に基づく仮説
+  rate_cv: {best: 0.10, worst: 0.40}
   volume_std_db: {best: 4, worst: 12}
   sudden_per_10min: {best: 0, worst: 10}
 

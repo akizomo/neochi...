@@ -31,8 +31,8 @@ def test_speech_rate_units():
 
 
 def test_ear_star_and_totals(cfg):
-    calm = {"speech_rate": 250, "volume_std_db": 4, "sudden_per_10min": 0}
-    loud = {"speech_rate": 450, "volume_std_db": 12, "sudden_per_10min": 10}
+    calm = {"speech_rate": 250, "speech_rate_cv": 0.1, "volume_std_db": 4, "sudden_per_10min": 0}
+    loud = {"speech_rate": 450, "speech_rate_cv": 0.4, "volume_std_db": 12, "sudden_per_10min": 10}
     assert scoring.ear_star(calm, "ja", cfg) == 5.0
     assert scoring.ear_star(loud, "ja", cfg) == 1.0
     assert scoring.ear_star({}, "ja", cfg) is None
@@ -61,7 +61,23 @@ def test_z_rank(zcfg):
 def test_plan_segments(cfg):
     assert transcribe.plan_segments(600, cfg) == [(0.0, 600)]
     segs = transcribe.plan_segments(3600, cfg)
-    assert segs[0] == (0.0, 900.0) and 900 <= segs[1][0] <= 3300 and segs[1][1] == 300
+    assert segs[0] == (0.0, 1200.0) and 1200 <= segs[1][0] <= 3300 and segs[1][1] == 300
+
+
+def test_rate_is_plateau_not_slower_is_better(cfg):
+    slow = scoring.ear_star({"speech_rate": 150}, "ja", cfg)
+    ok = scoring.ear_star({"speech_rate": 290}, "ja", cfg)
+    fast = scoring.ear_star({"speech_rate": 400}, "ja", cfg)
+    assert slow == ok == 5.0 and fast < ok
+
+
+def test_rate_profile_weights_front(cfg):
+    # 前半(0〜10分)はゆっくり、中盤は速い。前半の重みが大きいので、単純平均より遅く出る
+    spans = [(m * 60, m * 60 + 60, "あ" * 200) for m in range(10)] + [(m * 60, m * 60 + 60, "あ" * 400) for m in range(30, 35)]
+    p = features.rate_profile(spans, "ja", cfg)
+    simple = (200 * 10 + 400 * 5) / 15
+    assert p["speech_rate"] < simple
+    assert p["speech_rate_cv"] > 0
 
 
 def test_parse_judgement_validates():

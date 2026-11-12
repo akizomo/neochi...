@@ -11,6 +11,15 @@ def _norm(v: float, best: float, worst: float) -> float:
     return max(0.0, min(1.0, (v - worst) / (best - worst)))
 
 
+def _rate_unit(rate: float, r: dict) -> float:
+    """話す速さは台形: best_max 以下は満点、worst で 0。slow_floor があればそれ未満も減点(初期値は無し)。"""
+    if r.get("slow_floor") is not None and rate < r["slow_floor"]:
+        return _norm(rate, r["slow_floor"], 0)
+    if rate <= r["best_max"]:
+        return 1.0
+    return _norm(rate, r["best_max"], r["worst"])
+
+
 def _star(unit: float) -> float:
     return round(1 + 4 * unit, 1)
 
@@ -22,7 +31,10 @@ def ear_star(features: dict, lang: str, cfg: dict) -> float | None:
     rate = features.get("speech_rate")
     if rate is not None:
         r = e["rate"]["ja" if lang == "ja" else "en"]
-        parts["rate"] = _norm(rate, r["best"], r["worst"])
+        parts["rate"] = _rate_unit(rate, r)
+    if features.get("speech_rate_cv") is not None:
+        c = e["rate_cv"]
+        parts["rate_cv"] = _norm(features["speech_rate_cv"], c["best"], c["worst"])
     if features.get("volume_std_db") is not None:
         v = e["volume_std_db"]
         parts["volume"] = _norm(features["volume_std_db"], v["best"], v["worst"])

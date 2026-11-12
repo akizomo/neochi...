@@ -20,18 +20,19 @@ def plan_segments(duration_sec: float, cfg: dict, rng: random.Random | None = No
     return [(0.0, float(front)), (start, float(mid))]
 
 
-def transcribe(path: str, duration_sec: float, lang: str, cfg: dict, rng: random.Random | None = None) -> tuple[str, float]:
-    """(文字起こし全文, 文字起こしした分数) を返す。"""
+def transcribe(path: str, duration_sec: float, lang: str, cfg: dict, rng: random.Random | None = None) -> tuple[str, float, list[tuple[float, float, str]]]:
+    """(文字起こし全文, 文字起こしした分数, 発話区間[(開始秒, 終了秒, 文字)]) を返す。区間の秒は回の頭からの絶対時刻。"""
     global _model
     from faster_whisper import WhisperModel  # 遅延 import(重い)
 
     t = cfg["transcribe"]
     if _model is None:
         _model = WhisperModel(t["whisper_model"], compute_type=t["whisper_compute_type"])
-    texts, total = [], 0.0
+    texts, total, spans = [], 0.0, []
     for start, dur in plan_segments(duration_sec, cfg, rng):
         audio = decode_pcm(path, sr=16000, start=start, dur=dur)
-        segs, _ = _model.transcribe(audio, language=lang, vad_filter=True)
+        segs = list(_model.transcribe(audio, language=lang, vad_filter=True)[0])
+        spans += [(start + s.start, start + s.end, s.text) for s in segs]
         texts.append("".join(s.text for s in segs) if lang == "ja" else " ".join(s.text.strip() for s in segs))
         total += len(audio) / 16000 / 60
-    return ("\n".join(texts), total)
+    return ("\n".join(texts), total, spans)
