@@ -26,8 +26,8 @@ struct MorningView: View {
                 resultSection
                 if let l = listened { listenedSection(l.show, l.episode) }
                 ratingSection
-                Section(NCString.memoHeader) {
-                    TextField("", text: $note, axis: .vertical).lineLimit(1...4).ncText(NCText.body)
+                Section {
+                    TextField(NCString.memoHeader, text: $note, axis: .vertical).lineLimit(1...4).ncText(NCText.body)
                         .listRowBackground(Color.nc(.surface))
                 }
             }
@@ -45,25 +45,35 @@ struct MorningView: View {
     private var resultSection: some View {
         Section {
             VStack(alignment: .leading, spacing: NCSpace.s2) {
-                HStack {
-                    Text(NCString.resultFrom).ncText(NCText.footnote, .textSub)
-                    Spacer()
-                    InfoButton(title: NCString.infoResultTitle, lines: NCString.infoResult)
-                }
+                Text(NCString.resultFrom).ncText(NCText.footnote, .textSub)
                 if let m = minutes {
                     HStack(alignment: .firstTextBaseline, spacing: NCSpace.s2) {
                         Text("\(m)").ncText(NCText.numHero, .accentResult)
                         Text("分").ncText(NCText.title, .accentResult)
                     }
                     Text(NCString.comment(minutes: m)).ncText(NCText.headline)
-                    if model.onsetAt != nil { Text(NCString.resultSourceWatch).ncText(NCText.footnote, .textSub) }
+                    if let s = model.playStartedAt, let o = model.onsetAt {
+                        HStack(spacing: NCSpace.s6) {
+                            timeColumn(NCString.startedLabel, s)
+                            timeColumn(NCString.onsetLabel, o)
+                        }
+                        .padding(.top, NCSpace.s2)
+                    }
                 } else {
                     Text("―").ncText(NCText.numHero, .textSub)
                     Text(NCString.noResultNote).ncText(NCText.body, .textSub)
                 }
             }
             .listRowBackground(Color.nc(.surface))
-        } header: { Text(NCString.resultHeader) }
+        }
+    }
+
+    /// 数字の元になった時刻(データ)。ヘルスケアで入眠が確認できたときだけ出す。
+    private func timeColumn(_ label: String, _ date: Date) -> some View {
+        VStack(alignment: .leading, spacing: NCSpace.s1) {
+            Text(label).ncText(NCText.footnote, .textSub)
+            Text(date.formatted(.dateTime.hour().minute())).ncText(NCText.numMd)
+        }
     }
 
     /// どのコンテンツを聴いたか。
@@ -77,18 +87,18 @@ struct MorningView: View {
                 }
             }
             .listRowBackground(Color.nc(.surface))
-        } header: { Text(NCString.listenedHeader) }
+        }
     }
 
     /// そのコンテンツの評価。2つの質問は、同じ部品(`ChoiceScale`)で出す。
     private var ratingSection: some View {
         Section {
-            ChoiceScale(question: NCString.interestQuestion, infoTitle: NCString.infoInterestTitle, infoLines: NCString.infoInterest, count: InterestAnswer.allCases.count,
+            ChoiceScale(question: NCString.interestQuestion, info: NCString.infoInterest, count: InterestAnswer.allCases.count,
                         selection: interestBinding,
                         leading: NCString.interestLabel(.bored), middle: NCString.interestLabel(.justRight),
                         trailing: NCString.interestLabel(.absorbed))
                 .listRowBackground(Color.nc(.surface))
-            ChoiceScale(question: NCString.calmQuestion, infoTitle: NCString.infoCalmTitle, infoLines: NCString.infoCalm, count: 5, selection: $calm,
+            ChoiceScale(question: NCString.calmQuestion, info: NCString.infoCalm, count: 5, selection: $calm,
                         leading: NCString.calmLow, trailing: NCString.calmHigh)
                 .listRowBackground(Color.nc(.surface))
         } header: { Text(NCString.ratingHeader) } footer: { Text(NCString.ratingFooter) }
