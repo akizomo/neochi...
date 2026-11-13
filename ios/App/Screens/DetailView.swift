@@ -63,7 +63,7 @@ struct DetailView: View {
                 Text("寝落ち適性(AI解析)").ncText(NCText.caption, .textSub)
                 HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
                     Text("★").ncText(NCText.numMd, .accentFactor)
-                    Text(show.star.map { String(format: "%.1f", $0) } ?? "―").ncText(NCText.numHero, .accentFactor)
+                    Text(show.star.map { String(format: "%.1f", $0) } ?? "―").ncText(NCText.numMd, .accentFactor)
                 }
             }
             Rectangle().fill(Color.nc(.line)).frame(width: 1, height: 56)
@@ -73,11 +73,11 @@ struct DetailView: View {
                     RankBadge(rank: show.rank)
                     if let m = show.avgMinutes {
                         HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
-                            Text("\(m)").ncText(NCText.numHero, .accentResult)
+                            Text("\(m)").ncText(NCText.numMd, .accentResult)
                             Text("分").ncText(NCText.footnote, .accentResult)
                         }
                     } else {
-                        Text("―").ncText(NCText.numHero, .textSub)
+                        Text("―").ncText(NCText.numMd, .textSub)
                     }
                 }
             }
