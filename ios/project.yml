@@ -31,7 +31,7 @@ targets:
         INFOPLIST_KEY_UIUserInterfaceStyle: Automatic
         # 接続先。空なら端末内だけで動く(docs/SETUP.md)。ホスト名だけ(例: abcd.supabase.co)。
         SUPABASE_HOST: ""
-        SUPABASE_ANON_KEY: ""
+        SUPABASE_ANON_KEY: "sb_publishable_u_VoKvxehNLffEeq5oCnfQ_elYpZG3a"
     info:
       path: App/Info.plist
       properties:
