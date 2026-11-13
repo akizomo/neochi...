@@ -67,3 +67,16 @@ def test_z_rank_from_dummy_sleep_log(cfg, zcfg, tmp_path):
         store.upsert("sleep_log", {"id": f"w{m}", "episode_id": e, "source": "watch", "latency_min": m})
     store.upsert("sleep_log", {"id": "s1", "episode_id": e, "source": "self", "latency_min": 3})  # 自己申告は集計しない
     assert z_rank.z_rank(store.watch_latencies(SHOW.id), zcfg) == "ZZZ"
+
+
+def test_session_judge_writes_pending_and_apply(tmp_path, cfg):
+    from neochi import pipeline as pl
+    from neochi.store import JsonStore
+    store = JsonStore(tmp_path / "s.json")
+    e = ep(1)
+    deps = make_deps(made_dirs=[])
+    deps.judge, deps.pending_dir = None, str(tmp_path / "pending")
+    row = pl.analyze_episode(SHOW, e, cfg, store, deps)
+    assert row["calm_star"] is None and (tmp_path / "pending" / f"{pl._safe(e.id)}.json").exists()
+    new = pl.apply_judgement({"episode_id": e.id, "calm_star": 4, "interest_level": "mid", "reason": "淡々としています"}, cfg, store)
+    assert new["calm_star"] == 4.0 and new["final_star"] is not None and new["interest_level"] == "mid"

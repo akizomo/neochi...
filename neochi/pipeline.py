@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import logging
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Callable
 
 from . import audio, feeds, features, llm, scoring, transcribe
@@ -16,7 +18,8 @@ class Deps:
     download: Callable = audio.downloaded
     decode: Callable = features.decode_pcm
     transcribe: Callable = transcribe.transcribe
-    judge: Callable = llm.judge
+    judge: Callable | None = llm.judge   # None = API を使わず、判定待ちとして書き出す(セッションで判定する)
+    pending_dir: str = "work/pending"     # judge=None のときの書き出し先(文字起こしを含むのでリポジトリに入れない)
 
 
 def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps: Deps | None = None) -> dict:
@@ -49,7 +52,13 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
         log.warning("音声を扱えませんでした(メタ情報のみ): %s (%s)", ep.title, e)
 
     calm, level, reason = None, None, ""
-    if input_depth == "transcript":
+    if input_depth == "transcript" and deps.judge is None:
+        d = Path(deps.pending_dir)
+        d.mkdir(parents=True, exist_ok=True)
+        (d / f"{_safe(ep.id)}.json").write_text(json.dumps({
+            "episode_id": ep.id, "show": show.title, "title": ep.title, "transcript": text,
+        }, ensure_ascii=False, indent=1), encoding="utf-8")
+    elif input_depth == "transcript":
         try:
             j = deps.judge(ep.title, show.title, text, cfg)
             calm, level, reason = j["calm_star"], j["interest_level"], j["reason"]
@@ -57,9 +66,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
             log.warning("LLM 判定に失敗(🌊🎯は空): %s (%s)", ep.title, e)
 
     ear = scoring.ear_star(feat, show.lang, cfg)
-    total = scoring.total_star(calm, ear, level, cfg)
-    crowd, n = store.community(ep.id)
-    final, final_reason = scoring.final_star(total, crowd, n, cfg)
+    total, final, final_reason = _stars(calm, ear, level, ep.id, cfg, store)
 
     store.upsert("show", {"id": show.id, "title": show.title, "publisher": show.publisher,
                           "rss_url": show.rss_url, "genre": show.genre, "lang": show.lang,
@@ -77,3 +84,31 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
     }
     store.upsert("analysis", row)
     return row
+
+
+def _safe(eid: str) -> str:
+    return "".join(c if c.isalnum() or c in "-_" else "_" for c in eid)[:120]
+
+
+def _stars(calm, ear, level, episode_id: str, cfg: dict, store):
+    total = scoring.total_star(calm, ear, level, cfg)
+    crowd, n = store.community(episode_id)
+    final, final_reason = scoring.final_star(total, crowd, n, cfg)
+    return total, final, final_reason
+
+
+def apply_judgement(j: dict, cfg: dict, store) -> dict:
+    """セッションで判定した🌊🎯を、保存済みの解析に入れて★を計算し直す。
+
+    j = {"episode_id", "calm_star", "interest_level", "reason"}。値の検証は llm.parse_judgement と同じ。
+    """
+    v = llm.parse_judgement(json.dumps(j, ensure_ascii=False))
+    row = store.get("analysis", j["episode_id"])
+    if row is None:
+        raise KeyError(f"解析が見つかりません: {j['episode_id']}")
+    total, final, final_reason = _stars(v["calm_star"], row.get("ear_star"), v["interest_level"], j["episode_id"], cfg, store)
+    new = {**row, "calm_star": v["calm_star"], "interest_level": v["interest_level"],
+           "total_star": total, "final_star": final, "final_reason": final_reason,
+           "reasons": {**(row.get("reasons") or {}), "llm": v["reason"]}}
+    store.upsert("analysis", new)
+    return new

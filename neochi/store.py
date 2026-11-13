@@ -106,7 +106,7 @@ class SupabaseStore:
         pass
 
 
-def open_store(default_json: str = "out/store.json"):
+def open_store(default_json: str = "data/store.json"):
     url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_SERVICE_KEY")
     if url and key:
         return SupabaseStore(url, key)
