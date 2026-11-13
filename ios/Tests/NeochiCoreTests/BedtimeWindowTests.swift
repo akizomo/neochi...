@@ -90,4 +90,22 @@ final class BedtimeWindowTests: XCTestCase {
         XCTAssertEqual(BedtimeWindow.typicalMinute(starts: s, calendar: cal), 23 * 60 + 50)
         XCTAssertNil(BedtimeWindow.typicalMinute(starts: Array(s.prefix(4)), calendar: cal))
     }
+
+    // 手で決める候補は 15 分刻みで、18:00 から始まり、翌日の 17:45 で終わる
+    func testPickerMinutes() {
+        let m = BedtimeWindow.pickerMinutes
+        XCTAssertEqual(m.count, 96)
+        XCTAssertEqual(m.first, 18 * 60)
+        XCTAssertEqual(m[24], 0)            // 24 個目で 0:00
+        XCTAssertEqual(m.last, 17 * 60 + 45)
+        XCTAssertEqual(Set(m).count, 96)
+    }
+
+    func testSnappedAndLabel() {
+        XCTAssertEqual(BedtimeWindow.snapped(23 * 60 + 7), 23 * 60)
+        XCTAssertEqual(BedtimeWindow.snapped(23 * 60 + 8), 23 * 60 + 15)
+        XCTAssertEqual(BedtimeWindow.snapped(23 * 60 + 53), 0)      // 24:00 は 0:00 に戻す
+        XCTAssertEqual(BedtimeWindow.label(minute: 23 * 60 + 5), "23:05")
+        XCTAssertEqual(BedtimeWindow.label(minute: 0), "0:00")
+    }
 }
