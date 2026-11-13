@@ -14,6 +14,7 @@ struct NeochiApp: App {
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         @Bindable var model = model
@@ -25,6 +26,9 @@ struct RootView: View {
         .tint(Color.nc(.textMain))
         .fullScreenCover(item: $model.nightScreen) { _ in NightView() }
         .task { await model.loadRemote() }
+        .onAppear { model.openNightIfBedtime() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime() } }
+        .sheet(isPresented: Binding(get: { !model.bedtimeAsked }, set: { _ in })) { BedtimeSetupView().interactiveDismissDisabled() }
         .fullScreenCover(isPresented: $model.morningOpen) { MorningView() }
     }
 }

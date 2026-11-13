@@ -58,4 +58,20 @@ final class BedtimeWindowTests: XCTestCase {
         XCTAssertNotNil(weekday)
         XCTAssertNil(weekend, "週末は4件しかなく、最低件数(5)に満たない")
     }
+
+    // いまが時間帯の中か。初回に聞いた 23:00 なら、22:00〜翌0:30
+    func testIsInWindowWithFallback() {
+        let f = date(2026, 11, 12, 23, 0)
+        func inside(_ d: Date) -> Bool { BedtimeWindow.isInWindow(now: d, starts: [], fallback: f, calendar: cal) }
+        XCTAssertTrue(inside(date(2026, 11, 12, 22, 30)))
+        XCTAssertTrue(inside(date(2026, 11, 13, 0, 20)))
+        XCTAssertFalse(inside(date(2026, 11, 13, 0, 40)))
+        XCTAssertFalse(inside(date(2026, 11, 12, 14, 0)))
+        XCTAssertFalse(inside(date(2026, 11, 13, 7, 0)))
+    }
+
+    // 記録も初回の時刻もなければ、いつでも昼の画面
+    func testIsInWindowWithoutAnyData() {
+        XCTAssertFalse(BedtimeWindow.isInWindow(now: date(2026, 11, 12, 23, 0), starts: [], fallback: nil, calendar: cal))
+    }
 }

@@ -6,12 +6,17 @@ struct NightView: View {
     @Environment(AppModel.self) private var model
     @State private var timerOpen = false
 
+    /// 再生中はその番組。まだなら、今夜の予約、なければ今夜の先頭の候補。
+    private var shown: Candidate? { model.playing ?? model.reservations[0] ?? model.slate(night: 0).first }
+
     var body: some View {
         ZStack {
             Color.nc(.bgNight).ignoresSafeArea()
             VStack(spacing: NCSpace.s8) {
-                Text(model.playing?.show.title ?? "").ncText(NCText.title).multilineTextAlignment(.center)
-                Button { model.player.toggle() } label: {
+                Text(shown?.show.title ?? "").ncText(NCText.title).multilineTextAlignment(.center)
+                Button {
+                    if model.playing == nil, let c = shown { model.play(c) } else { model.player.toggle() }
+                } label: {
                     Image(systemName: model.player.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 36))
                         .frame(width: NCSize.playD, height: NCSize.playD)

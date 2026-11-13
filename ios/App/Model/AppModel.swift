@@ -31,6 +31,35 @@ final class AppModel {
     var playEpisodeID: String?
     var playShowID: String?
 
+    /// いまの時刻。デバッグ時だけ、環境変数 NEOCHI_NOW(例 2026-11-13T22:30:00+09:00)で差し替えて、時間帯を試せる。
+    var now: () -> Date = AppModel.defaultClock
+    static func defaultClock() -> Date {
+        #if DEBUG
+        if let s = ProcessInfo.processInfo.environment["NEOCHI_NOW"], let d = ISO8601DateFormatter().date(from: s) { return d }
+        #endif
+        return Date()
+    }
+    /// 初回に聞いた、ふだんの就寝時刻(時刻だけを使う)。聞いたかどうかも覚える。
+    var bedtimeFallback: Date? = UserDefaults.standard.object(forKey: "bedtimeFallback") as? Date
+    var bedtimeAsked = UserDefaults.standard.bool(forKey: "bedtimeAsked")
+
+    func saveBedtime(_ date: Date?) {
+        bedtimeFallback = date; bedtimeAsked = true
+        UserDefaults.standard.set(date, forKey: "bedtimeFallback")
+        UserDefaults.standard.set(true, forKey: "bedtimeAsked")
+        openNightIfBedtime()
+    }
+
+    var inBedtimeWindow: Bool {
+        BedtimeWindow.isInWindow(now: now(), starts: history.map(\.playedAt), fallback: bedtimeFallback, calendar: .current)
+    }
+
+    /// 就寝の時間帯にアプリを開いたら、昼の画面ではなく夜の画面を出す。
+    func openNightIfBedtime() {
+        guard nightScreen == nil, inBedtimeWindow else { return }
+        nightScreen = playing == nil ? .ready : .playing
+    }
+
     enum NightScreen: String, Identifiable { case ready, playing; var id: String { rawValue } }
 
     init(shows: [Show], episodes: [String: [Episode]], history: [PlayRecord] = [], favorites: Set<String> = [],
@@ -131,6 +160,6 @@ final class AppModel {
         pendingMorning = true
         playing = candidate
         player.start(url: candidate.episode?.audioURL, title: candidate.show.title)
-        nightScreen = .playing
+        if nightScreen == nil { nightScreen = .playing }
     }
 }

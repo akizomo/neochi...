@@ -42,6 +42,13 @@ public struct BedtimeWindow: Hashable, Sendable {
         return BedtimeWindow(lower: max(0, t - leadMinutes), upper: min(1439, t + tailMinutes))
     }
 
+    /// いま(`now`)が就寝の時間帯か。記録も初回の就寝時刻もなければ false(昼の画面)。
+    public static func isInWindow(now: Date, starts: [Date], fallback: Date?, calendar: Calendar) -> Bool {
+        guard let w = make(starts: starts, weekendNight: isWeekendNight(now, calendar: calendar),
+                           calendar: calendar, fallback: fallback) else { return false }
+        return w.contains(now, calendar: calendar)
+    }
+
     public func contains(_ date: Date, calendar: Calendar) -> Bool {
         (lower...upper).contains(Self.minuteSinceNoon(date, calendar: calendar))
     }
