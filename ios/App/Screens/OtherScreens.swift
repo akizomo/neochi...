@@ -25,7 +25,7 @@ struct DiscoverView: View {
                     ForEach(list) { show in
                         NavigationLink(value: show.id) {
                             ScoreRow(show: show, isFavorite: model.favorites.contains(show.id)) { model.toggleFavorite(show) }
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.pressable)
                     }
                 }
                 .padding(.horizontal, NCSpace.s5).padding(.bottom, NCSpace.s8)
@@ -74,7 +74,7 @@ struct LogView: View {
             .padding(NCSpace.s4)
             .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
         }
-        .buttonStyle(.plain).disabled(auto)
+        .buttonStyle(.pressable).disabled(auto)
     }
 
     var body: some View {
@@ -125,7 +125,7 @@ struct LogView: View {
             .padding(NCSpace.s4)
             .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 

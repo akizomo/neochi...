@@ -124,7 +124,9 @@ struct MorningView: View {
                     .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
                     .background(Capsule().fill(Color.nc(.textMain)))
             }
+            .buttonStyle(.pressable)
             Button(NCString.later) { dismiss() }
+                .buttonStyle(.pressable)
                 .ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
         }
         .padding(.horizontal, NCSpace.s5).padding(.top, NCSpace.s2)

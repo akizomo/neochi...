@@ -27,9 +27,11 @@ struct BedtimeSetupView: View {
                 Text("決める").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
                     .background(Capsule().fill(Color.nc(.textMain)))
             }
+            .buttonStyle(.pressable)
             Button { if editing { dismiss() } else { model.saveBedtime(nil) } } label: {
                 Text(editing ? "閉じる" : "あとで").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
             }
+            .buttonStyle(.pressable)
         }
         .padding(NCSpace.s5)
         .frame(maxWidth: .infinity, alignment: .top) }

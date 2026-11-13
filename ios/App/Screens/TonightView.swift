@@ -1,12 +1,13 @@
 import SwiftUI
 import NeochiCore
 
-/// 今夜: 昼は「決める」。見出しの右の矢印で、明日・土曜へ。予約があればその1本、なければ理由つきの3つ。
+/// 今夜: 昼は「決める」。見出しの右の矢印で、明日へ。予約があればその1本、なければ理由つきの3つ。
+/// 決めるのは今夜と明日だけ。それより先は「次に聴く」に入れておく。
 struct TonightView: View {
     @Environment(AppModel.self) private var model
     @State private var night = 0
-    private let labels = ["今夜", "明日", "土曜"]
-    private let verbs = ["今夜聴く", "明日聴く", "土曜に聴く"]
+    private let labels = ["今夜", "明日"]
+    private let verbs = ["今夜聴く", "明日聴く"]
 
     var body: some View {
         NavigationStack {
@@ -20,6 +21,13 @@ struct TonightView: View {
                 .padding(.bottom, NCSpace.s8)
             }
             .background(Color.nc(.bgBase))
+            // 横にスワイプでも晩を切り替える。候補カードの横スクロールの上では、カードが先に動く。
+            .gesture(DragGesture(minimumDistance: 24).onEnded { v in
+                let dx = v.translation.width, dy = v.translation.height
+                guard abs(dx) > abs(dy) * 1.5, abs(dx) > 60 else { return }
+                let next = night + (dx < 0 ? 1 : -1)
+                if labels.indices.contains(next) { withAnimation { night = next } }
+            })
             .navigationDestination(for: String.self) { DetailView(showID: $0) }
             .navigationTitle(labels[night])
             .toolbarTitleDisplayMode(.inlineLarge)
@@ -55,11 +63,11 @@ struct TonightView: View {
             }
             .padding(NCSpace.s4)
             .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
-        }.buttonStyle(.plain)
+        }.buttonStyle(.pressable)
     }
 
     @ViewBuilder private var candidates: some View {
-        if let reserved = model.reservations[night] {
+        if let reserved = model.reservation(night: night) {
             TonightCard(candidate: reserved, primaryTitle: "取り消す", primaryIcon: "xmark") {
                 model.cancelReservation(night: night)
             }
@@ -91,7 +99,7 @@ struct TonightView: View {
             ForEach(model.shows.filter { model.favorites.contains($0.id) }) { show in
                 NavigationLink(value: show.id) {
                     ScoreRow(show: show, isFavorite: true) { model.toggleFavorite(show) }
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressable)
             }
         }
     }

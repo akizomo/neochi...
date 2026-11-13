@@ -40,7 +40,7 @@ struct DetailView: View {
         .background(Color.nc(.bgBase))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if let show { FavoriteButton(isOn: model.favorites.contains(show.id), title: show.title) { model.toggleFavorite(show) } }
+                if let show { FavoriteButton(isOn: model.favorites.contains(show.id), title: show.title, inToolbar: true) { model.toggleFavorite(show) } }
             }
         }
     }
@@ -85,7 +85,20 @@ struct DetailView: View {
         }
     }
 
+    /// 主役は「今夜聴く」(昼に決めて夜に聴く)。「いま聴く」は、昼寝などのために控えめに置く。
     private func actions(_ show: Show) -> some View {
+        VStack(spacing: NCSpace.s2) {
+            tonightRow(show)
+            if let c = TonightEngine.listenNow(show: show, ctx: model.context) {
+                Button { model.play(c) } label: {
+                    Text("いま聴く").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.pressable)
+            }
+        }
+    }
+
+    private func tonightRow(_ show: Show) -> some View {
         HStack(spacing: NCSpace.s2) {
             Button {
                 if let c = model.slate(night: 0).first(where: { $0.show.id == show.id }) ?? model.slate(night: 0).first {
@@ -95,13 +108,15 @@ struct DetailView: View {
                 Text("今夜聴く").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: 52)
                     .background(Capsule().fill(Color.nc(.textMain)))
             }
+            .buttonStyle(.pressable)
             Button {
-                if let i = model.queue.firstIndex(of: show.id) { model.queue.remove(at: i) } else { model.queue.append(show.id) }
+                model.toggleQueue(show)
             } label: {
                 Text(model.queue.contains(show.id) ? "次に聴くから外す" : "次に聴く").ncText(NCText.body)
                     .frame(maxWidth: .infinity, minHeight: 52)
                     .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
             }
+            .buttonStyle(.pressable)
         }
     }
 

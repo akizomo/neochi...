@@ -14,8 +14,8 @@ final class AppModel {
     var currentShowID: String?
     var lastNight: LastNight?
     var genreStreakNights: Int
-    /// 晩(0 = 今夜、1 = 明日…)ごとの予約。
-    var reservations: [Int: Candidate] = [:]
+    /// 聴く晩ごとの予約。キーは、その晩の日付(`nightDay`)。日をまたぐと、明日の予約は自然に今夜になる。
+    var reservations: [Date: Candidate] = [:]
     /// 朝の振り返りが済んでいないか。
     var pendingMorning: Bool
     var nightScreen: NightScreen?
@@ -172,21 +172,64 @@ final class AppModel {
         // 見本の状態は、実データには存在しない番組を指すので外す。
         let r = SessionState(history: history, favorites: favorites, queue: queue, currentShowID: currentShowID,
                              lastNight: lastNight, genreStreakNights: genreStreakNights, pendingMorning: pendingMorning,
-                             reservedShowIDs: reservations.mapValues { $0.show.id })
+                             reservedShowIDs: [:])
             .reconciled(toShowIDs: Set(s.map(\.id)))
         history = r.history; favorites = r.favorites; queue = r.queue; currentShowID = r.currentShowID
         lastNight = r.lastNight; genreStreakNights = r.genreStreakNights; pendingMorning = r.pendingMorning
-        reservations = reservations.filter { r.reservedShowIDs[$0.key] != nil }
+        reservations = reservations.filter { entry in s.contains(where: { $0.id == entry.value.show.id }) }
     }
 
     func slate(night: Int) -> [Candidate] { TonightEngine.slate(night: night, ctx: context) }
 
-    func toggleFavorite(_ show: Show) {
-        if favorites.contains(show.id) { favorites.remove(show.id) } else { favorites.insert(show.id) }
+    /// 操作の結果を、画面の下に短く出す(約2秒)。
+    var toast: Toast?
+    struct Toast: Equatable, Identifiable { let id = UUID(); let text: String }
+    private var toastTask: Task<Void, Never>?
+
+    func showToast(_ text: String) {
+        toastTask?.cancel()
+        toast = Toast(text: text)
+        toastTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            if !Task.isCancelled { toast = nil }
+        }
     }
 
-    func reserve(night: Int, _ candidate: Candidate) { reservations[night] = candidate }
-    func cancelReservation(night: Int) { reservations[night] = nil }
+    func toggleFavorite(_ show: Show) {
+        if favorites.contains(show.id) {
+            favorites.remove(show.id)
+        } else {
+            favorites.insert(show.id); showToast("お気に入りに追加しました")
+        }
+    }
+
+    func toggleQueue(_ show: Show) {
+        if let i = queue.firstIndex(of: show.id) {
+            queue.remove(at: i)
+        } else {
+            queue.append(show.id); showToast("「次に聴く」に入れました")
+        }
+    }
+
+    /// night(0 = 今夜、1 = 明日)の晩の日付。午前4時までは、まだ前の日の晩とみなす。
+    func nightDay(_ night: Int) -> Date {
+        let cal = Calendar.current
+        let base = cal.startOfDay(for: now().addingTimeInterval(-4 * 3600))
+        return cal.date(byAdding: .day, value: night, to: base) ?? base
+    }
+
+    func reservation(night: Int) -> Candidate? { reservations[nightDay(night)] }
+
+    func reserve(night: Int, _ candidate: Candidate) {
+        let today = nightDay(0)
+        reservations = reservations.filter { $0.key >= today }   // 過ぎた晩の予約は捨てる
+        reservations[nightDay(night)] = candidate
+        showToast(night == 0 ? "今夜聴くに決めました" : "明日聴くに決めました")
+    }
+    func cancelReservation(night: Int) {
+        reservations[nightDay(night)] = nil
+        showToast("予約を取り消しました")
+    }
 
     /// 夜の画面を閉じて、再生を止める。朝の振り返りは、そのまま残る。
     func endPlayback() {

@@ -7,7 +7,7 @@ struct NightView: View {
     @State private var timerOpen = false
 
     /// 再生中はその番組。まだなら、今夜の予約、なければ今夜の先頭の候補。
-    private var shown: Candidate? { model.playing ?? model.reservations[0] ?? model.slate(night: 0).first }
+    private var shown: Candidate? { model.playing ?? model.reservation(night: 0) ?? model.slate(night: 0).first }
 
     var body: some View {
         ZStack {

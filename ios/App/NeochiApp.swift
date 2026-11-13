@@ -24,6 +24,15 @@ struct RootView: View {
             LogView().tabItem { Label("記録", systemImage: "clock") }
         }
         .tint(Color.nc(.textMain))
+        .overlay(alignment: .bottom) {
+            if let t = model.toast {
+                ToastView(text: t.text)
+                    .padding(.bottom, 96)   // タブバーの上
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .id(t.id)
+            }
+        }
+        .animation(.snappy(duration: 0.25), value: model.toast)
         .fullScreenCover(item: $model.nightScreen) { _ in NightView() }
         .task { await model.loadRemote() }
         .task { await model.loadHealthBedtimes() }

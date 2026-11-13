@@ -29,6 +29,35 @@ struct ArtworkView: View {
     }
 }
 
+/// 押している間だけ、少し薄く・小さくなる。標準のボタンのように、押したことが目に見える。
+/// (`.plain` は押しても何も変わらないので、代わりにこれを使う。)
+struct PressableStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.55 : 1)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == PressableStyle {
+    static var pressable: PressableStyle { PressableStyle() }
+}
+
+/// 操作の結果を、画面の下に短く出す。iOS に標準のトーストはないので、押した結果をひとこと返すための部品。
+struct ToastView: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .ncText(NCText.body, .bgBase)
+            .padding(.horizontal, NCSpace.s4).padding(.vertical, NCSpace.s3)
+            .background(Capsule().fill(Color.nc(.textMain)))
+            .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+            .accessibilityAddTraits(.isStaticText)
+    }
+}
+
 /// 番組をお気に入りに入れる。★(評価)と取り違えないよう、ブックマークのアイコン。
 struct FavoriteButton: View {
     let isOn: Bool
@@ -52,6 +81,9 @@ struct FavoriteButton: View {
                     .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: isOn ? 0 : NCSize.borderW))
             }
         }
+        .buttonStyle(.pressable)
+        .sensoryFeedback(.impact(weight: .light), trigger: isOn)
+        .animation(.snappy(duration: 0.2), value: isOn)
         .accessibilityLabel(isOn ? "\(title)をお気に入りから外す" : "\(title)をお気に入りに追加")
     }
 }
@@ -151,7 +183,7 @@ struct TonightCard: View {
             ArtworkView(show: candidate.show, size: NCSize.artworkXl, radius: NCRadius.lg)
             NavigationLink(value: candidate.show.id) {
                 Text(candidate.show.title).ncText(NCText.title).multilineTextAlignment(.center)
-            }.buttonStyle(.plain)
+            }.buttonStyle(.pressable)
             Text(episodeLine).ncText(NCText.footnote, .textSub)
             MetricsRow(show: candidate.show).padding(.top, NCSpace.s2)
             Button(action: onPrimary) {
@@ -160,6 +192,7 @@ struct TonightCard: View {
                     .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
                     .background(Capsule().fill(Color.nc(.textMain)))
             }
+            .buttonStyle(.pressable)
             .padding(.top, NCSpace.s3)
         }
         .padding(NCSpace.s4)
@@ -185,7 +218,7 @@ struct InfoButton: View {
             Image(systemName: "info.circle").font(.system(size: NCSize.iconMd))
                 .foregroundStyle(Color.nc(.textSub)).frame(minWidth: NCSize.tapMin, minHeight: NCSize.tapMin)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .accessibilityLabel("説明")
         .popover(isPresented: $open) {
             Text(text).ncText(NCText.body)

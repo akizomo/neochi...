@@ -66,7 +66,7 @@ struct RecordDetailView: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").ncText(NCText.footnote, .textSub)
             }
-        }.buttonStyle(.plain)
+        }.buttonStyle(.pressable)
     }
 
     /// 再生開始 → 入眠(推定)。再生終了は、回の長さ(最大60分)。
