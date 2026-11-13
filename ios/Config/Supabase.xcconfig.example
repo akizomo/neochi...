@@ -1,5 +1,6 @@
 // このファイルを Supabase.xcconfig にコピーして使う(Supabase.xcconfig は git に入れない)。
 // xcconfig では // がコメント扱いになるため、URL の // は $() で分ける。
 SUPABASE_URL = https:/$()/rogbmmjfwvatojrjvsjl.supabase.co
-// ダッシュボードの Project Settings > API Keys の anon (public) key。service_role は入れない。
-SUPABASE_ANON_KEY =
+// Publishable key(旧 anon key)。RLS を有効にしてあるので、アプリに入れてよい。
+// Secret key(sb_secret_...)は絶対にここへ入れない。
+SUPABASE_PUBLISHABLE_KEY = sb_publishable_u_VoKvxehNLffEeq5oCnfQ_elYpZG3a
