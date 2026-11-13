@@ -95,6 +95,13 @@ struct DetailView: View {
                 }
                 .buttonStyle(.pressable)
             }
+            if let url = show.appleURL ?? show.linkURL {
+                Link(destination: url) {
+                    Label("元のPodcastを開く", systemImage: "arrow.up.right")
+                        .ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.pressable)
+            }
         }
     }
 
@@ -143,24 +150,13 @@ struct DetailView: View {
         }
     }
 
+    // 🌊 起伏の少なさ: どの項目で、どれだけ昂らせる要素があったか。
     private func calmDetail(_ a: EpisodeAnalysis) -> some View {
         VStack(alignment: .leading, spacing: NCSpace.s2) {
-            let pts = a.volumePerMin.enumerated().compactMap { i, v in v.map { (i, $0) } }
-            if !pts.isEmpty {
-                Text("音量の推移(回全体の中央値との差)").ncText(NCText.footnote, .textSub)
-                Chart {
-                    RuleMark(y: .value("中央値", 0)).foregroundStyle(Color.nc(.line))
-                    ForEach(pts, id: \.0) { LineMark(x: .value("分", $0.0), y: .value("dB", $0.1)).foregroundStyle(Color.nc(.textMain)) }
-                    ForEach(a.suddenAtSec.prefix(60), id: \.self) {
-                        PointMark(x: .value("分", Double($0) / 60), y: .value("dB", 0)).foregroundStyle(Color.nc(.accentFactor)).symbolSize(24)
-                    }
-                }
-                .chartXAxisLabel("分", alignment: .trailing)
-                .frame(height: 120)
-                HStack(spacing: NCSpace.s4) {
-                    if let s = a.suddenPer10Min { legend("突発音 \(String(format: "%.1f", s)) 回/10分", .accentFactor) }
-                    if let d = a.volumeStdDB { legend("ばらつき \(String(format: "%.1f", d)) dB", .textMain) }
-                }
+            if !a.calmItems.isEmpty {
+                Text(Explain.calmVerdict(a.calmItems)).ncText(NCText.body)
+                itemRows(a.calmItems, labels: Explain.calmLabels)
+                Text("項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.5)").ncText(NCText.caption, .textSub)
             }
             ForEach(a.moments, id: \.self) { m in
                 (Text("\(m.minute)分").font(.nc(NCText.numSm)).foregroundStyle(Color.nc(.accentFactor))
@@ -169,61 +165,127 @@ struct DetailView: View {
         }
     }
 
+    // 🎧 耳のゆるさ: 2つのグラフ(寝落ちに向く範囲を帯で示す)と、4項目それぞれの理由。
     private func earDetail(_ a: EpisodeAnalysis) -> some View {
-        VStack(alignment: .leading, spacing: NCSpace.s2) {
-            let pts = a.ratePerMin.enumerated().compactMap { i, v in v.map { (i, $0) } }
-            if !pts.isEmpty {
-                Text("話す速さの推移(冒頭の20分)").ncText(NCText.footnote, .textSub)
+        VStack(alignment: .leading, spacing: NCSpace.s3) {
+            let ratePts = a.ratePerMin.enumerated().compactMap { i, v in v.map { (i, $0) } }
+            if !ratePts.isEmpty {
+                let top = max(EarCriteria.rateWorst, (ratePts.map(\.1).max() ?? 0) + 20)
+                Text("話す速さ(冒頭の\(a.ratePerMin.count)分)").ncText(NCText.footnote, .textSub)
                 Chart {
-                    ForEach(pts, id: \.0) { LineMark(x: .value("分", $0.0), y: .value("字/分", $0.1)).foregroundStyle(Color.nc(.accentFactor)) }
-                    RuleMark(y: .value("満点の上限", 290)).lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3])).foregroundStyle(Color.nc(.textSub))
+                    RectangleMark(yStart: .value("下限", 0), yEnd: .value("上限", EarCriteria.rateBestMax)).foregroundStyle(Color.nc(.accentResult).opacity(0.22))
+                    ForEach(ratePts, id: \.0) { LineMark(x: .value("分", $0.0), y: .value("字/分", $0.1)).foregroundStyle(Color.nc(.accentFactor)) }
                 }
+                .chartYScale(domain: 0...top)
+                .chartXAxisLabel("分", alignment: .trailing)
                 .frame(height: 120)
                 HStack(spacing: NCSpace.s4) {
-                    if let r = a.speechRate { legend("1分に\(Int(r.rounded()))字", .accentFactor) }
-                    legend("破線 290字/分(満点の上限)", .textSub)
+                    bandLegend("寝落ちに向く範囲(\(Int(EarCriteria.rateBestMax))字/分まで)")
+                    legend("この回", .accentFactor)
                 }
             }
-            if let p = a.earParts {
-                VStack(spacing: 0) {
-                    partRow("話す速さ", p.rate); partRow("速さのばらつき", p.rateCV)
-                    partRow("音量の変化", p.volume); partRow("突発音", p.sudden)
+            let volPts = a.volumePerMin.enumerated().compactMap { i, v in v.map { (i, $0) } }
+            if !volPts.isEmpty {
+                let band = EarCriteria.volumeBest
+                let span = max(band * 2, (volPts.map { abs($0.1) }.max() ?? 0) + 2)
+                Text("音量の推移(回全体の中央値との差)").ncText(NCText.footnote, .textSub)
+                Chart {
+                    RectangleMark(yStart: .value("下限", -band), yEnd: .value("上限", band)).foregroundStyle(Color.nc(.accentResult).opacity(0.22))
+                    RuleMark(y: .value("中央値", 0)).foregroundStyle(Color.nc(.line))
+                    ForEach(volPts, id: \.0) { LineMark(x: .value("分", $0.0), y: .value("dB", $0.1)).foregroundStyle(Color.nc(.textMain)) }
+                    ForEach(a.suddenAtSec.prefix(60), id: \.self) {
+                        PointMark(x: .value("分", Double($0) / 60), y: .value("dB", 0)).foregroundStyle(Color.nc(.accentFactor)).symbolSize(24)
+                    }
                 }
+                .chartYScale(domain: -span...span)
+                .chartXAxisLabel("分", alignment: .trailing)
+                .frame(height: 120)
+                HStack(spacing: NCSpace.s4) {
+                    bandLegend("寝落ちに向く範囲(±\(Int(band))dB)")
+                    legend("突発音", .accentFactor)
+                }
+            }
+            let parts = Explain.earParts(a)
+            if !parts.isEmpty {
+                Text("なぜこの★か").ncText(NCText.footnote, .textSub).padding(.top, NCSpace.s1)
+                VStack(spacing: NCSpace.s2) { ForEach(parts) { partCard($0) } }
             }
         }
     }
 
+    // 🎯 程よい興味: 5つの項目の点と、ゾーン(4〜6)のどこにいるか。
     private func interestDetail(_ a: EpisodeAnalysis, _ l: InterestLevel) -> some View {
         VStack(alignment: .leading, spacing: NCSpace.s2) {
-            if let z = a.interestScore {
+            let total = a.interestScore ?? Explain.interestTotal(a.interestItems)
+            Text(Explain.interestVerdict(l, total: total)).ncText(NCText.body)
+            if !a.interestItems.isEmpty {
+                itemRows(a.interestItems, labels: Explain.interestLabels)
+            }
+            VStack(spacing: NCSpace.s1) {
                 HStack(spacing: 3) {
                     ForEach(1...10, id: \.self) { i in
-                        RoundedRectangle(cornerRadius: 2).fill(i == z ? Color.nc(.accentFactor) : Color.nc(.line)).frame(height: 8)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(i == total ? Color.nc(.accentFactor) : (4...6).contains(i) ? Color.nc(.accentResult).opacity(0.5) : Color.nc(.line))
+                            .frame(height: 8)
                     }
                 }
                 HStack {
-                    Text("退屈寄り").ncText(NCText.caption, .textSub); Spacer(); Text("夢中寄り").ncText(NCText.caption, .textSub)
+                    Text("退屈寄り").ncText(NCText.caption, .textSub); Spacer()
+                    Text("ちょうどいい(4〜6)").ncText(NCText.caption, .accentResult); Spacer()
+                    Text("夢中寄り").ncText(NCText.caption, .textSub)
                 }
             }
-            Text("AIの見立ては、\(interestWord(l))です").ncText(NCText.footnote, .textSub)
+            Text("引き込み力 = 5項目の点の合計(0〜10)。真ん中が、眠るにはいちばん向いています").ncText(NCText.caption, .textSub)
+        }
+    }
+
+    /// 採点項目を1行ずつ。点(●●○)と、根拠になった分。
+    private func itemRows(_ items: [ScoredItem], labels: [String: String]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(items, id: \.key) { it in
+                HStack(spacing: NCSpace.s2) {
+                    Text(labels[it.key] ?? it.key).ncText(NCText.footnote)
+                    Spacer()
+                    if let m = it.minute, it.score > 0 { Text("\(m)分ごろ").ncText(NCText.caption, .textSub) }
+                    Text(Explain.levelWord(it.score)).ncText(NCText.footnote, it.score > 0 ? .accentFactor : .textSub)
+                    HStack(spacing: 3) {
+                        ForEach(0..<2, id: \.self) { i in
+                            Circle().fill(i < it.score ? Color.nc(.accentFactor) : Color.nc(.line)).frame(width: 8, height: 8)
+                        }
+                    }
+                }.frame(minHeight: 32)
+            }
+        }
+    }
+
+    /// 🎧 の1項目: 測った値・結果のひとこと・基準。
+    private func partCard(_ r: EarPartReport) -> some View {
+        VStack(alignment: .leading, spacing: NCSpace.s1) {
+            HStack {
+                Text(r.title).ncText(NCText.footnote)
+                Spacer()
+                if let s = r.star {
+                    Text("★").ncText(NCText.numSm, .accentFactor)
+                    Text(String(format: "%.1f", s)).ncText(NCText.numSm, .accentFactor)
+                }
+            }
+            Text("\(r.measured)。\(r.verdict)").ncText(NCText.footnote, r.good ? .accentResult : .textMain)
+            Text(r.criterion).ncText(NCText.caption, .textSub)
+        }
+        .padding(NCSpace.s3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: NCRadius.sm, style: .continuous).fill(Color.nc(.bgBase)))
+    }
+
+    private func bandLegend(_ text: String) -> some View {
+        HStack(spacing: NCSpace.s1) {
+            RoundedRectangle(cornerRadius: 2).fill(Color.nc(.accentResult).opacity(0.22)).frame(width: 14, height: 8)
+            Text(text).ncText(NCText.caption, .textSub)
         }
     }
 
     private func interestWord(_ l: InterestLevel) -> String {
         switch l { case .low: "退屈寄り"; case .mid: "程よい"; case .high: "夢中寄り" }
-    }
-
-    private func partRow(_ title: String, _ v: Double?) -> some View {
-        Group {
-            if let v {
-                HStack {
-                    Text(title).ncText(NCText.footnote, .textSub)
-                    Spacer()
-                    Text("★").ncText(NCText.numSm, .accentFactor)
-                    Text(String(format: "%.1f", v)).ncText(NCText.numSm, .accentFactor)
-                }.frame(minHeight: 32)
-            }
-        }
     }
 
     private func legend(_ text: String, _ color: NCColor) -> some View {

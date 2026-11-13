@@ -70,12 +70,14 @@ actor SupabaseClient {
 
     private func request(_ path: String, query: [URLQueryItem] = [], method: String = "GET", body: Data? = nil) async throws -> Data {
         guard let base else { throw ClientError.notConfigured }
-        let s = try await validSession()
+        // 読み出し(GET)は、ログインできなくても公開キーだけで読める。匿名ログインが無効な環境でも、番組が見られるように。
+        // 書き込みは、端末ごとの ID が要るので、ログインできなければ失敗させる。
+        let session: Session? = method == "GET" ? try? await validSession() : try await validSession()
         var comps = URLComponents(url: base.appendingPathComponent("rest/v1/\(path)"), resolvingAgainstBaseURL: false)!
         if !query.isEmpty { comps.queryItems = query }
         var req = URLRequest(url: comps.url!); req.httpMethod = method
         req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.setValue("Bearer \(s.accessToken)", forHTTPHeaderField: "Authorization")
+        if let session { req.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization") }
         if let body { req.httpBody = body; req.setValue("application/json", forHTTPHeaderField: "Content-Type") }
         let (data, resp) = try await URLSession.shared.data(for: req)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
@@ -132,15 +134,21 @@ actor SupabaseClient {
         let interest_level: String?; let interest_score: Int?; let input_depth: String?
         let reasons: Reasons?; let features: Features?
         struct Reasons: Decodable {
-            let llm: String?; let moments: [M]?
+            let llm: String?; let moments: [M]?; let items: Items?
             struct M: Decodable { let min: Int; let note: String }
+            struct Item: Decodable { let score: Int; let min: Int? }
+            struct Items: Decodable { let interest: [String: Item]?; let calm: [String: Item]? }
         }
         struct Features: Decodable {
-            let duration_sec: Double?; let speech_rate: Double?; let volume_std_db: Double?; let sudden_per_10min: Double?
+            let duration_sec: Double?; let speech_rate: Double?; let speech_rate_cv: Double?; let volume_std_db: Double?; let sudden_per_10min: Double?
             let ear_parts: Parts?; let timeline: Timeline?
             struct Parts: Decodable { let rate: Double?; let rate_cv: Double?; let volume: Double?; let sudden: Double? }
             struct Timeline: Decodable { let rate_per_min: [Double?]?; let volume_db: [Double?]?; let sudden_at_sec: [Int]? }
         }
+    }
+
+    private static func items(_ d: [String: AnalysisRow.Reasons.Item]?) -> [ScoredItem] {
+        (d ?? [:]).map { ScoredItem(key: $0.key, score: $0.value.score, minute: $0.value.min) }.sorted { $0.key < $1.key }
     }
 
     /// 各回の解析。★と、根拠のデータ(古い解析にない項目は nil)。
@@ -150,15 +158,20 @@ actor SupabaseClient {
             URLQueryItem(name: "order", value: "analyzed_at.desc")])
         return try Self.decoder.decode([AnalysisRow].self, from: data).map { r in
             let f = r.features
-            return EpisodeAnalysis(
+            var a = EpisodeAnalysis(
                 episodeID: r.episode_id, finalStar: r.final_star, calmStar: r.calm_star, earStar: r.ear_star,
                 interest: r.interest_level.flatMap(InterestLevel.init(rawValue:)), interestScore: r.interest_score,
                 reason: r.reasons?.llm, inputDepth: r.input_depth, durationSec: f?.duration_sec,
                 earParts: f?.ear_parts.map { EarParts(rate: $0.rate, rateCV: $0.rate_cv, volume: $0.volume, sudden: $0.sudden) },
-                speechRate: f?.speech_rate, volumeStdDB: f?.volume_std_db, suddenPer10Min: f?.sudden_per_10min,
-                ratePerMin: f?.timeline?.rate_per_min ?? [], volumePerMin: f?.timeline?.volume_db ?? [],
-                suddenAtSec: f?.timeline?.sudden_at_sec ?? [],
-                moments: (r.reasons?.moments ?? []).map { Moment(minute: $0.min, note: $0.note) })
+                speechRate: f?.speech_rate, volumeStdDB: f?.volume_std_db, suddenPer10Min: f?.sudden_per_10min)
+            a.speechRateCV = f?.speech_rate_cv
+            a.interestItems = Self.items(r.reasons?.items?.interest)
+            a.calmItems = Self.items(r.reasons?.items?.calm)
+            a.ratePerMin = f?.timeline?.rate_per_min ?? []
+            a.volumePerMin = f?.timeline?.volume_db ?? []
+            a.suddenAtSec = f?.timeline?.sudden_at_sec ?? []
+            a.moments = (r.reasons?.moments ?? []).map { Moment(minute: $0.min, note: $0.note) }
+            return a
         }
     }
 

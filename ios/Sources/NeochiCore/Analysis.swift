@@ -18,6 +18,14 @@ public struct Moment: Hashable, Codable, Sendable {
     public init(minute: Int, note: String) { self.minute = minute; self.note = note }
 }
 
+/// 🎯 / 🌊 の採点項目ひとつぶん。score は 0〜2、minute は根拠になった分(なければ nil)。
+public struct ScoredItem: Hashable, Codable, Sendable {
+    public var key: String
+    public var score: Int
+    public var minute: Int?
+    public init(key: String, score: Int, minute: Int? = nil) { self.key = key; self.score = score; self.minute = minute }
+}
+
 /// 1回ぶんの解析(★と、根拠になったデータ)。無い項目は nil(古い解析には timeline などがない)。
 public struct EpisodeAnalysis: Hashable, Codable, Sendable {
     public var episodeID: String
@@ -34,6 +42,11 @@ public struct EpisodeAnalysis: Hashable, Codable, Sendable {
     public var earParts: EarParts?
     /// 話す速さ(字/分)・ばらつき・音量の変化(dB)・突発音(回/10分)。
     public var speechRate: Double?
+    /// 1分ごとの話す速さの変動係数(0.10 で満点、0.40 で最低)。
+    public var speechRateCV: Double?
+    /// 🎯 引き込み力(A〜E)と 🌊 起伏(A〜D)の、項目ごとの点。
+    public var interestItems: [ScoredItem]
+    public var calmItems: [ScoredItem]
     public var volumeStdDB: Double?
     public var suddenPer10Min: Double?
     /// 1分ごと。話す速さは冒頭20分、音量は全編。無い分は nil。
@@ -45,12 +58,14 @@ public struct EpisodeAnalysis: Hashable, Codable, Sendable {
     public init(episodeID: String, finalStar: Double? = nil, calmStar: Double? = nil, earStar: Double? = nil,
                 interest: InterestLevel? = nil, interestScore: Int? = nil, reason: String? = nil,
                 inputDepth: String? = nil, durationSec: Double? = nil, earParts: EarParts? = nil,
-                speechRate: Double? = nil, volumeStdDB: Double? = nil, suddenPer10Min: Double? = nil,
+                speechRate: Double? = nil, speechRateCV: Double? = nil, volumeStdDB: Double? = nil, suddenPer10Min: Double? = nil,
+                interestItems: [ScoredItem] = [], calmItems: [ScoredItem] = [],
                 ratePerMin: [Double?] = [], volumePerMin: [Double?] = [], suddenAtSec: [Int] = [], moments: [Moment] = []) {
         self.episodeID = episodeID; self.finalStar = finalStar; self.calmStar = calmStar; self.earStar = earStar
         self.interest = interest; self.interestScore = interestScore; self.reason = reason
         self.inputDepth = inputDepth; self.durationSec = durationSec; self.earParts = earParts
-        self.speechRate = speechRate; self.volumeStdDB = volumeStdDB; self.suddenPer10Min = suddenPer10Min
+        self.speechRate = speechRate; self.speechRateCV = speechRateCV; self.volumeStdDB = volumeStdDB
+        self.suddenPer10Min = suddenPer10Min; self.interestItems = interestItems; self.calmItems = calmItems
         self.ratePerMin = ratePerMin; self.volumePerMin = volumePerMin; self.suddenAtSec = suddenAtSec; self.moments = moments
     }
 
