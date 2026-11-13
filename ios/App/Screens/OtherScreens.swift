@@ -112,32 +112,3 @@ struct LogView: View {
     }
 }
 
-/// 朝の振り返り(最初の形)。結果を先に見せる。入力と「記録する」は、このあと足す。
-struct MorningView: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: NCSpace.s3) {
-            HStack {
-                Text("朝の振り返り").ncText(NCText.footnote, .textSub)
-                Spacer()
-                Button("あとで") { dismiss() }.ncText(NCText.body, .textSub).frame(minHeight: NCSize.tapMin)
-            }
-            Text("寝落ちまで").ncText(NCText.footnote, .textSub)
-            if let m = model.lastNight?.minutes {
-                HStack(alignment: .firstTextBaseline, spacing: NCSpace.s2) {
-                    Text("\(m)").ncText(NCText.numHero, .accentResult)
-                    Text("分").ncText(NCText.title, .accentResult)
-                }
-                Text(NCString.comment(minutes: m)).ncText(NCText.title)
-            } else {
-                Text("―").ncText(NCText.numHero, .textSub)
-                Text(NCString.noResultNote).ncText(NCText.title)
-            }
-            Spacer()
-        }
-        .padding(NCSpace.s4)
-        .background(Color.nc(.bgBase))
-    }
-}

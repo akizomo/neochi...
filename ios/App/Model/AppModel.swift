@@ -22,6 +22,14 @@ final class AppModel {
     var morningOpen = false
     var playing: Candidate?
     let player = PlayerService()
+    let health = HealthService()
+    /// 保存した記録(端末内)。
+    var logs: [SleepLog] = LogStore.load()
+    /// 今夜の再生の入眠(確認できたときだけ)と、再生開始の時刻・回。
+    var onsetAt: Date?
+    var playStartedAt: Date?
+    var playEpisodeID: String?
+    var playShowID: String?
 
     enum NightScreen: String, Identifiable { case ready, playing; var id: String { rawValue } }
 
@@ -46,6 +54,35 @@ final class AppModel {
                        currentShowID: currentShowID, lastNight: lastNight, genreStreakNights: genreStreakNights)
     }
 
+    /// 朝の振り返りに出す寝落ちまでの分。ヘルスケアから確認できなければ nil。
+    var pendingLatency: Int? {
+        guard let s = playStartedAt, let o = onsetAt else { return lastNight?.minutes }
+        return max(0, Int((o.timeIntervalSince(s) / 60).rounded()))
+    }
+
+    func refreshOnset() async {
+        guard let s = playStartedAt else { return }
+        do {
+            try await health.requestAuthorization()
+            onsetAt = try await health.sleepOnset(after: s)
+        } catch { onsetAt = nil }
+    }
+
+    /// 「記録する」で保存。入力は任意。
+    func saveLog(interest: Int?, calm: Int?, note: String) {
+        guard let s = playStartedAt, let ep = playEpisodeID, let show = playShowID else { pendingMorning = false; return }
+        let listenNo = history.filter { $0.episodeID == ep }.count
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let log = SleepLog(id: UUID().uuidString, episodeID: ep, showID: show, startedAt: s, sleepOnsetAt: onsetAt,
+                           source: onsetAt == nil ? .selfReport : .watch, interestVote: interest, calmVote: calm,
+                           note: trimmed.isEmpty ? nil : trimmed, listenNo: max(1, listenNo))
+        logs.append(log)
+        if let m = log.latencyMinutes { lastNight = LastNight(showID: show, episodeID: ep, minutes: m) }
+        pendingMorning = false
+        playStartedAt = nil; onsetAt = nil
+        LogStore.save(logs)
+    }
+
     func slate(night: Int) -> [Candidate] { TonightEngine.slate(night: night, ctx: context) }
 
     func toggleFavorite(_ show: Show) {
@@ -61,6 +98,9 @@ final class AppModel {
             history.append(PlayRecord(episodeID: ep.id, showID: candidate.show.id, playedAt: Date()))
         }
         currentShowID = candidate.show.id
+        playStartedAt = Date(); onsetAt = nil
+        playEpisodeID = candidate.episode?.id; playShowID = candidate.show.id
+        pendingMorning = true
         playing = candidate
         player.start(url: candidate.episode?.audioURL, title: candidate.show.title)
         nightScreen = .playing
