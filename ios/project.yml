@@ -29,10 +29,15 @@ targets:
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_NSHealthShareUsageDescription: 睡眠データから入眠の時刻を推定し、寝落ちまでの分数を記録するために読み取ります。広告や外部への提供には使いません。
         INFOPLIST_KEY_UIUserInterfaceStyle: Automatic
+        # 接続先。空なら端末内だけで動く(docs/SETUP.md)。ホスト名だけ(例: abcd.supabase.co)。
+        SUPABASE_HOST: ""
+        SUPABASE_ANON_KEY: ""
     info:
       path: App/Info.plist
       properties:
         UIBackgroundModes: [audio]
+        SupabaseHost: $(SUPABASE_HOST)
+        SupabaseAnonKey: $(SUPABASE_ANON_KEY)
     entitlements:
       path: App/Neochi.entitlements
       properties:

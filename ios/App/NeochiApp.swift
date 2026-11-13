@@ -24,6 +24,7 @@ struct RootView: View {
         }
         .tint(Color.nc(.textMain))
         .fullScreenCover(item: $model.nightScreen) { _ in NightView() }
+        .task { await model.loadRemote() }
         .fullScreenCover(isPresented: $model.morningOpen) { MorningView() }
     }
 }

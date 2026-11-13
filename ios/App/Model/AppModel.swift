@@ -81,6 +81,21 @@ final class AppModel {
         pendingMorning = false
         playStartedAt = nil; onsetAt = nil
         LogStore.save(logs)
+        Task { try? await SupabaseClient.shared.upload(log) }
+    }
+
+    /// 番組と回を読み込む。未設定や失敗のときは、いまの内容のまま(端末内だけで動く)。
+    func loadRemote() async {
+        guard SupabaseClient.shared.isConfigured else { return }
+        guard let s = try? await SupabaseClient.shared.fetchShows(), !s.isEmpty,
+              let e = try? await SupabaseClient.shared.fetchEpisodes() else { return }
+        shows = s; episodes = e
+        // 見本の履歴は、実データには存在しない番組を指すので外す。
+        let ids = Set(s.map(\.id))
+        history = history.filter { ids.contains($0.showID) }
+        favorites = favorites.intersection(ids); queue = queue.filter(ids.contains)
+        if let c = currentShowID, !ids.contains(c) { currentShowID = nil }
+        if let l = lastNight, !ids.contains(l.showID) { lastNight = nil; pendingMorning = false }
     }
 
     func slate(night: Int) -> [Candidate] { TonightEngine.slate(night: night, ctx: context) }
