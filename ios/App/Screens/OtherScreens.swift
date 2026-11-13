@@ -95,20 +95,23 @@ struct LogView: View {
             .navigationTitle("記録")
             .toolbarTitleDisplayMode(.inlineLarge)
             .contentMargins(.top, NCSpace.s5, for: .scrollContent)
+            .navigationDestination(for: LogRoute.self) { RecordDetailView(logID: $0.id) }
+            .navigationDestination(for: String.self) { DetailView(showID: $0) }
             .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         }
     }
 
     private func row(_ log: SleepLog) -> some View {
         let title = model.shows.first { $0.id == log.showID }?.title ?? ""
-        return HStack(alignment: .center, spacing: NCSpace.s3) {
-            VStack(alignment: .leading, spacing: NCSpace.s1) {
-                Text(Self.dateFormat.string(from: log.startedAt)).ncText(NCText.footnote, .textSub)
-                Text(title).ncText(NCText.headline).lineLimit(1)
-                if let note = log.note { Text(note).ncText(NCText.footnote, .textSub).lineLimit(2) }
-            }
-            Spacer(minLength: NCSpace.s2)
-            VStack(alignment: .trailing, spacing: NCSpace.s1) {
+        let ep = model.episodes[log.showID]?.first { $0.id == log.episodeID }?.title
+        return NavigationLink(value: LogRoute(id: log.id)) {
+            HStack(alignment: .center, spacing: NCSpace.s3) {
+                VStack(alignment: .leading, spacing: NCSpace.s1) {
+                    Text(Self.dateFormat.string(from: log.startedAt)).ncText(NCText.footnote, .textSub)
+                    Text(title).ncText(NCText.headline).lineLimit(1)
+                    if let ep, !ep.isEmpty { Text(ep).ncText(NCText.footnote, .textSub).lineLimit(1) }
+                }
+                Spacer(minLength: NCSpace.s2)
                 if let m = log.latencyMinutes {
                     HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
                         Text("\(m)").ncText(NCText.numMd, .accentResult)
@@ -117,15 +120,13 @@ struct LogView: View {
                 } else {
                     Text("―").ncText(NCText.numMd, .textSub)
                 }
-                if let c = log.calmVote {
-                    HStack(spacing: NCSpace.s1) {
-                        Text("★").ncText(NCText.numSm, .accentFactor)
-                        Text("\(c)").ncText(NCText.numSm, .accentFactor)
-                    }
-                }
+                Image(systemName: "chevron.right").ncText(NCText.footnote, .textSub)
             }
+            .padding(NCSpace.s4)
+            .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
         }
-        .padding(NCSpace.s4)
-        .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+        .buttonStyle(.plain)
     }
 }
+
+struct LogRoute: Hashable { let id: String }

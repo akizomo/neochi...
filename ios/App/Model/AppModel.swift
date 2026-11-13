@@ -141,6 +141,18 @@ final class AppModel {
         Task { try? await SupabaseClient.shared.upload(log) }
     }
 
+    /// 記録のメモをあとから直す(空にすると消す)。
+    func updateNote(logID: String, note: String) {
+        guard let i = logs.firstIndex(where: { $0.id == logID }) else { return }
+        let t = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let new: String? = t.isEmpty ? nil : t
+        guard logs[i].note != new else { return }
+        logs[i].note = new
+        LogStore.save(logs)
+        let log = logs[i]
+        Task { try? await SupabaseClient.shared.upload(log) }
+    }
+
     /// 番組と回を読み込む。未設定や失敗のときは、いまの内容のまま(端末内だけで動く)。
     func loadRemote() async {
         guard SupabaseClient.shared.isConfigured else { return }
