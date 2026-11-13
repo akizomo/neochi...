@@ -86,6 +86,7 @@ actor SupabaseClient {
     private struct ShowRow: Decodable {
         let id: String; let title: String; let genre: String?; let show_star: Double?; let z_rank: String?
         let listing_status: String
+        let artwork_url: String?; let link_url: String?; let apple_url: String?
     }
     private struct EpisodeRow: Decodable {
         let id: String; let show_id: String; let title: String?; let audio_url: String?
@@ -106,9 +107,11 @@ actor SupabaseClient {
 
     /// 掲載中(listed)の番組。ランクは掲載中だけ付く。
     func fetchShows() async throws -> [Show] {
-        let data = try await request("show", query: [URLQueryItem(name: "select", value: "id,title,genre,show_star,z_rank,listing_status")])
+        let data = try await request("show", query: [URLQueryItem(name: "select", value: "id,title,genre,show_star,z_rank,listing_status,artwork_url,link_url,apple_url")])
         return try Self.decoder.decode([ShowRow].self, from: data).map {
-            Show(id: $0.id, title: $0.title, genre: $0.genre ?? "", star: $0.show_star,
+            Show(id: $0.id, title: $0.title, genre: $0.genre ?? "",
+                 artworkURL: $0.artwork_url.flatMap(URL.init(string:)), linkURL: $0.link_url.flatMap(URL.init(string:)),
+                 appleURL: $0.apple_url.flatMap(URL.init(string:)), star: $0.show_star,
                  rank: $0.listing_status == "listed" ? $0.z_rank.flatMap(ZRank.init(rawValue:)) : nil)
         }
     }
