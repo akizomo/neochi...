@@ -74,4 +74,13 @@ final class BedtimeWindowTests: XCTestCase {
     func testIsInWindowWithoutAnyData() {
         XCTAssertFalse(BedtimeWindow.isInWindow(now: date(2026, 11, 12, 23, 0), starts: [], fallback: nil, calendar: cal))
     }
+
+    // 晩ごとに最も早い開始を取り、昼寝は除く。夜中の目覚めのあとの再入眠は、同じ晩に数える
+    func testNightlyStarts() {
+        let s = [date(2026, 11, 10, 23, 10), date(2026, 11, 11, 2, 30),   // 10日の晩: 23:10(夜中の再入眠 2:30 は同じ晩)
+                 date(2026, 11, 11, 14, 0),                                 // 昼寝は除く
+                 date(2026, 11, 11, 22, 50)]                                // 11日の晩
+        let n = BedtimeWindow.nightlyStarts(from: s, calendar: cal)
+        XCTAssertEqual(n, [date(2026, 11, 10, 23, 10), date(2026, 11, 11, 22, 50)])
+    }
 }

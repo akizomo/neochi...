@@ -33,4 +33,20 @@ final class HealthService {
         guard let first = asleep.first else { return nil }
         return max(first.startDate, start)
     }
+
+    /// 過去 `days` 日の、眠っていた区間の開始時刻。許可がない、データがないときは空。
+    func sleepStarts(days: Int = 45) async throws -> [Date] {
+        guard isAvailable else { return [] }
+        let type = HKCategoryType(.sleepAnalysis)
+        let from = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+        let p = HKQuery.predicateForSamples(withStart: from, end: Date(), options: [])
+        let samples: [HKSample] = try await withCheckedThrowingContinuation { cont in
+            let q = HKSampleQuery(sampleType: type, predicate: p, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, result, error in
+                if let error { cont.resume(throwing: error) } else { cont.resume(returning: result ?? []) }
+            }
+            store.execute(q)
+        }
+        let asleep = Set(HKCategoryValueSleepAnalysis.allAsleepValues.map(\.rawValue))
+        return samples.compactMap { $0 as? HKCategorySample }.filter { asleep.contains($0.value) }.map(\.startDate)
+    }
 }

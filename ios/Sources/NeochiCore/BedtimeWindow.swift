@@ -42,6 +42,21 @@ public struct BedtimeWindow: Hashable, Sendable {
         return BedtimeWindow(lower: max(0, t - leadMinutes), upper: min(1439, t + tailMinutes))
     }
 
+    /// 睡眠の記録(眠っていた区間の開始時刻)から、晩ごとの就寝時刻を取り出す。
+    /// 18時〜翌6時に始まったものだけを数え(昼寝は除く)、同じ晩のうち最も早いものを、その晩の就寝時刻とする。
+    public static func nightlyStarts(from sleepStarts: [Date], calendar: Calendar) -> [Date] {
+        var byNight: [Date: Date] = [:]
+        for d in sleepStarts {
+            let h = calendar.component(.hour, from: d)
+            guard h >= 18 || h < 6 else { continue }
+            let evening = h < 6 ? (calendar.date(byAdding: .day, value: -1, to: d) ?? d) : d
+            let key = calendar.startOfDay(for: evening)
+            if let cur = byNight[key], cur <= d { continue }
+            byNight[key] = d
+        }
+        return byNight.values.sorted()
+    }
+
     /// いま(`now`)が就寝の時間帯か。記録も初回の就寝時刻もなければ false(昼の画面)。
     public static func isInWindow(now: Date, starts: [Date], fallback: Date?, calendar: Calendar) -> Bool {
         guard let w = make(starts: starts, weekendNight: isWeekendNight(now, calendar: calendar),

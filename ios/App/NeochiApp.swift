@@ -26,9 +26,10 @@ struct RootView: View {
         .tint(Color.nc(.textMain))
         .fullScreenCover(item: $model.nightScreen) { _ in NightView() }
         .task { await model.loadRemote() }
+        .task { await model.loadHealthBedtimes() }
         .onAppear { model.openNightIfBedtime() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime() } }
-        .sheet(isPresented: Binding(get: { !model.bedtimeAsked }, set: { _ in })) { BedtimeSetupView().interactiveDismissDisabled() }
+        .sheet(isPresented: Binding(get: { model.needsBedtimeQuestion }, set: { _ in })) { BedtimeSetupView().interactiveDismissDisabled() }
         .fullScreenCover(isPresented: $model.morningOpen) { MorningView() }
     }
 }

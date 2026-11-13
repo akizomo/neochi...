@@ -43,6 +43,25 @@ final class AppModel {
     var bedtimeFallback: Date? = UserDefaults.standard.object(forKey: "bedtimeFallback") as? Date
     var bedtimeAsked = UserDefaults.standard.bool(forKey: "bedtimeAsked")
 
+    /// ヘルスケアの履歴から読んだ、晩ごとの就寝時刻。確認が済んだら healthChecked。
+    var healthStarts: [Date] = []
+    var healthChecked = false
+
+    /// 履歴が足りないときだけ、就寝時刻を聞く。
+    var needsBedtimeQuestion: Bool {
+        healthChecked && !bedtimeAsked && healthStarts.count < BedtimeWindow.minimumSamples
+    }
+
+    func loadHealthBedtimes() async {
+        do {
+            try await health.requestAuthorization()
+            let raw = try await health.sleepStarts()
+            healthStarts = BedtimeWindow.nightlyStarts(from: raw, calendar: .current)
+        } catch { healthStarts = [] }
+        healthChecked = true
+        openNightIfBedtime()
+    }
+
     func saveBedtime(_ date: Date?) {
         bedtimeFallback = date; bedtimeAsked = true
         UserDefaults.standard.set(date, forKey: "bedtimeFallback")
@@ -51,7 +70,7 @@ final class AppModel {
     }
 
     var inBedtimeWindow: Bool {
-        BedtimeWindow.isInWindow(now: now(), starts: history.map(\.playedAt), fallback: bedtimeFallback, calendar: .current)
+        BedtimeWindow.isInWindow(now: now(), starts: history.map(\.playedAt) + healthStarts, fallback: bedtimeFallback, calendar: .current)
     }
 
     /// 就寝の時間帯にアプリを開いたら、昼の画面ではなく夜の画面を出す。
