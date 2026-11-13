@@ -15,7 +15,6 @@ struct DiscoverView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: NCSpace.s3) {
-                    Text("見つける").ncText(NCText.title).frame(minHeight: NCSize.tapMin, alignment: .leading)
                     Text("AIのおすすめ順").ncText(NCText.headline).padding(.top, NCSpace.s2)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: NCSpace.s2) {
@@ -33,7 +32,7 @@ struct DiscoverView: View {
             }
             .background(Color.nc(.bgBase))
             .navigationDestination(for: String.self) { DetailView(showID: $0) }
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationTitle("見つける")
         }
     }
 
@@ -136,7 +135,6 @@ struct LogView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: NCSpace.s3) {
-                    Text("記録").ncText(NCText.title).frame(minHeight: NCSize.tapMin, alignment: .leading)
                     bedtimeRow
                     if model.logs.isEmpty {
                         Text("まだ記録がありません。").ncText(NCText.footnote, .textSub)
@@ -148,7 +146,7 @@ struct LogView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(Color.nc(.bgBase))
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationTitle("記録")
             .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         }
     }

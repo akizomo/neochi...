@@ -12,7 +12,6 @@ struct TonightView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: NCSpace.s3) {
-                    header
                     if model.pendingMorning { recap }
                     candidates
                     favorites
@@ -22,32 +21,21 @@ struct TonightView: View {
             }
             .background(Color.nc(.bgBase))
             .navigationDestination(for: String.self) { DetailView(showID: $0) }
-            .toolbar(.hidden, for: .navigationBar)
-        }
-    }
-
-    private var header: some View {
-        HStack {
-            Text(labels[night]).ncText(NCText.title)
-            Spacer()
-            HStack(spacing: NCSpace.s2) {
-                stepButton("arrow.left", label: "前の晩", enabled: night > 0) { night -= 1 }
-                stepButton("arrow.right", label: "次の晩", enabled: night < labels.count - 1) { night += 1 }
+            .navigationTitle(labels[night])
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    stepButton("arrow.left", label: "前の晩", enabled: night > 0) { night -= 1 }
+                    stepButton("arrow.right", label: "次の晩", enabled: night < labels.count - 1) { night += 1 }
+                }
             }
         }
-        .frame(minHeight: NCSize.tapMin)
     }
 
-    /// 矢印は常に2つ出す。行けない方向は押せなくして薄くする(位置が動かない)。枠線は付けない。
+    /// 矢印は常に2つ出す。行けない方向は押せなくする(標準のツールバーボタン)。
     private func stepButton(_ icon: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon).font(.system(size: 18, weight: .semibold))
-                .frame(width: NCSize.tapMin, height: NCSize.tapMin)
-                .foregroundStyle(Color.nc(.textMain))
-                .opacity(enabled ? 1 : 0.3)
-        }
-        .disabled(!enabled)
-        .accessibilityLabel(label)
+        Button(action: action) { Image(systemName: icon) }
+            .disabled(!enabled)
+            .accessibilityLabel(label)
     }
 
     private var recap: some View {
