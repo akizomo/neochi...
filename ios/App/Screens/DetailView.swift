@@ -32,7 +32,12 @@ struct DetailView: View {
                     }
                     record(show)
                     if analyzed.count >= 2 { recent }
-                    if let (e, a) = latest { about(a, episode: e) }
+                    if let (e, a) = latest { about(a, episode: e) } else {
+                        Text("この番組の解析は、まだありません。").ncText(NCText.footnote, .textSub)
+                    }
+                    #if DEBUG
+                    Text("読み込み: \(model.remoteStatus)").ncText(NCText.caption, .textSub)
+                    #endif
                 }
                 .padding(NCSpace.s4)
             }

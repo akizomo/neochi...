@@ -153,14 +153,25 @@ final class AppModel {
         Task { try? await SupabaseClient.shared.upload(log) }
     }
 
+    /// 読み込みの結果(確認用)。どこで失敗したかをここに残す。
+    var remoteStatus = "未接続(端末内の見本で動作)"
+
     /// 番組と回を読み込む。未設定や失敗のときは、いまの内容のまま(端末内だけで動く)。
     func loadRemote() async {
         guard SupabaseClient.shared.isConfigured else { return }
-        guard let fetched = try? await SupabaseClient.shared.fetchShows(), !fetched.isEmpty,
-              let e = try? await SupabaseClient.shared.fetchEpisodes() else { return }
+        let fetched: [Show]
+        do { fetched = try await SupabaseClient.shared.fetchShows() }
+        catch { remoteStatus = "番組の読み込みに失敗: \(error)"; return }
+        guard !fetched.isEmpty else { remoteStatus = "番組が0件(show が空、または読み取りの権限がない)"; return }
+        let e: [String: [Episode]]
+        do { e = try await SupabaseClient.shared.fetchEpisodes() }
+        catch { remoteStatus = "回の読み込みに失敗: \(error)"; return }
         var s = fetched
-        let list = (try? await SupabaseClient.shared.fetchAnalyses()) ?? []
-        let stats = (try? await SupabaseClient.shared.fetchStats()) ?? [:]
+        var notes: [String] = []
+        var list: [EpisodeAnalysis] = []
+        do { list = try await SupabaseClient.shared.fetchAnalyses() } catch { notes.append("解析の読み込みに失敗: \(error)") }
+        var stats: [String: ShowStats] = [:]
+        do { stats = try await SupabaseClient.shared.fetchStats() } catch { notes.append("実績の読み込みに失敗: \(error)") }
         let showOf = Dictionary(uniqueKeysWithValues: e.flatMap { $0.value }.map { ($0.id, $0.showID) })
         for i in s.indices {
             let mine = list.filter { showOf[$0.episodeID] == s[i].id }
@@ -169,6 +180,7 @@ final class AppModel {
         }
         analyses = Dictionary(list.map { ($0.episodeID, $0) }, uniquingKeysWith: { a, _ in a })
         shows = s; episodes = e
+        remoteStatus = "番組\(s.count)・回\(e.values.reduce(0) { $0 + $1.count })・解析\(list.count)・実績\(stats.count)" + (notes.isEmpty ? "" : "\n" + notes.joined(separator: "\n"))
         // 見本の状態は、実データには存在しない番組を指すので外す。
         let r = SessionState(history: history, favorites: favorites, queue: queue, currentShowID: currentShowID,
                              lastNight: lastNight, genreStreakNights: genreStreakNights, pendingMorning: pendingMorning,
