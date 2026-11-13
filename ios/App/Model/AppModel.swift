@@ -21,6 +21,7 @@ final class AppModel {
     var nightScreen: NightScreen?
     var morningOpen = false
     var playing: Candidate?
+    let player = PlayerService()
 
     enum NightScreen: String, Identifiable { case ready, playing; var id: String { rawValue } }
 
@@ -61,6 +62,7 @@ final class AppModel {
         }
         currentShowID = candidate.show.id
         playing = candidate
+        player.start(url: candidate.episode?.audioURL, title: candidate.show.title)
         nightScreen = .playing
     }
 }
