@@ -12,11 +12,17 @@ public struct Show: Identifiable, Hashable, Codable, Sendable {
     public var star: Double?
     /// 掲載ランク(実測の集計)。実測がなければ nil(調査中)。
     public var rank: ZRank?
+    /// AIの一行(一覧に出す)。
+    public var oneLiner: String?
+    /// 実測の平均(分)。実測がなければ nil。
+    public var avgMinutes: Int?
 
     public init(id: String, title: String, genre: String, artworkURL: URL? = nil, linkURL: URL? = nil,
-                appleURL: URL? = nil, star: Double? = nil, rank: ZRank? = nil) {
+                appleURL: URL? = nil, star: Double? = nil, rank: ZRank? = nil,
+                oneLiner: String? = nil, avgMinutes: Int? = nil) {
         self.id = id; self.title = title; self.genre = genre; self.artworkURL = artworkURL
         self.linkURL = linkURL; self.appleURL = appleURL; self.star = star; self.rank = rank
+        self.oneLiner = oneLiner; self.avgMinutes = avgMinutes
     }
 }
 
