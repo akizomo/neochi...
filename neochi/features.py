@@ -41,17 +41,32 @@ def acoustic_features(x: np.ndarray, sr: int, cfg: dict) -> dict:
     if len(active) == 0:
         return {"duration_sec": duration, "volume_std_db": None, "sudden_per_10min": None}
     median = float(np.median(active))
-    sudden = 0
+    sudden_at: list[int] = []
     for i in range(1, len(db)):
         if db[i] > a["silence_floor_db"] and db[i] > median + a["sudden_over_median_db"] \
                 and db[i] - db[i - 1] > a["sudden_over_prev_db"]:
-            sudden += 1
+            sudden_at.append(int(i * a["frame_sec"]))
     minutes = max(duration / 60, 1e-9)
     return {
         "duration_sec": duration,
         "volume_std_db": float(active.std()),
-        "sudden_per_10min": sudden / minutes * 10,
+        "sudden_per_10min": len(sudden_at) / minutes * 10,
+        "timeline": {
+            "volume_db": volume_per_min(db, a["frame_sec"], a["silence_floor_db"], median),
+            "sudden_at_sec": sudden_at[:300],
+        },
     }
+
+
+def volume_per_min(db: np.ndarray, frame_sec: float, floor: float, median: float) -> list[float | None]:
+    """1分ごとの音量(無音を除いた中央値)を、回全体の中央値との差(dB)で返す。無音の分は None。"""
+    per = max(1, int(round(60 / frame_sec)))
+    out: list[float | None] = []
+    for i in range(0, len(db), per):
+        m = db[i:i + per]
+        m = m[m > floor]
+        out.append(round(float(np.median(m)) - median, 1) if len(m) else None)
+    return out
 
 
 _JA_JUNK = re.compile(r"[\s、。，．,.!?！？「」『』（）()\-ー…・]")
@@ -99,6 +114,10 @@ def rate_profile(spans: list[tuple[float, float, str]], lang: str, cfg: dict) ->
     out: dict = {}
     if den > 0:
         out["speech_rate"] = num / den
+    if per_min:
+        last = max(per_min)
+        out["rate_per_min"] = [round(per_min[m][0] / per_min[m][1]) if m in per_min and per_min[m][1] >= 0.25 else None
+                               for m in range(last + 1)]
     rates = [c / d for c, d in per_min.values() if d >= 0.25]
     if len(rates) >= 3:
         arr = np.array(rates)

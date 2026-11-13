@@ -27,6 +27,11 @@ class JsonStore:
         k = self._key(table, row)
         self.data[table][k] = {**self.data[table].get(k, {}), **row}
 
+    def update(self, table: str, key: str, fields: dict) -> None:
+        """既存の行の一部の列だけを書き換える(行がなければ何もしない)。"""
+        if key in self.data[table]:
+            self.data[table][key].update(fields)
+
     def get(self, table: str, key: str) -> dict | None:
         return self.data[table].get(key)
 
@@ -67,6 +72,13 @@ class SupabaseStore:
         r = requests.post(f"{self.base}/{table}?on_conflict={self.CONFLICT[table]}",
                           headers={**self.h, "Prefer": "resolution=merge-duplicates"},
                           data=json.dumps(row, ensure_ascii=False).encode(), timeout=30)
+        r.raise_for_status()
+
+    def update(self, table: str, key: str, fields: dict) -> None:
+        """一部の列だけの更新は PATCH で行う。upsert だと、省いた NOT NULL の列(title など)で拒否される。"""
+        col = self.CONFLICT[table]
+        r = requests.patch(f"{self.base}/{table}?{col}=eq.{key}", headers=self.h,
+                           data=json.dumps(fields, ensure_ascii=False).encode(), timeout=30)
         r.raise_for_status()
 
     def get(self, table: str, key: str) -> dict | None:

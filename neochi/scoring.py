@@ -24,8 +24,7 @@ def _star(unit: float) -> float:
     return round(1 + 4 * unit, 1)
 
 
-def ear_star(features: dict, lang: str, cfg: dict) -> float | None:
-    """🎧 耳のゆるさ。取れた指標だけで重みを再配分する。全部欠けたら None。"""
+def _ear_units(features: dict, lang: str, cfg: dict) -> dict:
     e = cfg["ear"]
     parts = {}
     rate = features.get("speech_rate")
@@ -41,17 +40,44 @@ def ear_star(features: dict, lang: str, cfg: dict) -> float | None:
     if features.get("sudden_per_10min") is not None:
         s = e["sudden_per_10min"]
         parts["sudden"] = _norm(features["sudden_per_10min"], s["best"], s["worst"])
+    return parts
+
+
+def ear_parts(features: dict, lang: str, cfg: dict) -> dict:
+    """🎧 の内訳。項目ごとの★(1〜5)。アプリで「どこが効いているか」を見せるために保存する。"""
+    return {k: _star(u) for k, u in _ear_units(features, lang, cfg).items()}
+
+
+def ear_star(features: dict, lang: str, cfg: dict) -> float | None:
+    """🎧 耳のゆるさ。取れた指標だけで重みを再配分する。全部欠けたら None。"""
+    parts = _ear_units(features, lang, cfg)
     if not parts:
         return None
-    w = {k: e["weights"][k] for k in parts}
+    w = {k: cfg["ear"]["weights"][k] for k in parts}
     return _star(sum(parts[k] * w[k] for k in parts) / sum(w.values()))
 
 
-def total_star(calm: float | None, ear: float | None, interest_level: str | None, cfg: dict) -> float | None:
+def interest_star(score: float, cfg: dict) -> float:
+    """🎯★。引き込み力(1〜10)がゾーンに入れば満点、外れるほど下がる(左右で下がり方が違う)。"""
+    z = cfg["total"]["interest_zone"]
+    lo, hi = z["zone"]
+    if lo <= score <= hi:
+        return 5.0
+    if score < lo:
+        x0, y0 = z["low_end"]
+        return round(y0 + (5.0 - y0) * (score - x0) / (lo - x0), 1)
+    x1, y1 = z["high_end"]
+    return round(5.0 + (y1 - 5.0) * (score - hi) / (x1 - hi), 1)
+
+
+def total_star(calm: float | None, ear: float | None, interest_level: str | None, cfg: dict,
+               interest_score: float | None = None) -> float | None:
     """😴 AI解析の総合。欠けた要素は除いて重みを再配分する。"""
     t = cfg["total"]
     vals = {}
-    if interest_level in t["interest_star"]:
+    if interest_score is not None:
+        vals["interest"] = interest_star(interest_score, cfg)
+    elif interest_level in t["interest_star"]:  # 旧形式(3段階だけ)の判定
         vals["interest"] = float(t["interest_star"][interest_level])
     if calm is not None:
         vals["calm"] = float(calm)
