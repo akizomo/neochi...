@@ -34,6 +34,7 @@ struct MorningView: View {
             .scrollContentBackground(.hidden)
             .background(Color.nc(.bgBase))
             .scrollDismissesKeyboard(.interactively)
+            .navigationDestination(for: String.self) { DetailView(showID: $0) }
             .navigationTitle(NCString.morningTitle)
             .toolbarTitleDisplayMode(.inlineLarge)
             .safeAreaInset(edge: .bottom) { actions }
@@ -79,11 +80,13 @@ struct MorningView: View {
     /// どのコンテンツを聴いたか。
     private func listenedSection(_ show: Show, _ episode: Episode?) -> some View {
         Section {
-            HStack(spacing: NCSpace.s3) {
-                ArtworkView(show: show)
-                VStack(alignment: .leading, spacing: NCSpace.s1) {
-                    Text(show.title).ncText(NCText.headline).lineLimit(2)
-                    if let e = episode { Text(e.number.map { "第\($0)回" } ?? e.title).ncText(NCText.footnote, .textSub) }
+            NavigationLink(value: show.id) {
+                HStack(spacing: NCSpace.s3) {
+                    ArtworkView(show: show)
+                    VStack(alignment: .leading, spacing: NCSpace.s1) {
+                        Text(show.title).ncText(NCText.headline).lineLimit(2)
+                        if let e = episode { Text(e.number.map { "第\($0)回" } ?? e.title).ncText(NCText.footnote, .textSub) }
+                    }
                 }
             }
             .listRowBackground(Color.nc(.surface))
