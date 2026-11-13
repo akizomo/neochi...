@@ -124,6 +124,29 @@ actor SupabaseClient {
         }, by: \.showID)
     }
 
+    private struct AnalysisRow: Decodable {
+        let episode_id: String; let calm_star: Double?; let ear_star: Double?
+        let interest_level: String?; let final_reason: String?
+    }
+
+    /// 解析結果を番組ごとにまとめる(★は各回の平均、一行は最新の回の理由)。
+    func fetchAspects(episodes: [String: [Episode]]) async throws -> [String: (ShowAspects, String?)] {
+        let data = try await request("analysis", query: [
+            URLQueryItem(name: "select", value: "episode_id,calm_star,ear_star,interest_level,final_reason"),
+            URLQueryItem(name: "order", value: "analyzed_at.desc")])
+        let rows = try Self.decoder.decode([AnalysisRow].self, from: data)
+        var showOf: [String: String] = [:]
+        for (sid, eps) in episodes { for e in eps { showOf[e.id] = sid } }
+        var out: [String: (ShowAspects, String?)] = [:]
+        for (sid, group) in Dictionary(grouping: rows.filter { showOf[$0.episode_id] != nil }, by: { showOf[$0.episode_id]! }) {
+            func avg(_ v: [Double]) -> Double? { v.isEmpty ? nil : v.reduce(0, +) / Double(v.count) }
+            let levels = group.compactMap { $0.interest_level.flatMap(InterestLevel.init(rawValue:)) }
+            out[sid] = (ShowAspects(calmStar: avg(group.compactMap(\.calm_star)), earStar: avg(group.compactMap(\.ear_star)),
+                                    interest: levels.first), group.first?.final_reason)
+        }
+        return out
+    }
+
     private struct LogUpload: Encodable {
         let id: String; let episode_id: String; let started_at: Date; let sleep_onset_at: Date?
         let latency_min: Int?; let source: String; let interest_vote: Int?; let calm_vote: Int?

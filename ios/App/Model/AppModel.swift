@@ -89,6 +89,10 @@ final class AppModel {
         guard SupabaseClient.shared.isConfigured else { return }
         guard let s = try? await SupabaseClient.shared.fetchShows(), !s.isEmpty,
               let e = try? await SupabaseClient.shared.fetchEpisodes() else { return }
+        var s = s
+        if let a = try? await SupabaseClient.shared.fetchAspects(episodes: e) {
+            for i in s.indices { if let (asp, line) = a[s[i].id] { s[i].aspects = asp; s[i].oneLiner = line } }
+        }
         shows = s; episodes = e
         // 見本の履歴は、実データには存在しない番組を指すので外す。
         let ids = Set(s.map(\.id))

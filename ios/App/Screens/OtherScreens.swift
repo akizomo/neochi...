@@ -65,6 +65,7 @@ struct DetailView: View {
                     }
                     MetricsRow(show: show)
                     if let line = show.oneLiner { Text(line).ncText(NCText.body) }
+                    if let a = show.aspects { AspectsView(aspects: a) }
                     HStack(spacing: NCSpace.s2) {
                         Button {
                             if let c = model.slate(night: 0).first(where: { $0.show.id == show.id }) ?? model.slate(night: 0).first {
@@ -150,5 +151,43 @@ struct LogView: View {
         }
         .padding(NCSpace.s4)
         .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+    }
+}
+
+/// 観点ごとの★(要因・琥珀)。合算しない。
+struct AspectsView: View {
+    let aspects: ShowAspects
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if let v = aspects.calmStar { row("起伏の少なさ", star: v) }
+            if let v = aspects.earStar { row("耳ざわり", star: v) }
+            if let l = aspects.interest { row("興味", text: label(l)) }
+        }
+        .padding(.horizontal, NCSpace.s4)
+        .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+    }
+
+    private func label(_ l: InterestLevel) -> String {
+        switch l { case .low: "低め"; case .mid: "ほどほど"; case .high: "高め" }
+    }
+
+    private func row(_ title: String, star: Double) -> some View {
+        HStack {
+            Text(title).ncText(NCText.body)
+            Spacer()
+            HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
+                Text("★").ncText(NCText.numSm, .accentFactor)
+                Text(String(format: "%.1f", star)).ncText(NCText.numMd, .accentFactor)
+            }
+        }.frame(minHeight: NCSize.tapMin)
+    }
+
+    private func row(_ title: String, text: String) -> some View {
+        HStack {
+            Text(title).ncText(NCText.body)
+            Spacer()
+            Text(text).ncText(NCText.body, .accentFactor)
+        }.frame(minHeight: NCSize.tapMin)
     }
 }

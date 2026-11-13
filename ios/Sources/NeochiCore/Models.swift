@@ -16,15 +16,31 @@ public struct Show: Identifiable, Hashable, Codable, Sendable {
     public var oneLiner: String?
     /// 実測の平均(分)。実測がなければ nil。
     public var avgMinutes: Int?
+    public var aspects: ShowAspects?
 
     public init(id: String, title: String, genre: String, artworkURL: URL? = nil, linkURL: URL? = nil,
                 appleURL: URL? = nil, star: Double? = nil, rank: ZRank? = nil,
-                oneLiner: String? = nil, avgMinutes: Int? = nil) {
+                oneLiner: String? = nil, avgMinutes: Int? = nil, aspects: ShowAspects? = nil) {
         self.id = id; self.title = title; self.genre = genre; self.artworkURL = artworkURL
         self.linkURL = linkURL; self.appleURL = appleURL; self.star = star; self.rank = rank
-        self.oneLiner = oneLiner; self.avgMinutes = avgMinutes
+        self.oneLiner = oneLiner; self.avgMinutes = avgMinutes; self.aspects = aspects
     }
 }
+
+/// 観点ごとのAI解析(番組の各回の平均)。合算した★とは別に見せる。
+public struct ShowAspects: Hashable, Codable, Sendable {
+    /// 起伏の少なさ(1.0〜5.0)。
+    public var calmStar: Double?
+    /// 耳ざわり(1.0〜5.0)。
+    public var earStar: Double?
+    /// 程よい興味の水準。
+    public var interest: InterestLevel?
+    public init(calmStar: Double? = nil, earStar: Double? = nil, interest: InterestLevel? = nil) {
+        self.calmStar = calmStar; self.earStar = earStar; self.interest = interest
+    }
+}
+
+public enum InterestLevel: String, Codable, Sendable { case low, mid, high }
 
 public enum ZRank: String, Codable, Sendable { case z = "Z", zz = "ZZ", zzz = "ZZZ" }
 
