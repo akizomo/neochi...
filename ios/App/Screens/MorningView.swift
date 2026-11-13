@@ -17,8 +17,6 @@ struct MorningView: View {
             VStack(alignment: .leading, spacing: NCSpace.s6) {
                 HStack {
                     Text("朝の振り返り").ncText(NCText.title).frame(minHeight: NCSize.tapMin, alignment: .leading)
-                    Spacer()
-                    Button("あとで") { dismiss() }.ncText(NCText.body, .textSub).frame(minHeight: NCSize.tapMin)
                 }
                 result
                 inputs
@@ -32,6 +30,8 @@ struct MorningView: View {
                         .background(Capsule().fill(Color.nc(.textMain)))
                 }
                 .padding(.top, NCSpace.s2)
+                Button("あとで") { dismiss() }
+                    .ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
             }
             .padding(NCSpace.s5)
         }

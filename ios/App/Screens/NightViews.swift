@@ -38,14 +38,11 @@ struct NightView: View {
             }
             .padding(.horizontal, NCSpace.s8)
             VStack {
-                HStack {
-                    Button("終わる") { model.endPlayback() }
-                        .ncText(NCText.body, .textSub).frame(minHeight: NCSize.tapMin)
-                    Spacer()
-                }
                 Spacer()
+                Button("終わる") { model.endPlayback() }
+                    .ncText(NCText.body, .textSub).frame(minHeight: NCSize.tapMin)
             }
-            .padding(.horizontal, NCSpace.s4)
+            .padding(.horizontal, NCSpace.s4).padding(.bottom, NCSpace.s6)
         }
         .environment(\.colorScheme, .dark)
         .preferredColorScheme(.dark)

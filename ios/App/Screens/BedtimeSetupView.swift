@@ -16,10 +16,11 @@ struct BedtimeSetupView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: NCSpace.s5) {
+        ScrollView { VStack(alignment: .leading, spacing: NCSpace.s5) {
             Text(editing ? "ふだんの就寝時刻" : "ふだん、何時ごろ寝ますか?").ncText(NCText.title)
             Text("この時刻の前後にアプリを開くと、夜の画面を出します。聴いた記録が貯まると、自動で合わせます。")
                 .ncText(NCText.body, .textSub)
+                .fixedSize(horizontal: false, vertical: true)
             DatePicker("就寝時刻", selection: $time, displayedComponents: .hourAndMinute)
                 .datePickerStyle(.wheel).labelsHidden().frame(maxWidth: .infinity)
             Button { model.saveBedtime(time, openNight: !editing); if editing { dismiss() } } label: {
@@ -31,7 +32,11 @@ struct BedtimeSetupView: View {
             }
         }
         .padding(NCSpace.s5)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, alignment: .top) }
+        .frame(maxHeight: .infinity)
         .background(Color.nc(.bgBase).ignoresSafeArea())
+        // 親指が届くよう、画面の下半分に収める。
+        .presentationDetents([.medium])
+        .presentationDragIndicator(editing ? .visible : .hidden)
     }
 }
