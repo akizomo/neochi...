@@ -87,9 +87,9 @@ final class AppModel {
     /// 番組と回を読み込む。未設定や失敗のときは、いまの内容のまま(端末内だけで動く)。
     func loadRemote() async {
         guard SupabaseClient.shared.isConfigured else { return }
-        guard let s = try? await SupabaseClient.shared.fetchShows(), !s.isEmpty,
+        guard let fetched = try? await SupabaseClient.shared.fetchShows(), !fetched.isEmpty,
               let e = try? await SupabaseClient.shared.fetchEpisodes() else { return }
-        var s = s
+        var s = fetched
         if let a = try? await SupabaseClient.shared.fetchAspects(episodes: e) {
             for i in s.indices { if let (asp, line) = a[s[i].id] { s[i].aspects = asp; s[i].oneLiner = line } }
         }
