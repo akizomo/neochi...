@@ -94,12 +94,14 @@ final class AppModel {
             for i in s.indices { if let (asp, line) = a[s[i].id] { s[i].aspects = asp; s[i].oneLiner = line } }
         }
         shows = s; episodes = e
-        // 見本の履歴は、実データには存在しない番組を指すので外す。
-        let ids = Set(s.map(\.id))
-        history = history.filter { ids.contains($0.showID) }
-        favorites = favorites.intersection(ids); queue = queue.filter(ids.contains)
-        if let c = currentShowID, !ids.contains(c) { currentShowID = nil }
-        if let l = lastNight, !ids.contains(l.showID) { lastNight = nil; pendingMorning = false }
+        // 見本の状態は、実データには存在しない番組を指すので外す。
+        let r = SessionState(history: history, favorites: favorites, queue: queue, currentShowID: currentShowID,
+                             lastNight: lastNight, genreStreakNights: genreStreakNights, pendingMorning: pendingMorning,
+                             reservedShowIDs: reservations.mapValues { $0.show.id })
+            .reconciled(toShowIDs: Set(s.map(\.id)))
+        history = r.history; favorites = r.favorites; queue = r.queue; currentShowID = r.currentShowID
+        lastNight = r.lastNight; genreStreakNights = r.genreStreakNights; pendingMorning = r.pendingMorning
+        reservations = reservations.filter { r.reservedShowIDs[$0.key] != nil }
     }
 
     func slate(night: Int) -> [Candidate] { TonightEngine.slate(night: night, ctx: context) }
