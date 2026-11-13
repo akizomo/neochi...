@@ -84,6 +84,7 @@ struct TonightView: View {
                 }
                 .scrollTargetLayout()
             }
+            .scrollClipDisabled()   // 影が、スクロール枠で切れないように
             .scrollTargetBehavior(.viewAligned)
             .contentMargins(.horizontal, 0, for: .scrollContent)
         }

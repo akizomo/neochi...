@@ -58,6 +58,15 @@ struct ToastView: View {
     }
 }
 
+/// カードの面を押したとき、面だけが少し沈む(中身は動かさない)。
+struct CardPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.6 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
 /// 番組をお気に入りに入れる。★(評価)と取り違えないよう、ブックマークのアイコン。
 struct FavoriteButton: View {
     let isOn: Bool
@@ -178,26 +187,38 @@ struct TonightCard: View {
     let onPrimary: () -> Void
 
     var body: some View {
-        VStack(spacing: NCSpace.s2) {
-            ReasonText(reason: candidate.reason).frame(minHeight: NCSpace.s5)
-            ArtworkView(show: candidate.show, size: NCSize.artworkXl, radius: NCRadius.lg)
+        // カードぜんたいが、詳細への入口。下のレイヤーがカードの面(押すと少し沈む)で、
+        // 上のレイヤーの文字や画像は、タップを下へ通す。主ボタンだけが別の操作。
+        ZStack {
             NavigationLink(value: candidate.show.id) {
-                Text(candidate.show.title).ncText(NCText.title).multilineTextAlignment(.center)
-            }.buttonStyle(.pressable)
-            Text(episodeLine).ncText(NCText.footnote, .textSub)
-            MetricsRow(show: candidate.show).padding(.top, NCSpace.s2)
-            Button(action: onPrimary) {
-                Label(primaryTitle, systemImage: primaryIcon)
-                    .ncText(NCText.headline, .bgBase)
-                    .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                    .background(Capsule().fill(Color.nc(.textMain)))
+                RoundedRectangle(cornerRadius: NCRadius.lg, style: .continuous).fill(Color.nc(.surface))
+                    .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)   // 面を、背景から浮かせる
+                    .contentShape(RoundedRectangle(cornerRadius: NCRadius.lg, style: .continuous))
             }
-            .buttonStyle(.pressable)
-            .padding(.top, NCSpace.s3)
+            .buttonStyle(CardPressStyle())
+            VStack(spacing: NCSpace.s2) {
+                Group {
+                    // どのカードも同じ高さにする。題名は2行ぶん、理由と回の行は1行ぶんを、いつも確保する。
+                    ReasonText(reason: candidate.reason).lineLimit(1).frame(minHeight: NCSpace.s5)
+                    ArtworkView(show: candidate.show, size: NCSize.artworkXl, radius: NCRadius.lg)
+                    Text(candidate.show.title).ncText(NCText.title)
+                        .lineLimit(2, reservesSpace: true).multilineTextAlignment(.center)
+                    Text(episodeLine).ncText(NCText.footnote, .textSub).lineLimit(1)
+                    MetricsRow(show: candidate.show).padding(.top, NCSpace.s2)
+                }
+                .allowsHitTesting(false)
+                Button(action: onPrimary) {
+                    Label(primaryTitle, systemImage: primaryIcon)
+                        .ncText(NCText.headline, .bgBase)
+                        .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                        .background(Capsule().fill(Color.nc(.textMain)))
+                }
+                .buttonStyle(.pressable)
+                .padding(.top, NCSpace.s3)
+            }
+            .padding(NCSpace.s4)
         }
-        .padding(NCSpace.s4)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: NCRadius.lg, style: .continuous).fill(Color.nc(.surface)))
     }
 
     private var episodeLine: String {
