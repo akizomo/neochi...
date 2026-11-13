@@ -32,6 +32,15 @@ struct NightView: View {
                 .accessibilityLabel("スリープタイマー \(model.player.timerMinutes > 0 ? "\(model.player.timerMinutes)分" : "なし")")
             }
             .padding(.horizontal, NCSpace.s8)
+            VStack {
+                HStack {
+                    Button("終わる") { model.endPlayback() }
+                        .ncText(NCText.body, .textSub).frame(minHeight: NCSize.tapMin)
+                    Spacer()
+                }
+                Spacer()
+            }
+            .padding(.horizontal, NCSpace.s4)
         }
         .environment(\.colorScheme, .dark)
         .preferredColorScheme(.dark)

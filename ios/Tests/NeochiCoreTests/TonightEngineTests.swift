@@ -131,4 +131,25 @@ final class TonightEngineTests: XCTestCase {
         XCTAssertEqual(log.latencyMinutes, 18)
         XCTAssertNil(SleepLog(id: "2", episodeID: "e", showID: "s", startedAt: start).latencyMinutes)
     }
+
+    // 「いま聴く」は、今夜の候補に入っていない番組でも、回を決めて返す
+    func testListenNowPicksEpisodeForAnyShow() {
+        let c = TonightEngine.listenNow(show: weather, ctx: ctx())
+        XCTAssertEqual(c?.show.id, "weather")
+        XCTAssertEqual(c?.episode?.id, "weather-88")
+        XCTAssertEqual(c?.playCount, 1)
+    }
+
+    // 聴いたことのある回は、回数が進む
+    func testListenNowCountsRepeat() {
+        let c = TonightEngine.listenNow(show: phonebook, ctx: ctx(history: play("phonebook", 7), lastNight: LastNight(showID: "phonebook", episodeID: "phonebook-7", minutes: 18)))
+        XCTAssertEqual(c?.episode?.id, "phonebook-7")
+        XCTAssertEqual(c?.playCount, 2)
+    }
+
+    // 回のない番組は nil
+    func testListenNowNilWithoutEpisodes() {
+        let empty = TonightContext(shows: [weather], episodes: [:], history: [], favorites: [], queue: [], currentShowID: nil, lastNight: nil, genreStreakNights: 0)
+        XCTAssertNil(TonightEngine.listenNow(show: weather, ctx: empty))
+    }
 }

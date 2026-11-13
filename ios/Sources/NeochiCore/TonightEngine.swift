@@ -83,6 +83,14 @@ public enum TonightEngine {
         return (chosen, counts[chosen.id, default: 0] + 1)
     }
 
+    /// 番組を指定して「いま聴く」ときの候補。回は `pick` と同じ決め方(時間帯には依存しない。昼寝でも同じ)。
+    /// 回がない番組は nil。
+    public static func listenNow(show: Show, ctx: TonightContext) -> Candidate? {
+        guard let p = pick(show: show, ctx: ctx) else { return nil }
+        return Candidate(show: show, episode: p.episode, playCount: p.playCount,
+                         reason: p.playCount > 1 ? .heardBefore : .unlistened)
+    }
+
     private static func current(_ ctx: TonightContext) -> Show? {
         ctx.shows.first(where: { $0.id == ctx.currentShowID }) ?? ctx.shows.first
     }

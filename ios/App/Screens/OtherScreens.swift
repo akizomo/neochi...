@@ -66,14 +66,21 @@ struct DetailView: View {
                     MetricsRow(show: show)
                     if let line = show.oneLiner { Text(line).ncText(NCText.body) }
                     if let a = show.aspects { AspectsView(aspects: a) }
+                    // 時間帯に関係なく、いつでも聴ける(昼寝など)。
+                    if let c = TonightEngine.listenNow(show: show, ctx: model.context) {
+                        Button { model.play(c) } label: {
+                            Text("いま聴く").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: 52)
+                                .background(Capsule().fill(Color.nc(.textMain)))
+                        }
+                    }
                     HStack(spacing: NCSpace.s2) {
                         Button {
                             if let c = model.slate(night: 0).first(where: { $0.show.id == show.id }) ?? model.slate(night: 0).first {
                                 model.reserve(night: 0, c); dismiss()
                             }
                         } label: {
-                            Text("今夜聴く").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: 52)
-                                .background(Capsule().fill(Color.nc(.textMain)))
+                            Text("今夜聴く").ncText(NCText.body).frame(maxWidth: .infinity, minHeight: 52)
+                                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
                         }
                         Button {
                             if let i = model.queue.firstIndex(of: show.id) { model.queue.remove(at: i) } else { model.queue.append(show.id) }

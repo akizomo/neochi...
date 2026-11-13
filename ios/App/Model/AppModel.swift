@@ -113,6 +113,13 @@ final class AppModel {
     func reserve(night: Int, _ candidate: Candidate) { reservations[night] = candidate }
     func cancelReservation(night: Int) { reservations[night] = nil }
 
+    /// 夜の画面を閉じて、再生を止める。朝の振り返りは、そのまま残る。
+    func endPlayback() {
+        player.stop()
+        playing = nil
+        nightScreen = nil
+    }
+
     /// 再生を始める。再生した番組が、次の「いまの番組」になる。
     func play(_ candidate: Candidate) {
         if let ep = candidate.episode {
