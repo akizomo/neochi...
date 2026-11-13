@@ -24,6 +24,8 @@ final class AppModel {
     let player = PlayerService()
     let health = HealthService()
     /// 保存した記録(端末内)。
+    /// 回ごとの解析(根拠のデータ込み)。
+    var analyses: [String: EpisodeAnalysis] = [:]
     var logs: [SleepLog] = LogStore.load()
     /// 今夜の再生の入眠(確認できたときだけ)と、再生開始の時刻・回。
     var onsetAt: Date?
@@ -145,9 +147,15 @@ final class AppModel {
         guard let fetched = try? await SupabaseClient.shared.fetchShows(), !fetched.isEmpty,
               let e = try? await SupabaseClient.shared.fetchEpisodes() else { return }
         var s = fetched
-        if let a = try? await SupabaseClient.shared.fetchAspects(episodes: e) {
-            for i in s.indices { if let (asp, line) = a[s[i].id] { s[i].aspects = asp; s[i].oneLiner = line } }
+        let list = (try? await SupabaseClient.shared.fetchAnalyses()) ?? []
+        let stats = (try? await SupabaseClient.shared.fetchStats()) ?? [:]
+        let showOf = Dictionary(uniqueKeysWithValues: e.flatMap { $0.value }.map { ($0.id, $0.showID) })
+        for i in s.indices {
+            let mine = list.filter { showOf[$0.episodeID] == s[i].id }
+            if !mine.isEmpty { s[i].aspects = EpisodeAnalysis.aspects(mine); s[i].oneLiner = mine.first?.reason }
+            if let st = stats[s[i].id] { s[i].stats = st; s[i].avgMinutes = st.avgMinutes }
         }
+        analyses = Dictionary(list.map { ($0.episodeID, $0) }, uniquingKeysWith: { a, _ in a })
         shows = s; episodes = e
         // 見本の状態は、実データには存在しない番組を指すので外す。
         let r = SessionState(history: history, favorites: favorites, queue: queue, currentShowID: currentShowID,
