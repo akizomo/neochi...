@@ -107,15 +107,37 @@ struct DetailView: View {
 struct LogView: View {
     @Environment(AppModel.self) private var model
 
+    @State private var editingBedtime = false
     private static let dateFormat: DateFormatter = {
         let f = DateFormatter(); f.locale = Locale(identifier: "ja_JP"); f.setLocalizedDateFormatFromTemplate("M/d E"); return f
     }()
+
+    /// ふだんの就寝時刻。履歴が足りないうちは手で決められ、十分になったら自動(ヘルスケアの記録)になる。
+    private var bedtimeRow: some View {
+        let auto = model.bedtimeIsAuto
+        let text = model.bedtimeMinute.map { String(format: "%d:%02d", $0 / 60, $0 % 60) } ?? "未設定"
+        return Button { editingBedtime = true } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("ふだんの就寝時刻").ncText(NCText.footnote, .textSub)
+                    Text(text).ncText(NCText.numMd)
+                }
+                Spacer()
+                if auto { Text("ヘルスケアの記録から").ncText(NCText.footnote, .textSub) }
+                else { HStack(spacing: 4) { Text("変える"); Image(systemName: "chevron.right") }.ncText(NCText.footnote, .textSub) }
+            }
+            .padding(.horizontal, NCSpace.s4).frame(minHeight: 72)
+            .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+        }
+        .buttonStyle(.plain).disabled(auto)
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: NCSpace.s3) {
                     Text("記録").ncText(NCText.title).frame(minHeight: NCSize.tapMin, alignment: .leading)
+                    bedtimeRow
                     if model.logs.isEmpty {
                         Text("まだ記録がありません。").ncText(NCText.footnote, .textSub)
                     } else {
@@ -127,6 +149,7 @@ struct LogView: View {
             }
             .background(Color.nc(.bgBase))
             .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         }
     }
 

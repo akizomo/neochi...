@@ -57,6 +57,13 @@ public struct BedtimeWindow: Hashable, Sendable {
         return byNight.values.sorted()
     }
 
+    /// 就寝時刻の中央値(0時からの分。夜またぎは正午起点で数える)。記録が最低件数に満たなければ nil。
+    public static func typicalMinute(starts: [Date], calendar: Calendar) -> Int? {
+        guard starts.count >= minimumSamples else { return nil }
+        let m = starts.map { minuteSinceNoon($0, calendar: calendar) }.sorted()
+        return (m[m.count / 2] + 720) % 1440
+    }
+
     /// いま(`now`)が就寝の時間帯か。記録も初回の就寝時刻もなければ false(昼の画面)。
     public static func isInWindow(now: Date, starts: [Date], fallback: Date?, calendar: Calendar) -> Bool {
         guard let w = make(starts: starts, weekendNight: isWeekendNight(now, calendar: calendar),

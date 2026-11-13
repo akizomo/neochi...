@@ -62,11 +62,18 @@ final class AppModel {
         openNightIfBedtime()
     }
 
-    func saveBedtime(_ date: Date?) {
+    /// 記録タブに出す、ふだんの就寝時刻。履歴が十分なら自動(中央値)、足りなければ手で決めたもの。
+    var bedtimeIsAuto: Bool { BedtimeWindow.typicalMinute(starts: healthStarts, calendar: .current) != nil }
+    var bedtimeMinute: Int? {
+        if let m = BedtimeWindow.typicalMinute(starts: healthStarts, calendar: .current) { return m }
+        return bedtimeFallback.map { Calendar.current.component(.hour, from: $0) * 60 + Calendar.current.component(.minute, from: $0) }
+    }
+
+    func saveBedtime(_ date: Date?, openNight: Bool = true) {
         bedtimeFallback = date; bedtimeAsked = true
         UserDefaults.standard.set(date, forKey: "bedtimeFallback")
         UserDefaults.standard.set(true, forKey: "bedtimeAsked")
-        openNightIfBedtime()
+        if openNight { openNightIfBedtime() }
     }
 
     var inBedtimeWindow: Bool {

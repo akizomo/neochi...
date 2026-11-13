@@ -83,4 +83,11 @@ final class BedtimeWindowTests: XCTestCase {
         let n = BedtimeWindow.nightlyStarts(from: s, calendar: cal)
         XCTAssertEqual(n, [date(2026, 11, 10, 23, 10), date(2026, 11, 11, 22, 50)])
     }
+
+    // 就寝時刻の中央値。23:50 と 0:10 が混ざっても、夜またぎで数える。件数が足りなければ nil
+    func testTypicalMinute() {
+        let s = [date(2026, 11, 2, 23, 50), date(2026, 11, 4, 0, 10), date(2026, 11, 5, 23, 30), date(2026, 11, 6, 23, 40), date(2026, 11, 9, 23, 55)]
+        XCTAssertEqual(BedtimeWindow.typicalMinute(starts: s, calendar: cal), 23 * 60 + 50)
+        XCTAssertNil(BedtimeWindow.typicalMinute(starts: Array(s.prefix(4)), calendar: cal))
+    }
 }
