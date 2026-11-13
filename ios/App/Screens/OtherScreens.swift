@@ -95,20 +95,60 @@ struct DetailView: View {
     }
 }
 
-/// 記録: 日付ごとの結果。(実データはあとでつなぐ)
+/// 記録: 日付ごとの結果(新しい順)。
 struct LogView: View {
+    @Environment(AppModel.self) private var model
+
+    private static let dateFormat: DateFormatter = {
+        let f = DateFormatter(); f.locale = Locale(identifier: "ja_JP"); f.setLocalizedDateFormatFromTemplate("M/d E"); return f
+    }()
+
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading) {
-                Text("記録").ncText(NCText.title).frame(minHeight: NCSize.tapMin, alignment: .leading)
-                Text("まだ記録がありません。").ncText(NCText.footnote, .textSub)
-                Spacer()
+            ScrollView {
+                VStack(alignment: .leading, spacing: NCSpace.s3) {
+                    Text("記録").ncText(NCText.title).frame(minHeight: NCSize.tapMin, alignment: .leading)
+                    if model.logs.isEmpty {
+                        Text("まだ記録がありません。").ncText(NCText.footnote, .textSub)
+                    } else {
+                        ForEach(model.logs.sorted { $0.startedAt > $1.startedAt }) { log in row(log) }
+                    }
+                }
+                .padding(.horizontal, NCSpace.s4)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, NCSpace.s4)
-            .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.nc(.bgBase))
             .toolbar(.hidden, for: .navigationBar)
         }
     }
-}
 
+    private func row(_ log: SleepLog) -> some View {
+        let title = model.shows.first { $0.id == log.showID }?.title ?? ""
+        return HStack(alignment: .center, spacing: NCSpace.s3) {
+            VStack(alignment: .leading, spacing: NCSpace.s1) {
+                Text(Self.dateFormat.string(from: log.startedAt)).ncText(NCText.footnote, .textSub)
+                Text(title).ncText(NCText.headline).lineLimit(1)
+                if let note = log.note { Text(note).ncText(NCText.footnote, .textSub).lineLimit(2) }
+            }
+            Spacer(minLength: NCSpace.s2)
+            VStack(alignment: .trailing, spacing: NCSpace.s1) {
+                if let m = log.latencyMinutes {
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text("\(m)").ncText(NCText.numMd, .accentResult)
+                        Text("分").ncText(NCText.footnote, .accentResult)
+                    }
+                } else {
+                    Text("―").ncText(NCText.numMd, .textSub)
+                }
+                if let c = log.calmVote {
+                    HStack(spacing: 2) {
+                        Text("★").ncText(NCText.numSm, .accentFactor)
+                        Text("\(c)").ncText(NCText.numSm, .accentFactor)
+                    }
+                }
+            }
+        }
+        .padding(NCSpace.s4)
+        .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+    }
+}
