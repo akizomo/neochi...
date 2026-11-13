@@ -61,7 +61,7 @@ def test_z_rank(zcfg):
 def test_plan_segments(cfg):
     assert transcribe.plan_segments(600, cfg) == [(0.0, 600)]
     segs = transcribe.plan_segments(3600, cfg)
-    assert segs == [(0.0, 1800.0)]  # 冒頭30分だけ(中盤のランダム区間は使わない)
+    assert segs == [(0.0, 1200.0)]  # 冒頭20分だけ(中盤のランダム区間は使わない)
 
 
 def test_rate_is_plateau_not_slower_is_better(cfg):
@@ -128,3 +128,14 @@ def test_store_update_changes_only_given_columns(tmp_path):
     st.update("show", "none", {"show_star": 1.0})  # 行がなければ何もしない(作らない)
     assert st.get("show", "s1") == {"id": "s1", "title": "T", "rss_url": "u", "show_star": 4.0}
     assert st.get("show", "none") is None
+
+
+def test_shard_splits_shows_without_overlap():
+    from neochi.cli import _shard
+    from neochi import feeds
+    shows = [feeds.Show(id=feeds.show_id(f"http://x/{i}"), title=str(i), publisher="", rss_url=f"http://x/{i}",
+                        genre="", lang="ja") for i in range(30)]
+    parts = [_shard(shows, f"{i}/3") for i in range(3)]
+    assert sum(len(p) for p in parts) == 30
+    assert len({s.id for p in parts for s in p}) == 30
+    assert _shard(shows, None) == shows

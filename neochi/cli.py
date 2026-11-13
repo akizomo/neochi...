@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import uuid
 from pathlib import Path
 
 import yaml
@@ -21,12 +22,24 @@ def load_z_config() -> dict:
     return yaml.safe_load((ROOT / "config" / "z_rank.yaml").read_text(encoding="utf-8"))
 
 
+def _shard(shows, spec: str | None):
+    """"i/n" を指定すると、番組ID(固定のUUID)で n 分割したうちの i 番目だけを返す。並列に回すときに使う。"""
+    if not spec:
+        return shows
+    i, n = (int(x) for x in spec.split("/"))
+    if n < 1 or not 0 <= i < n:
+        raise SystemExit(f"--shard は i/n の形で、0 <= i < n にしてください: {spec}")
+    return [s for s in shows if uuid.UUID(s.id).int % n == i]
+
+
 def cmd_run(a) -> int:
     cfg, store = load_config(), open_store(a.store)
-    shows = feeds.load_shows(a.csv)[: a.limit]
+    shows = _shard(feeds.load_shows(a.csv), a.shard)[: a.limit]
     deps = pipeline.Deps(judge=None) if a.judge == "session" else pipeline.Deps()
     done = 0
     for show in shows:
+        if a.max_new and done >= a.max_new:
+            break
         eps = feeds.fetch_episodes(show)[: a.per_show]
         for ep in eps:
             if not a.force and store.get("analysis", ep.id):
@@ -92,6 +105,7 @@ def main(argv=None) -> int:
     r.add_argument("--csv", default="data/shows.csv")
     r.add_argument("--limit", type=int, default=10, help="番組数の上限")
     r.add_argument("--per-show", type=int, default=1, help="番組あたり最新何回を見るか")
+    r.add_argument("--shard", default=None, help="並列実行用。例: 0/3 は番組を3分割した最初の1つ")
     r.add_argument("--force", action="store_true", help="解析済みの回も再解析する")
     r.add_argument("--max-new", type=int, default=0, help="1回の実行で新しく解析する件数の上限(0 = 無制限)")
     r.add_argument("--judge", choices=["api", "session"], default="session",
