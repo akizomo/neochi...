@@ -1,3 +1,5 @@
+import json
+import pytest
 import numpy as np
 
 from neochi import features, feeds, llm, scoring, strings, transcribe
@@ -170,3 +172,23 @@ def test_timeline_and_ear_parts(cfg):
     f.update({"speech_rate": rp["speech_rate"]})
     parts = scoring.ear_parts(f, "ja", cfg)
     assert set(parts) >= {"rate", "volume", "sudden"} and all(1 <= v <= 5 for v in parts.values())
+
+
+def test_item_judgement_and_zone(cfg):
+    from neochi import llm, scoring
+    raw = json.dumps({"interest": {"A": 2, "B": {"score": 1, "min": 3}, "C": 0, "D": 1, "E": 0},
+                      "calm": {"A": 1, "B": 0, "C": 2, "D": 0},
+                      "moments": [{"min": 12, "note": "結末が明かされます"}], "reason": "r"})
+    v = llm.parse_judgement(raw)
+    assert v["interest_score"] == 4 and v["interest_level"] == "mid" and v["calm_star"] == 3.5
+    assert v["items"]["interest"]["B"] == {"score": 1, "min": 3} and v["moments"][0]["min"] == 12
+    assert scoring.interest_star(5, cfg) == 5.0
+    assert scoring.interest_star(1, cfg) == 3.0 and scoring.interest_star(10, cfg) == 1.0
+    assert scoring.interest_star(2.5, cfg) == 4.0 and scoring.interest_star(8, cfg) == 3.0
+    with pytest.raises(ValueError):
+        llm.parse_judgement(json.dumps({"interest": {"A": 3}, "calm": {}}))
+
+
+def test_minute_marks():
+    from neochi.pipeline import with_minute_marks
+    assert with_minute_marks([(0, 5, "あ"), (30, 40, "い"), (61, 70, "う")]) == "[0分] あい\n[1分] う"

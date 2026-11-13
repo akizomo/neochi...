@@ -57,11 +57,27 @@ def ear_star(features: dict, lang: str, cfg: dict) -> float | None:
     return _star(sum(parts[k] * w[k] for k in parts) / sum(w.values()))
 
 
-def total_star(calm: float | None, ear: float | None, interest_level: str | None, cfg: dict) -> float | None:
+def interest_star(score: float, cfg: dict) -> float:
+    """🎯★。引き込み力(1〜10)がゾーンに入れば満点、外れるほど下がる(左右で下がり方が違う)。"""
+    z = cfg["total"]["interest_zone"]
+    lo, hi = z["zone"]
+    if lo <= score <= hi:
+        return 5.0
+    if score < lo:
+        x0, y0 = z["low_end"]
+        return round(y0 + (5.0 - y0) * (score - x0) / (lo - x0), 1)
+    x1, y1 = z["high_end"]
+    return round(5.0 + (y1 - 5.0) * (score - hi) / (x1 - hi), 1)
+
+
+def total_star(calm: float | None, ear: float | None, interest_level: str | None, cfg: dict,
+               interest_score: float | None = None) -> float | None:
     """😴 AI解析の総合。欠けた要素は除いて重みを再配分する。"""
     t = cfg["total"]
     vals = {}
-    if interest_level in t["interest_star"]:
+    if interest_score is not None:
+        vals["interest"] = interest_star(interest_score, cfg)
+    elif interest_level in t["interest_star"]:  # 旧形式(3段階だけ)の判定
         vals["interest"] = float(t["interest_star"][interest_level])
     if calm is not None:
         vals["calm"] = float(calm)

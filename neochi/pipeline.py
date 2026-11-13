@@ -26,7 +26,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
     """音声DL → 特徴量 → 文字起こし → LLM → ★ → upsert。音声は with を抜けると消える。"""
     deps = deps or Deps()
     feat: dict = {}
-    text, minutes = "", 0.0
+    text, minutes, spans = "", 0.0, []
     input_depth = "meta"
 
     try:
@@ -58,7 +58,8 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
         d = Path(deps.pending_dir)
         d.mkdir(parents=True, exist_ok=True)
         (d / f"{_safe(ep.id)}.json").write_text(json.dumps({
-            "episode_id": ep.id, "show": show.title, "title": ep.title, "transcript": text,
+            "episode_id": ep.id, "show": show.title, "title": ep.title,
+            "transcript": with_minute_marks(spans) if spans else text,
         }, ensure_ascii=False, indent=1), encoding="utf-8")
     elif input_depth == "transcript":
         try:
@@ -90,12 +91,24 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
     return row
 
 
+def with_minute_marks(spans) -> str:
+    """文字起こしに [n分] の目印を入れる(判定で、根拠の時刻を書けるようにする)。"""
+    out, cur = [], -1
+    for a, _b, t in spans:
+        m = int(a // 60)
+        if m != cur:
+            out.append(f"\n[{m}分] ")
+            cur = m
+        out.append(t)
+    return "".join(out).strip()
+
+
 def _safe(eid: str) -> str:
     return "".join(c if c.isalnum() or c in "-_" else "_" for c in eid)[:120]
 
 
-def _stars(calm, ear, level, episode_id: str, cfg: dict, store):
-    total = scoring.total_star(calm, ear, level, cfg)
+def _stars(calm, ear, level, episode_id: str, cfg: dict, store, interest_score=None):
+    total = scoring.total_star(calm, ear, level, cfg, interest_score)
     crowd, n = store.community(episode_id)
     final, final_reason = scoring.final_star(total, crowd, n, cfg)
     return total, final, final_reason
@@ -104,15 +117,20 @@ def _stars(calm, ear, level, episode_id: str, cfg: dict, store):
 def apply_judgement(j: dict, cfg: dict, store) -> dict:
     """セッションで判定した🌊🎯を、保存済みの解析に入れて★を計算し直す。
 
-    j = {"episode_id", "calm_star", "interest_level", "reason"}。値の検証は llm.parse_judgement と同じ。
+    j は config/rubric.md の出力形式(項目ごとの 0/1/2)に episode_id を足したもの。値の検証は llm.parse_judgement。
     """
     v = llm.parse_judgement(json.dumps(j, ensure_ascii=False))
     row = store.get("analysis", j["episode_id"])
     if row is None:
         raise KeyError(f"解析が見つかりません: {j['episode_id']}")
-    total, final, final_reason = _stars(v["calm_star"], row.get("ear_star"), v["interest_level"], j["episode_id"], cfg, store)
+    total, final, final_reason = _stars(v["calm_star"], row.get("ear_star"), v["interest_level"], j["episode_id"],
+                                        cfg, store, v["interest_score"])
+    reasons = {**(row.get("reasons") or {}), "llm": v["reason"]}
+    if v["items"]:
+        reasons["items"] = v["items"]
+    reasons["moments"] = v["moments"]
     new = {**row, "calm_star": v["calm_star"], "interest_level": v["interest_level"],
-           "total_star": total, "final_star": final, "final_reason": final_reason,
-           "reasons": {**(row.get("reasons") or {}), "llm": v["reason"]}}
+           "interest_score": v["interest_score"],
+           "total_star": total, "final_star": final, "final_reason": final_reason, "reasons": reasons}
     store.upsert("analysis", new)
     return new
