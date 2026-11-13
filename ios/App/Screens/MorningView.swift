@@ -45,7 +45,11 @@ struct MorningView: View {
     private var resultSection: some View {
         Section {
             VStack(alignment: .leading, spacing: NCSpace.s2) {
-                Text(NCString.resultFrom).ncText(NCText.footnote, .textSub)
+                HStack {
+                    Text(NCString.resultFrom).ncText(NCText.footnote, .textSub)
+                    Spacer()
+                    InfoButton(title: NCString.infoResultTitle, lines: NCString.infoResult)
+                }
                 if let m = minutes {
                     HStack(alignment: .firstTextBaseline, spacing: NCSpace.s2) {
                         Text("\(m)").ncText(NCText.numHero, .accentResult)
@@ -79,12 +83,12 @@ struct MorningView: View {
     /// そのコンテンツの評価。2つの質問は、同じ部品(`ChoiceScale`)で出す。
     private var ratingSection: some View {
         Section {
-            ChoiceScale(question: NCString.interestQuestion, count: InterestAnswer.allCases.count,
+            ChoiceScale(question: NCString.interestQuestion, infoTitle: NCString.infoInterestTitle, infoLines: NCString.infoInterest, count: InterestAnswer.allCases.count,
                         selection: interestBinding,
                         leading: NCString.interestLabel(.bored), middle: NCString.interestLabel(.justRight),
                         trailing: NCString.interestLabel(.absorbed))
                 .listRowBackground(Color.nc(.surface))
-            ChoiceScale(question: NCString.calmQuestion, count: 5, selection: $calm,
+            ChoiceScale(question: NCString.calmQuestion, infoTitle: NCString.infoCalmTitle, infoLines: NCString.infoCalm, count: 5, selection: $calm,
                         leading: NCString.calmLow, trailing: NCString.calmHigh)
                 .listRowBackground(Color.nc(.surface))
         } header: { Text(NCString.ratingHeader) } footer: { Text(NCString.ratingFooter) }

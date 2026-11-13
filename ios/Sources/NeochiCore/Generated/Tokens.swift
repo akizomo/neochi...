@@ -99,6 +99,7 @@ public enum NCSize {
     public static let badgeH: Double = 24
     public static let iconMd: Double = 18
     public static let iconPlay: Double = 36
+    public static let popoverW: Double = 300
 }
 
 public enum NCDuration {

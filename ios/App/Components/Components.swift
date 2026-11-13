@@ -176,8 +176,36 @@ struct TonightCard: View {
 
 /// 質問の選択肢を、同じ形で出す部品。数字のセグメントと、その下の言葉(左端・中央・右端)。
 /// 3択でも5段階でも、同じ見た目・同じ置き方。何も選ばない(未回答)こともできる。
+struct InfoButton: View {
+    let title: String
+    let lines: [String]
+    @State private var open = false
+
+    var body: some View {
+        Button { open = true } label: {
+            Image(systemName: "info.circle").font(.system(size: NCSize.iconMd))
+                .foregroundStyle(Color.nc(.textSub)).frame(minWidth: NCSize.tapMin, minHeight: NCSize.tapMin)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title)の説明")
+        .popover(isPresented: $open) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: NCSpace.s3) {
+                    Text(title).ncText(NCText.headline)
+                    ForEach(lines, id: \.self) { Text($0).ncText(NCText.body) }
+                }
+                .padding(NCSpace.s4)
+                .frame(width: NCSize.popoverW, alignment: .leading)
+            }
+            .presentationCompactAdaptation(.popover)
+        }
+    }
+}
+
 struct ChoiceScale: View {
     let question: String
+    var infoTitle: String? = nil
+    var infoLines: [String] = []
     let count: Int
     @Binding var selection: Int?
     let leading: String
@@ -186,7 +214,11 @@ struct ChoiceScale: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: NCSpace.s2) {
-            Text(question).ncText(NCText.headline)
+            HStack {
+                Text(question).ncText(NCText.headline)
+                Spacer()
+                if let infoTitle { InfoButton(title: infoTitle, lines: infoLines) }
+            }
             Picker(question, selection: $selection) {
                 ForEach(1...count, id: \.self) { Text("\($0)").tag(Optional($0)) }
             }
