@@ -22,17 +22,17 @@ struct NightView: View {
                         .frame(width: NCSize.playD, height: NCSize.playD)
                         .foregroundStyle(Color.nc(.textMain))
                         .background(Circle().fill(Color.nc(.surface)))
-                        .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
+                        .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
                 }
                 .accessibilityLabel(model.player.isPlaying ? "一時停止" : "再生")
                 Button { timerOpen = true } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: NCSpace.s2) {
                         Image(systemName: "clock")
                         if model.player.timerMinutes > 0 { Text("\(model.player.timerMinutes)分") }
                     }
                     .ncText(NCText.body, .textSub)
                     .padding(.horizontal, NCSpace.s3).frame(minWidth: NCSize.tapMin, minHeight: NCSize.tapMin)
-                    .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
+                    .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
                 }
                 .accessibilityLabel("スリープタイマー \(model.player.timerMinutes > 0 ? "\(model.player.timerMinutes)分" : "なし")")
             }
@@ -71,7 +71,7 @@ struct TimerSheet: View {
                         Text(m == 0 ? "なし" : "\(m)分").ncText(NCText.body, selected ? .bgBase : .textMain)
                             .frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
                             .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(selected ? Color.nc(.textMain) : Color.clear))
-                            .overlay(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).strokeBorder(Color.nc(.borderControl), lineWidth: selected ? 0 : 1))
+                            .overlay(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).strokeBorder(Color.nc(.borderControl), lineWidth: selected ? 0 : NCSize.borderW))
                     }
                 }
             }
@@ -79,7 +79,7 @@ struct TimerSheet: View {
         }
         .padding(NCSpace.s4)
         .background(Color.nc(.bgBase))
-        .presentationDetents([.height(160)])
+        .presentationDetents([.height(NCSize.sheetH)])
         .environment(\.colorScheme, .dark)
     }
 }

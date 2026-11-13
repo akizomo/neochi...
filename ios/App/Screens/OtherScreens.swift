@@ -33,6 +33,7 @@ struct DiscoverView: View {
             .background(Color.nc(.bgBase))
             .navigationDestination(for: String.self) { DetailView(showID: $0) }
             .navigationTitle("見つける")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 
@@ -41,7 +42,7 @@ struct DiscoverView: View {
             Text(title).ncText(NCText.body, selected ? .bgBase : .textMain)
                 .padding(.horizontal, NCSpace.s4).frame(minHeight: NCSize.tapMin)
                 .background(Capsule().fill(selected ? Color.nc(.textMain) : Color.clear))
-                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: selected ? 0 : 1))
+                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: selected ? 0 : NCSize.borderW))
         }
     }
 }
@@ -68,7 +69,7 @@ struct DetailView: View {
                     // 時間帯に関係なく、いつでも聴ける(昼寝など)。
                     if let c = TonightEngine.listenNow(show: show, ctx: model.context) {
                         Button { model.play(c) } label: {
-                            Text("いま聴く").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: 52)
+                            Text("いま聴く").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
                                 .background(Capsule().fill(Color.nc(.textMain)))
                         }
                     }
@@ -78,15 +79,15 @@ struct DetailView: View {
                                 model.reserve(night: 0, c); dismiss()
                             }
                         } label: {
-                            Text("今夜聴く").ncText(NCText.body).frame(maxWidth: .infinity, minHeight: 52)
-                                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
+                            Text("今夜聴く").ncText(NCText.body).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
                         }
                         Button {
                             if let i = model.queue.firstIndex(of: show.id) { model.queue.remove(at: i) } else { model.queue.append(show.id) }
                         } label: {
                             Text(model.queue.contains(show.id) ? "次に聴くから外す" : "次に聴く").ncText(NCText.body)
-                                .frame(maxWidth: .infinity, minHeight: 52)
-                                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
+                                .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
                         }
                     }
                 }
@@ -117,15 +118,15 @@ struct LogView: View {
         let text = model.bedtimeMinute.map { String(format: "%d:%02d", $0 / 60, $0 % 60) } ?? "未設定"
         return Button { editingBedtime = true } label: {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: NCSpace.s1) {
                     Text("ふだんの就寝時刻").ncText(NCText.footnote, .textSub)
                     Text(text).ncText(NCText.numMd)
                 }
                 Spacer()
                 if auto { Text("ヘルスケアの記録から").ncText(NCText.footnote, .textSub) }
-                else { HStack(spacing: 4) { Text("変える"); Image(systemName: "chevron.right") }.ncText(NCText.footnote, .textSub) }
+                else { HStack(spacing: NCSpace.s1) { Text("変える"); Image(systemName: "chevron.right") }.ncText(NCText.footnote, .textSub) }
             }
-            .padding(.horizontal, NCSpace.s4).frame(minHeight: 72)
+            .padding(NCSpace.s4)
             .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
         }
         .buttonStyle(.plain).disabled(auto)
@@ -147,6 +148,7 @@ struct LogView: View {
             }
             .background(Color.nc(.bgBase))
             .navigationTitle("記録")
+            .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         }
     }
@@ -162,7 +164,7 @@ struct LogView: View {
             Spacer(minLength: NCSpace.s2)
             VStack(alignment: .trailing, spacing: NCSpace.s1) {
                 if let m = log.latencyMinutes {
-                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
                         Text("\(m)").ncText(NCText.numMd, .accentResult)
                         Text("分").ncText(NCText.footnote, .accentResult)
                     }
@@ -170,7 +172,7 @@ struct LogView: View {
                     Text("―").ncText(NCText.numMd, .textSub)
                 }
                 if let c = log.calmVote {
-                    HStack(spacing: 2) {
+                    HStack(spacing: NCSpace.s1) {
                         Text("★").ncText(NCText.numSm, .accentFactor)
                         Text("\(c)").ncText(NCText.numSm, .accentFactor)
                     }

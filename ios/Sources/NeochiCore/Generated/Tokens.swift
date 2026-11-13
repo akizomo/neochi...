@@ -92,6 +92,10 @@ public enum NCSize {
     public static let playD: Double = 96
     public static let cardW: Double = 1080
     public static let cardH: Double = 1350
+    public static let buttonH: Double = 52
+    public static let dividerH: Double = 22
+    public static let sheetH: Double = 160
+    public static let borderW: Double = 1
 }
 
 public enum NCDuration {

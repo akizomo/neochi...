@@ -28,7 +28,7 @@ struct MorningView: View {
                     dismiss()
                 } label: {
                     Text("記録する").ncText(NCText.headline, .bgBase)
-                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
                         .background(Capsule().fill(Color.nc(.textMain)))
                 }
                 .padding(.top, NCSpace.s2)
@@ -78,7 +78,7 @@ struct MorningView: View {
                     .padding(NCSpace.s3)
                     .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
                     .overlay(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous)
-                        .strokeBorder(Color.nc(.borderControl), lineWidth: 1))
+                        .strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
             }
         }
     }

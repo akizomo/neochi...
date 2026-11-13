@@ -20,7 +20,7 @@ struct ArtworkView: View {
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Color.nc(.line), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Color.nc(.line), lineWidth: NCSize.borderW))
         .accessibilityHidden(true)
     }
 
@@ -49,7 +49,7 @@ struct FavoriteButton: View {
                     .frame(width: NCSize.stockD, height: NCSize.stockD)
                     .foregroundStyle(Color.nc(isOn ? .bgBase : .textMain))
                     .background(Circle().fill(isOn ? Color.nc(.textMain) : Color.clear))
-                    .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: isOn ? 0 : 1))
+                    .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: isOn ? 0 : NCSize.borderW))
             }
         }
         .accessibilityLabel(isOn ? "\(title)をお気に入りから外す" : "\(title)をお気に入りに追加")
@@ -68,7 +68,7 @@ struct RankBadge: View {
         } else {
             Text(NCString.researching).ncText(NCText.caption, .textSub)
                 .padding(.horizontal, NCSpace.s3).frame(minHeight: 24)
-                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
+                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
         }
     }
 }
@@ -83,7 +83,7 @@ struct MetricsRow: View {
                 Text("★").ncText(NCText.numSm, .accentFactor)
                 Text(show.star.map { String(format: "%.1f", $0) } ?? "―").ncText(NCText.numMd, .accentFactor)
             }
-            Rectangle().fill(Color.nc(.line)).frame(width: 1, height: 22)
+            Rectangle().fill(Color.nc(.line)).frame(width: NCSize.borderW, height: NCSize.dividerH)
             HStack(spacing: NCSpace.s2) {
                 RankBadge(rank: show.rank)
                 if let m = show.avgMinutes {
@@ -121,12 +121,12 @@ struct ScoreRow: View {
     var body: some View {
         HStack(spacing: NCSpace.s3) {
             ArtworkView(show: show)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: NCSpace.s1) {
                 Text(show.title).ncText(NCText.headline).lineLimit(1)
                 if let line = show.oneLiner {
                     Text(line).ncText(NCText.footnote, .textSub).lineLimit(2)
                 }
-                MetricsRow(show: show).padding(.top, 6)
+                MetricsRow(show: show).padding(.top, NCSpace.s2)
             }
             Spacer(minLength: 0)
             FavoriteButton(isOn: isFavorite, title: show.title, action: onToggleFavorite)
@@ -147,7 +147,7 @@ struct TonightCard: View {
 
     var body: some View {
         VStack(spacing: NCSpace.s2) {
-            ReasonText(reason: candidate.reason).frame(minHeight: 20)
+            ReasonText(reason: candidate.reason).frame(minHeight: NCSpace.s5)
             ArtworkView(show: candidate.show, size: NCSize.artworkXl, radius: NCRadius.lg)
             NavigationLink(value: candidate.show.id) {
                 Text(candidate.show.title).ncText(NCText.title).multilineTextAlignment(.center)
@@ -157,7 +157,7 @@ struct TonightCard: View {
             Button(action: onPrimary) {
                 Label(primaryTitle, systemImage: primaryIcon)
                     .ncText(NCText.headline, .bgBase)
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
                     .background(Capsule().fill(Color.nc(.textMain)))
             }
             .padding(.top, NCSpace.s3)

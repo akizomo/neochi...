@@ -23,7 +23,7 @@ struct BedtimeSetupView: View {
             DatePicker("就寝時刻", selection: $time, displayedComponents: .hourAndMinute)
                 .datePickerStyle(.wheel).labelsHidden().frame(maxWidth: .infinity)
             Button { model.saveBedtime(time, openNight: !editing); if editing { dismiss() } } label: {
-                Text("決める").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: 52)
+                Text("決める").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
                     .background(Capsule().fill(Color.nc(.textMain)))
             }
             Button { if editing { dismiss() } else { model.saveBedtime(nil) } } label: {

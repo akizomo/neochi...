@@ -22,6 +22,7 @@ struct TonightView: View {
             .background(Color.nc(.bgBase))
             .navigationDestination(for: String.self) { DetailView(showID: $0) }
             .navigationTitle(labels[night])
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     stepButton("arrow.left", label: "前の晩", enabled: night > 0) { night -= 1 }
@@ -41,7 +42,7 @@ struct TonightView: View {
     private var recap: some View {
         Button { model.morningOpen = true } label: {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: NCSpace.s1) {
                     Text("昨夜の結果").ncText(NCText.footnote, .textSub)
                     HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
                         Text("\(model.lastNight?.minutes ?? 0)").ncText(NCText.numMd, .accentResult)
@@ -49,9 +50,9 @@ struct TonightView: View {
                     }
                 }
                 Spacer()
-                HStack(spacing: 4) { Text("振り返る"); Image(systemName: "chevron.right") }.ncText(NCText.footnote, .textSub)
+                HStack(spacing: NCSpace.s1) { Text("振り返る"); Image(systemName: "chevron.right") }.ncText(NCText.footnote, .textSub)
             }
-            .padding(.horizontal, NCSpace.s4).frame(minHeight: 72)
+            .padding(NCSpace.s4)
             .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
         }.buttonStyle(.plain)
     }
