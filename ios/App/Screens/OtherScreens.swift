@@ -90,7 +90,7 @@ struct DetailView: View {
         .background(Color.nc(.bgBase))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if let show { FavoriteButton(isOn: model.favorites.contains(show.id), title: show.title) { model.toggleFavorite(show) } }
+                if let show { FavoriteButton(isOn: model.favorites.contains(show.id), title: show.title, inToolbar: true) { model.toggleFavorite(show) } }
             }
         }
     }

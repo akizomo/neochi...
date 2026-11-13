@@ -33,16 +33,24 @@ struct ArtworkView: View {
 struct FavoriteButton: View {
     let isOn: Bool
     let title: String
+    /// ツールバー用。システムが枠で包むので、独自の円は付けず、アイコンだけにする(はみ出し防止)。
+    var inToolbar = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: isOn ? "bookmark.fill" : "bookmark")
-                .font(.system(size: 18, weight: .semibold))
-                .frame(width: NCSize.stockD, height: NCSize.stockD)
-                .foregroundStyle(Color.nc(isOn ? .bgBase : .textMain))
-                .background(Circle().fill(isOn ? Color.nc(.textMain) : Color.clear))
-                .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: isOn ? 0 : 1))
+            if inToolbar {
+                Image(systemName: isOn ? "bookmark.fill" : "bookmark")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.nc(.textMain))
+            } else {
+                Image(systemName: isOn ? "bookmark.fill" : "bookmark")
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: NCSize.stockD, height: NCSize.stockD)
+                    .foregroundStyle(Color.nc(isOn ? .bgBase : .textMain))
+                    .background(Circle().fill(isOn ? Color.nc(.textMain) : Color.clear))
+                    .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: isOn ? 0 : 1))
+            }
         }
         .accessibilityLabel(isOn ? "\(title)をお気に入りから外す" : "\(title)をお気に入りに追加")
     }
