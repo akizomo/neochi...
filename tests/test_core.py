@@ -139,3 +139,16 @@ def test_shard_splits_shows_without_overlap():
     assert sum(len(p) for p in parts) == 30
     assert len({s.id for p in parts for s in p}) == 30
     assert _shard(shows, None) == shows
+
+
+def test_run_limits_before_sharding(monkeypatch, tmp_path):
+    """--limit は分割より先に効く(3分割しても、対象は先頭 limit 番組の中だけ)。"""
+    from neochi import cli, feeds
+    shows = [feeds.Show(id=feeds.show_id(f"http://x/{i}"), title=str(i), publisher="", rss_url=f"http://x/{i}",
+                        genre="", lang="ja") for i in range(60)]
+    monkeypatch.setattr(feeds, "load_shows", lambda _p: shows)
+    seen = []
+    monkeypatch.setattr(feeds, "fetch_episodes", lambda s: seen.append(s.id) or [])
+    for i in range(3):
+        cli.main(["--store", str(tmp_path / "s.json"), "run", "--limit", "30", "--shard", f"{i}/3"])
+    assert set(seen) == {s.id for s in shows[:30]} and len(seen) == 30

@@ -34,7 +34,7 @@ def _shard(shows, spec: str | None):
 
 def cmd_run(a) -> int:
     cfg, store = load_config(), open_store(a.store)
-    shows = _shard(feeds.load_shows(a.csv), a.shard)[: a.limit]
+    shows = _shard(feeds.load_shows(a.csv)[: a.limit], a.shard)  # 先に上限で絞ってから分割する
     deps = pipeline.Deps(judge=None) if a.judge == "session" else pipeline.Deps()
     done = 0
     for show in shows:
