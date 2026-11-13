@@ -16,7 +16,7 @@ struct BedtimeSetupView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: NCSpace.s4) {
+        VStack(alignment: .leading, spacing: NCSpace.s5) {
             Text(editing ? "ふだんの就寝時刻" : "ふだん、何時ごろ寝ますか?").ncText(NCText.title)
             Text("この時刻の前後にアプリを開くと、夜の画面を出します。聴いた記録が貯まると、自動で合わせます。")
                 .ncText(NCText.body, .textSub)
@@ -30,7 +30,7 @@ struct BedtimeSetupView: View {
                 Text(editing ? "閉じる" : "あとで").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
             }
         }
-        .padding(NCSpace.s4)
+        .padding(NCSpace.s5)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.nc(.bgBase).ignoresSafeArea())
     }

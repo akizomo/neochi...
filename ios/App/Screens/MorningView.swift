@@ -14,7 +14,7 @@ struct MorningView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: NCSpace.s4) {
+            VStack(alignment: .leading, spacing: NCSpace.s6) {
                 HStack {
                     Text("朝の振り返り").ncText(NCText.title).frame(minHeight: NCSize.tapMin, alignment: .leading)
                     Spacer()
@@ -33,7 +33,7 @@ struct MorningView: View {
                 }
                 .padding(.top, NCSpace.s2)
             }
-            .padding(NCSpace.s4)
+            .padding(NCSpace.s5)
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Color.nc(.bgBase))

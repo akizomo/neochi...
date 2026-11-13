@@ -11,12 +11,12 @@ struct TonightView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: NCSpace.s3) {
+                VStack(alignment: .leading, spacing: NCSpace.s5) {
                     if model.pendingMorning { recap }
                     candidates
                     favorites
                 }
-                .padding(.horizontal, NCSpace.s4)
+                .padding(.horizontal, NCSpace.s5)
                 .padding(.bottom, NCSpace.s8)
             }
             .background(Color.nc(.bgBase))

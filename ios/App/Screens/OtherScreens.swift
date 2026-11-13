@@ -28,7 +28,7 @@ struct DiscoverView: View {
                         }.buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, NCSpace.s4).padding(.bottom, NCSpace.s8)
+                .padding(.horizontal, NCSpace.s5).padding(.bottom, NCSpace.s8)
             }
             .background(Color.nc(.bgBase))
             .navigationDestination(for: String.self) { DetailView(showID: $0) }
@@ -57,7 +57,7 @@ struct DetailView: View {
     var body: some View {
         ScrollView {
             if let show {
-                VStack(alignment: .leading, spacing: NCSpace.s4) {
+                VStack(alignment: .leading, spacing: NCSpace.s5) {
                     HStack(spacing: NCSpace.s4) {
                         ArtworkView(show: show, size: NCSize.artworkL)
                         Text(show.title).ncText(NCText.title)
@@ -90,7 +90,7 @@ struct DetailView: View {
                         }
                     }
                 }
-                .padding(NCSpace.s4)
+                .padding(NCSpace.s5)
             }
         }
         .background(Color.nc(.bgBase))
@@ -142,7 +142,7 @@ struct LogView: View {
                         ForEach(model.logs.sorted { $0.startedAt > $1.startedAt }) { log in row(log) }
                     }
                 }
-                .padding(.horizontal, NCSpace.s4)
+                .padding(.horizontal, NCSpace.s5)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(Color.nc(.bgBase))
