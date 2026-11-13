@@ -17,13 +17,14 @@ public struct Show: Identifiable, Hashable, Codable, Sendable {
     /// 実測の平均(分)。実測がなければ nil。
     public var avgMinutes: Int?
     public var aspects: ShowAspects?
+    public var stats: ShowStats?
 
     public init(id: String, title: String, genre: String, artworkURL: URL? = nil, linkURL: URL? = nil,
                 appleURL: URL? = nil, star: Double? = nil, rank: ZRank? = nil,
-                oneLiner: String? = nil, avgMinutes: Int? = nil, aspects: ShowAspects? = nil) {
+                oneLiner: String? = nil, avgMinutes: Int? = nil, aspects: ShowAspects? = nil, stats: ShowStats? = nil) {
         self.id = id; self.title = title; self.genre = genre; self.artworkURL = artworkURL
         self.linkURL = linkURL; self.appleURL = appleURL; self.star = star; self.rank = rank
-        self.oneLiner = oneLiner; self.avgMinutes = avgMinutes; self.aspects = aspects
+        self.oneLiner = oneLiner; self.avgMinutes = avgMinutes; self.aspects = aspects; self.stats = stats
     }
 }
 

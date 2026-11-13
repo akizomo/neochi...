@@ -48,62 +48,6 @@ struct DiscoverView: View {
     }
 }
 
-/// 詳細(最初の形): 番組、★と実績、AIの一行、「今夜聴く」と「次に聴く」。観点ごとの図は、このあと足す。
-struct DetailView: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
-    let showID: String
-
-    private var show: Show? { model.shows.first { $0.id == showID } }
-
-    var body: some View {
-        ScrollView {
-            if let show {
-                VStack(alignment: .leading, spacing: NCSpace.s5) {
-                    HStack(spacing: NCSpace.s4) {
-                        ArtworkView(show: show, size: NCSize.artworkL)
-                        Text(show.title).ncText(NCText.title)
-                    }
-                    MetricsRow(show: show)
-                    if let line = show.oneLiner { Text(line).ncText(NCText.body) }
-                    if let a = show.aspects { AspectsView(aspects: a) }
-                    // 時間帯に関係なく、いつでも聴ける(昼寝など)。
-                    if let c = TonightEngine.listenNow(show: show, ctx: model.context) {
-                        Button { model.play(c) } label: {
-                            Text("いま聴く").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                                .background(Capsule().fill(Color.nc(.textMain)))
-                        }
-                    }
-                    HStack(spacing: NCSpace.s2) {
-                        Button {
-                            if let c = model.slate(night: 0).first(where: { $0.show.id == show.id }) ?? model.slate(night: 0).first {
-                                model.reserve(night: 0, c); dismiss()
-                            }
-                        } label: {
-                            Text("今夜聴く").ncText(NCText.body).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
-                        }
-                        Button {
-                            if let i = model.queue.firstIndex(of: show.id) { model.queue.remove(at: i) } else { model.queue.append(show.id) }
-                        } label: {
-                            Text(model.queue.contains(show.id) ? "次に聴くから外す" : "次に聴く").ncText(NCText.body)
-                                .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
-                        }
-                    }
-                }
-                .padding(NCSpace.s5)
-            }
-        }
-        .background(Color.nc(.bgBase))
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                if let show { FavoriteButton(isOn: model.favorites.contains(show.id), title: show.title, inToolbar: true) { model.toggleFavorite(show) } }
-            }
-        }
-    }
-}
-
 /// 記録: 日付ごとの結果(新しい順)。
 struct LogView: View {
     @Environment(AppModel.self) private var model
@@ -151,20 +95,23 @@ struct LogView: View {
             .navigationTitle("記録")
             .toolbarTitleDisplayMode(.inlineLarge)
             .contentMargins(.top, NCSpace.s5, for: .scrollContent)
+            .navigationDestination(for: LogRoute.self) { RecordDetailView(logID: $0.id) }
+            .navigationDestination(for: String.self) { DetailView(showID: $0) }
             .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         }
     }
 
     private func row(_ log: SleepLog) -> some View {
         let title = model.shows.first { $0.id == log.showID }?.title ?? ""
-        return HStack(alignment: .center, spacing: NCSpace.s3) {
-            VStack(alignment: .leading, spacing: NCSpace.s1) {
-                Text(Self.dateFormat.string(from: log.startedAt)).ncText(NCText.footnote, .textSub)
-                Text(title).ncText(NCText.headline).lineLimit(1)
-                if let note = log.note { Text(note).ncText(NCText.footnote, .textSub).lineLimit(2) }
-            }
-            Spacer(minLength: NCSpace.s2)
-            VStack(alignment: .trailing, spacing: NCSpace.s1) {
+        let ep = model.episodes[log.showID]?.first { $0.id == log.episodeID }?.title
+        return NavigationLink(value: LogRoute(id: log.id)) {
+            HStack(alignment: .center, spacing: NCSpace.s3) {
+                VStack(alignment: .leading, spacing: NCSpace.s1) {
+                    Text(Self.dateFormat.string(from: log.startedAt)).ncText(NCText.footnote, .textSub)
+                    Text(title).ncText(NCText.headline).lineLimit(1)
+                    if let ep, !ep.isEmpty { Text(ep).ncText(NCText.footnote, .textSub).lineLimit(1) }
+                }
+                Spacer(minLength: NCSpace.s2)
                 if let m = log.latencyMinutes {
                     HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
                         Text("\(m)").ncText(NCText.numMd, .accentResult)
@@ -173,53 +120,13 @@ struct LogView: View {
                 } else {
                     Text("―").ncText(NCText.numMd, .textSub)
                 }
-                if let c = log.calmVote {
-                    HStack(spacing: NCSpace.s1) {
-                        Text("★").ncText(NCText.numSm, .accentFactor)
-                        Text("\(c)").ncText(NCText.numSm, .accentFactor)
-                    }
-                }
+                Image(systemName: "chevron.right").ncText(NCText.footnote, .textSub)
             }
+            .padding(NCSpace.s4)
+            .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
         }
-        .padding(NCSpace.s4)
-        .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+        .buttonStyle(.plain)
     }
 }
 
-/// 観点ごとの★(要因・琥珀)。合算しない。
-struct AspectsView: View {
-    let aspects: ShowAspects
-
-    var body: some View {
-        VStack(spacing: 0) {
-            if let v = aspects.calmStar { row("起伏の少なさ", star: v) }
-            if let v = aspects.earStar { row("耳ざわり", star: v) }
-            if let l = aspects.interest { row("興味", text: label(l)) }
-        }
-        .padding(.horizontal, NCSpace.s4)
-        .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
-    }
-
-    private func label(_ l: InterestLevel) -> String {
-        switch l { case .low: "低め"; case .mid: "ほどほど"; case .high: "高め" }
-    }
-
-    private func row(_ title: String, star: Double) -> some View {
-        HStack {
-            Text(title).ncText(NCText.body)
-            Spacer()
-            HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
-                Text("★").ncText(NCText.numSm, .accentFactor)
-                Text(String(format: "%.1f", star)).ncText(NCText.numMd, .accentFactor)
-            }
-        }.frame(minHeight: NCSize.tapMin)
-    }
-
-    private func row(_ title: String, text: String) -> some View {
-        HStack {
-            Text(title).ncText(NCText.body)
-            Spacer()
-            Text(text).ncText(NCText.body, .accentFactor)
-        }.frame(minHeight: NCSize.tapMin)
-    }
-}
+struct LogRoute: Hashable { let id: String }
