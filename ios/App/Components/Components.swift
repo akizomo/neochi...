@@ -41,11 +41,11 @@ struct FavoriteButton: View {
         Button(action: action) {
             if inToolbar {
                 Image(systemName: isOn ? "bookmark.fill" : "bookmark")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: NCSize.iconMd, weight: .semibold))
                     .foregroundStyle(Color.nc(.textMain))
             } else {
                 Image(systemName: isOn ? "bookmark.fill" : "bookmark")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: NCSize.iconMd, weight: .semibold))
                     .frame(width: NCSize.stockD, height: NCSize.stockD)
                     .foregroundStyle(Color.nc(isOn ? .bgBase : .textMain))
                     .background(Circle().fill(isOn ? Color.nc(.textMain) : Color.clear))
@@ -63,11 +63,11 @@ struct RankBadge: View {
     var body: some View {
         if let rank {
             Text(rank.rawValue).ncText(NCText.caption, .accentResult)
-                .padding(.horizontal, NCSpace.s3).frame(minHeight: 24)
+                .padding(.horizontal, NCSpace.s3).frame(minHeight: NCSize.badgeH)
                 .background(Capsule().fill(Color.nc(.resultTint)))
         } else {
             Text(NCString.researching).ncText(NCText.caption, .textSub)
-                .padding(.horizontal, NCSpace.s3).frame(minHeight: 24)
+                .padding(.horizontal, NCSpace.s3).frame(minHeight: NCSize.badgeH)
                 .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
         }
     }

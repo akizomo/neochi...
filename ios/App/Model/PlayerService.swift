@@ -88,7 +88,7 @@ final class PlayerService {
     // MARK: ロック画面
 
     private func setUpNowPlaying(title: String) {
-        let size = CGSize(width: 600, height: 600)
+        let size = CGSize(width: 600, height: 600) // ロック画面の画像の生成サイズ(画面の寸法ではない)
         let night = UIGraphicsImageRenderer(size: size).image { ctx in
             UIColor(red: 11 / 255, green: 13 / 255, blue: 18 / 255, alpha: 1).setFill()   // bg-night の無地
             ctx.fill(CGRect(origin: .zero, size: size))

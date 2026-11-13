@@ -18,7 +18,7 @@ struct NightView: View {
                     if model.playing == nil, let c = shown { model.play(c) } else { model.player.toggle() }
                 } label: {
                     Image(systemName: model.player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 36))
+                        .font(.system(size: NCSize.iconPlay))
                         .frame(width: NCSize.playD, height: NCSize.playD)
                         .foregroundStyle(Color.nc(.textMain))
                         .background(Circle().fill(Color.nc(.surface)))
