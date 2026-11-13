@@ -16,7 +16,7 @@ struct MorningView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: NCSpace.s4) {
                 HStack {
-                    Text("朝の振り返り").ncText(NCText.footnote, .textSub)
+                    Text("朝の振り返り").ncText(NCText.title).frame(minHeight: NCSize.tapMin, alignment: .leading)
                     Spacer()
                     Button("あとで") { dismiss() }.ncText(NCText.body, .textSub).frame(minHeight: NCSize.tapMin)
                 }
