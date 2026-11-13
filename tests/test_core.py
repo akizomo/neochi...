@@ -118,3 +118,13 @@ def test_parse_feed_newest_first_and_stable_ids():
     assert [e.title for e in eps] == ["new", "old"]
     assert eps[1].duration_sec == 630
     assert [e.id for e in feeds.parse_feed(RSS, sid)] == [e.id for e in eps]
+
+
+def test_store_update_changes_only_given_columns(tmp_path):
+    from neochi.store import JsonStore
+    st = JsonStore(tmp_path / "s.json")
+    st.upsert("show", {"id": "s1", "title": "T", "rss_url": "u"})
+    st.update("show", "s1", {"show_star": 4.0})
+    st.update("show", "none", {"show_star": 1.0})  # 行がなければ何もしない(作らない)
+    assert st.get("show", "s1") == {"id": "s1", "title": "T", "rss_url": "u", "show_star": 4.0}
+    assert st.get("show", "none") is None

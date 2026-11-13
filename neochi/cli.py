@@ -47,7 +47,7 @@ def _update_show_stars(store, show_ids) -> None:
     for sid in show_ids:  # 番組の★ = 解析済みの回の最終★の平均(機械的な集計。手では動かさない)
         stars = store.final_stars(sid)
         if stars:
-            store.upsert("show", {"id": sid, "show_star": round(sum(stars) / len(stars), 1)})
+            store.update("show", sid, {"show_star": round(sum(stars) / len(stars), 1)})
 
 
 def cmd_apply(a) -> int:
@@ -77,8 +77,8 @@ def cmd_z_rank(a) -> int:
     shows = store.rows("show")
     for s in shows:
         rank = z_rank.z_rank(store.watch_latencies(s["id"]), zcfg)
-        store.upsert("show", {"id": s["id"], "z_rank": rank,
-                              "listing_status": "listed" if rank else "researching"})
+        store.update("show", s["id"], {"z_rank": rank,
+                                       "listing_status": "listed" if rank else "researching"})
         logging.info("%s → %s", s["title"], rank or "調査中")
     store.save()
     return 0

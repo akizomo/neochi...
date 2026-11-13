@@ -16,5 +16,4 @@ create policy episode_read on episode for select to anon, authenticated using (t
 drop policy if exists analysis_read on analysis;
 create policy analysis_read on analysis for select to anon, authenticated using (true);
 
--- sleep_log には policy を作らない。公開キーからは読み書きともにできず、service_role だけが触れる。
--- ログイン導入時に user_id 列を足し、「自分の行だけ」の policy を別のマイグレーションで追加する。
+-- sleep_log の policy は 0004 で追加する(それまでは、公開キーからは読み書きともにできない)。
