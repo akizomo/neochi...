@@ -1,117 +1,98 @@
 import SwiftUI
 import NeochiCore
 
-/// 朝の振り返り。結果を先に見せ、入力は 興味・起伏・メモ(任意)。「記録する」を押すまで保存しない。
+/// 朝の振り返り(`docs/SCORE.md` §4)。「あなたの睡眠の結果」と「この回について(質問)」を、見出しで分ける。
+/// 「記録する」を押すまで保存しない。質問はすべて任意。
 struct MorningView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    @State private var interest: Double = 50
-    @State private var interestTouched = false
-    @State private var calm = 0
+    @State private var interest: InterestAnswer?
+    @State private var calm: Int?
     @State private var note = ""
 
     private var minutes: Int? { model.pendingLatency }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: NCSpace.s6) {
-                HStack {
-                    Text("朝の振り返り").ncText(NCText.title).frame(minHeight: NCSize.tapMin, alignment: .leading)
+        NavigationStack {
+            Form {
+                resultSection
+                if let m = minutes { Section(NCString.evaluationHeader) { Text(NCString.comment(minutes: m)).ncText(NCText.headline).listRowBackground(Color.nc(.surface)) } }
+                interestSection
+                calmSection
+                Section(NCString.memoHeader) {
+                    TextField("", text: $note, axis: .vertical).lineLimit(1...4).ncText(NCText.body)
+                        .listRowBackground(Color.nc(.surface))
                 }
-                result
-                inputs
-                Button {
-                    model.saveLog(interest: interestTouched ? Int(interest) : nil,
-                                  calm: calm > 0 ? calm : nil, note: note)
-                    dismiss()
-                } label: {
-                    Text("記録する").ncText(NCText.headline, .bgBase)
-                        .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                        .background(Capsule().fill(Color.nc(.textMain)))
-                }
-                .padding(.top, NCSpace.s2)
-                Button("あとで") { dismiss() }
-                    .ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
             }
-            .padding(NCSpace.s5)
+            .scrollContentBackground(.hidden)
+            .background(Color.nc(.bgBase))
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle(NCString.morningTitle)
+            .toolbarTitleDisplayMode(.inlineLarge)
+            .safeAreaInset(edge: .bottom) { actions }
         }
-        .scrollDismissesKeyboard(.interactively)
-        .background(Color.nc(.bgBase))
         .task { await model.refreshOnset() }
     }
 
-    private var result: some View {
-        VStack(alignment: .leading, spacing: NCSpace.s2) {
-            Text("寝落ちまで").ncText(NCText.footnote, .textSub)
-            if let m = minutes {
-                HStack(alignment: .firstTextBaseline, spacing: NCSpace.s2) {
-                    Text("\(m)").ncText(NCText.numHero, .accentResult)
-                    Text("分").ncText(NCText.title, .accentResult)
+    private var resultSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: NCSpace.s2) {
+                Text(NCString.resultFrom).ncText(NCText.footnote, .textSub)
+                if let m = minutes {
+                    HStack(alignment: .firstTextBaseline, spacing: NCSpace.s2) {
+                        Text("\(m)").ncText(NCText.numHero, .accentResult)
+                        Text("分").ncText(NCText.title, .accentResult)
+                    }
+                    if model.onsetAt != nil { Text(NCString.resultSourceWatch).ncText(NCText.footnote, .textSub) }
+                } else {
+                    Text("―").ncText(NCText.numHero, .textSub)
+                    Text(NCString.noResultNote).ncText(NCText.body, .textSub)
                 }
-                Text(NCString.comment(minutes: m)).ncText(NCText.title)
-            } else {
-                Text("―").ncText(NCText.numHero, .textSub)
-                Text(NCString.noResultNote).ncText(NCText.title)
             }
-        }
+            .listRowBackground(Color.nc(.surface))
+        } header: { Text(NCString.resultHeader) }
     }
 
-    private var inputs: some View {
-        VStack(alignment: .leading, spacing: NCSpace.s6) {
-            VStack(alignment: .leading, spacing: NCSpace.s2) {
+    private var interestSection: some View {
+        Section {
+            Picker(NCString.interestQuestion, selection: $interest) {
+                ForEach(InterestAnswer.allCases) { Text(NCString.interestLabel($0)).tag(Optional($0)) }
+            }
+            .pickerStyle(.inline).labelsHidden()
+            .listRowBackground(Color.nc(.surface))
+        } header: { Text(NCString.interestQuestion) } footer: { Text(NCString.askedFooter) }
+    }
+
+    private var calmSection: some View {
+        Section {
+            VStack(spacing: NCSpace.s2) {
+                Picker(NCString.calmQuestion, selection: $calm) {
+                    ForEach(1...5, id: \.self) { Text("\($0)").tag(Optional($0)) }
+                }
+                .pickerStyle(.segmented).labelsHidden()
                 HStack {
-                    Text("興味").ncText(NCText.headline)
-                    Spacer()
-                    Text(interestTouched ? "\(Int(interest))" : "―").ncText(NCText.numMd, .accentFactor)
-                }
-                InterestScale(value: $interest, touched: $interestTouched)
+                    Text(NCString.calmLow); Spacer(); Text(NCString.calmHigh)
+                }.ncText(NCText.footnote, .textSub)
             }
-            VStack(alignment: .leading, spacing: NCSpace.s2) {
-                Text("起伏").ncText(NCText.headline)
-                StarInput(value: $calm)
-            }
-            VStack(alignment: .leading, spacing: NCSpace.s2) {
-                Text("メモ").ncText(NCText.headline)
-                TextField("", text: $note, axis: .vertical)
-                    .lineLimit(1...4)
-                    .ncText(NCText.body)
-                    .padding(NCSpace.s3)
-                    .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
-                    .overlay(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous)
-                        .strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
-            }
-        }
+            .listRowBackground(Color.nc(.surface))
+        } header: { Text(NCString.calmQuestion) }
     }
-}
 
-/// 0〜100の10刻み(11か所で止まる)。触るまでは未入力。
-struct InterestScale: View {
-    @Binding var value: Double
-    @Binding var touched: Bool
-
-    var body: some View {
-        Slider(value: Binding(get: { value }, set: { value = $0; touched = true }), in: 0...100, step: 10)
-            .tint(Color.nc(.accentFactor))
-            .frame(minHeight: NCSize.tapMin)
-            .sensoryFeedback(.selection, trigger: value)
-            .accessibilityLabel("興味")
-            .accessibilityValue(touched ? "\(Int(value))" : "未入力")
-    }
-}
-
-/// 起伏の少なさ。1〜5。同じ星をもう一度押すと未入力に戻る。
-struct StarInput: View {
-    @Binding var value: Int
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(1...5, id: \.self) { i in
-                Button { value = (value == i) ? 0 : i } label: {
-                    Text("★").ncText(NCText.numMd, i <= value ? .accentFactor : .borderControl)
-                        .frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
-                }
-                .accessibilityLabel("\(i)")
+    /// 親指が届く画面の下に置く。
+    private var actions: some View {
+        VStack(spacing: NCSpace.s1) {
+            Button {
+                model.saveLog(interest: interest, calm: calm, note: note)
+                dismiss()
+            } label: {
+                Text(NCString.save).ncText(NCText.headline, .bgBase)
+                    .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                    .background(Capsule().fill(Color.nc(.textMain)))
             }
+            Button(NCString.later) { dismiss() }
+                .ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
         }
+        .padding(.horizontal, NCSpace.s5).padding(.top, NCSpace.s2)
+        .background(Color.nc(.bgBase))
     }
 }

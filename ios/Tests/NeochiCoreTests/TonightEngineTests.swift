@@ -152,4 +152,10 @@ final class TonightEngineTests: XCTestCase {
         let empty = TonightContext(shows: [weather], episodes: [:], history: [], favorites: [], queue: [], currentShowID: nil, lastNight: nil, genreStreakNights: 0)
         XCTAssertNil(TonightEngine.listenNow(show: weather, ctx: empty))
     }
+
+    // 興味の3択の値は、DB の interest_vote の制約(-1, 0, 1)と同じ
+    func testInterestAnswerValuesMatchDatabase() {
+        XCTAssertEqual(InterestAnswer.allCases.map(\.rawValue), [-1, 0, 1])
+        XCTAssertEqual(NCString.interestLabel(.justRight), "ちょうどよかった")
+    }
 }

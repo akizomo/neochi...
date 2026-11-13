@@ -42,6 +42,12 @@ public struct ShowAspects: Hashable, Codable, Sendable {
 
 public enum InterestLevel: String, Codable, Sendable { case low, mid, high }
 
+/// 朝の振り返りの「この回の話は、どうでしたか」(3択)。値は DB の `interest_vote`(-1 / 0 / 1)と同じ。
+public enum InterestAnswer: Int, CaseIterable, Identifiable, Sendable {
+    case bored = -1, justRight = 0, absorbed = 1
+    public var id: Int { rawValue }
+}
+
 public enum ZRank: String, Codable, Sendable { case z = "Z", zz = "ZZ", zzz = "ZZZ" }
 
 /// 回。`number` は「第N回」の N。なければ公開日の順で並べる。
@@ -72,7 +78,7 @@ public struct SleepLog: Identifiable, Hashable, Codable, Sendable {
     public var startedAt: Date
     public var sleepOnsetAt: Date?
     public var source: SleepSource
-    /// 程よい興味。0〜100の10刻み。
+    /// 程よい興味の3択。-1 = 退屈だった、0 = ちょうどよかった、1 = 聴き入った(`InterestAnswer`)。
     public var interestVote: Int?
     /// 起伏の少なさ。1〜5。
     public var calmVote: Int?

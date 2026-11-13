@@ -124,12 +124,12 @@ final class AppModel {
     }
 
     /// 「記録する」で保存。入力は任意。
-    func saveLog(interest: Int?, calm: Int?, note: String) {
+    func saveLog(interest: InterestAnswer?, calm: Int?, note: String) {
         guard let s = playStartedAt, let ep = playEpisodeID, let show = playShowID else { pendingMorning = false; return }
         let listenNo = history.filter { $0.episodeID == ep }.count
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
         let log = SleepLog(id: UUID().uuidString, episodeID: ep, showID: show, startedAt: s, sleepOnsetAt: onsetAt,
-                           source: onsetAt == nil ? .selfReport : .watch, interestVote: interest, calmVote: calm,
+                           source: onsetAt == nil ? .selfReport : .watch, interestVote: interest?.rawValue, calmVote: calm,
                            note: trimmed.isEmpty ? nil : trimmed, listenNo: max(1, listenNo))
         logs.append(log)
         if let m = log.latencyMinutes { lastNight = LastNight(showID: show, episodeID: ep, minutes: m) }
