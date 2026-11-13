@@ -24,8 +24,7 @@ def _star(unit: float) -> float:
     return round(1 + 4 * unit, 1)
 
 
-def ear_star(features: dict, lang: str, cfg: dict) -> float | None:
-    """🎧 耳のゆるさ。取れた指標だけで重みを再配分する。全部欠けたら None。"""
+def _ear_units(features: dict, lang: str, cfg: dict) -> dict:
     e = cfg["ear"]
     parts = {}
     rate = features.get("speech_rate")
@@ -41,9 +40,20 @@ def ear_star(features: dict, lang: str, cfg: dict) -> float | None:
     if features.get("sudden_per_10min") is not None:
         s = e["sudden_per_10min"]
         parts["sudden"] = _norm(features["sudden_per_10min"], s["best"], s["worst"])
+    return parts
+
+
+def ear_parts(features: dict, lang: str, cfg: dict) -> dict:
+    """🎧 の内訳。項目ごとの★(1〜5)。アプリで「どこが効いているか」を見せるために保存する。"""
+    return {k: _star(u) for k, u in _ear_units(features, lang, cfg).items()}
+
+
+def ear_star(features: dict, lang: str, cfg: dict) -> float | None:
+    """🎧 耳のゆるさ。取れた指標だけで重みを再配分する。全部欠けたら None。"""
+    parts = _ear_units(features, lang, cfg)
     if not parts:
         return None
-    w = {k: e["weights"][k] for k in parts}
+    w = {k: cfg["ear"]["weights"][k] for k in parts}
     return _star(sum(parts[k] * w[k] for k in parts) / sum(w.values()))
 
 

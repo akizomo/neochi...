@@ -152,3 +152,21 @@ def test_run_limits_before_sharding(monkeypatch, tmp_path):
     for i in range(3):
         cli.main(["--store", str(tmp_path / "s.json"), "run", "--limit", "30", "--shard", f"{i}/3"])
     assert set(seen) == {s.id for s in shows[:30]} and len(seen) == 30
+
+
+def test_timeline_and_ear_parts(cfg):
+    import numpy as np
+    from neochi import features, scoring
+    sr = cfg["acoustic"]["sample_rate"]
+    t = np.arange(sr * 180) / sr
+    x = (0.05 * np.sin(2 * np.pi * 200 * t)).astype(np.float32)
+    x[sr * 100: sr * 101] *= 20  # 100秒目に大きな音
+    f = features.acoustic_features(x, sr, cfg)
+    tl = f["timeline"]
+    assert len(tl["volume_db"]) == 3 and 100 in tl["sudden_at_sec"]
+    spans = [(m * 60.0, m * 60 + 50.0, "あ" * 200) for m in range(3)]
+    rp = features.rate_profile(spans, "ja", cfg)
+    assert rp["rate_per_min"] == [240, 240, 240]
+    f.update({"speech_rate": rp["speech_rate"]})
+    parts = scoring.ear_parts(f, "ja", cfg)
+    assert set(parts) >= {"rate", "volume", "sudden"} and all(1 <= v <= 5 for v in parts.values())

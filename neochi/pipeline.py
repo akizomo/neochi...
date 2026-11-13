@@ -45,6 +45,8 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
                     feat["speech_rate"], feat["speech_rate_unit"] = rate, unit
                     if spans:  # 前半に重みを付けた速さと、速さのばらつき
                         feat.update(features.rate_profile(spans, show.lang, cfg))
+                        if "rate_per_min" in feat:
+                            feat.setdefault("timeline", {})["rate_per_min"] = feat.pop("rate_per_min")
                     input_depth = "transcript"
             except Exception as e:  # noqa: BLE001 - 文字起こしの失敗は特徴量だけで続行
                 log.warning("文字起こしに失敗(音響特徴量のみで続行): %s (%s)", ep.title, e)
@@ -66,6 +68,8 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
             log.warning("LLM 判定に失敗(🌊🎯は空): %s (%s)", ep.title, e)
 
     ear = scoring.ear_star(feat, show.lang, cfg)
+    if ear is not None:
+        feat["ear_parts"] = scoring.ear_parts(feat, show.lang, cfg)
     total, final, final_reason = _stars(calm, ear, level, ep.id, cfg, store)
 
     store.upsert("show", {"id": show.id, "title": show.title, "publisher": show.publisher,
