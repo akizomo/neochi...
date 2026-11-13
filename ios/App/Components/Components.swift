@@ -172,3 +172,32 @@ struct TonightCard: View {
         return candidate.playCount >= 2 ? "\(title) ・ \(candidate.playCount)回目" : title
     }
 }
+
+
+/// 質問の選択肢を、同じ形で出す部品。数字のセグメントと、その下の言葉(左端・中央・右端)。
+/// 3択でも5段階でも、同じ見た目・同じ置き方。何も選ばない(未回答)こともできる。
+struct ChoiceScale: View {
+    let question: String
+    let count: Int
+    @Binding var selection: Int?
+    let leading: String
+    var middle: String? = nil
+    let trailing: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: NCSpace.s2) {
+            Text(question).ncText(NCText.headline)
+            Picker(question, selection: $selection) {
+                ForEach(1...count, id: \.self) { Text("\($0)").tag(Optional($0)) }
+            }
+            .pickerStyle(.segmented).labelsHidden()
+            HStack {
+                Text(leading)
+                Spacer()
+                if let middle { Text(middle); Spacer() }
+                Text(trailing)
+            }
+            .ncText(NCText.footnote, .textSub)
+        }
+    }
+}

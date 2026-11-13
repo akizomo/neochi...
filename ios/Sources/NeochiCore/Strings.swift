@@ -18,9 +18,9 @@ public enum NCString {
     public static let resultHeader = "あなたの睡眠の結果"
     public static let resultFrom = "寝落ちまで"
     public static let resultSourceWatch = "ヘルスケアの記録から"
-    public static let evaluationHeader = "ひとこと"
-    public static let askedHeader = "この回について"
-    public static let askedFooter = "番組の評価に使います。答えなくても記録できます。"
+    public static let listenedHeader = "聴いたコンテンツ"
+    public static let ratingHeader = "このコンテンツの評価"
+    public static let ratingFooter = "番組の評価に使います。答えなくても記録できます。"
     public static let interestQuestion = "この回の話は、どうでしたか"
     public static func interestLabel(_ a: InterestAnswer) -> String {
         switch a {
