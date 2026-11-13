@@ -33,6 +33,7 @@ struct DiscoverView: View {
             .background(Color.nc(.bgBase))
             .navigationDestination(for: String.self) { DetailView(showID: $0) }
             .navigationTitle("見つける")
+            .toolbarTitleDisplayMode(.inlineLarge)
         }
     }
 
@@ -147,6 +148,7 @@ struct LogView: View {
             }
             .background(Color.nc(.bgBase))
             .navigationTitle("記録")
+            .toolbarTitleDisplayMode(.inlineLarge)
             .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         }
     }

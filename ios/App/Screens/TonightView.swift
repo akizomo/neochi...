@@ -22,6 +22,7 @@ struct TonightView: View {
             .background(Color.nc(.bgBase))
             .navigationDestination(for: String.self) { DetailView(showID: $0) }
             .navigationTitle(labels[night])
+            .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     stepButton("arrow.left", label: "前の晩", enabled: night > 0) { night -= 1 }
