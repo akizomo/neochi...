@@ -31,20 +31,23 @@ struct TonightView: View {
             Text(labels[night]).ncText(NCText.title)
             Spacer()
             HStack(spacing: NCSpace.s2) {
-                if night > 0 { stepButton("arrow.left", label: "前の晩") { night -= 1 } }
-                if night < labels.count - 1 { stepButton("arrow.right", label: "次の晩") { night += 1 } }
+                stepButton("arrow.left", label: "前の晩", enabled: night > 0) { night -= 1 }
+                stepButton("arrow.right", label: "次の晩", enabled: night < labels.count - 1) { night += 1 }
             }
         }
         .frame(minHeight: NCSize.tapMin)
     }
 
-    private func stepButton(_ icon: String, label: String, action: @escaping () -> Void) -> some View {
+    /// 矢印は常に2つ出す。行けない方向は押せなくして薄くする(位置が動かない)。枠線は付けない。
+    private func stepButton(_ icon: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon).font(.system(size: 18, weight: .semibold))
                 .frame(width: NCSize.tapMin, height: NCSize.tapMin)
                 .foregroundStyle(Color.nc(.textMain))
-                .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
-        }.accessibilityLabel(label)
+                .opacity(enabled ? 1 : 0.3)
+        }
+        .disabled(!enabled)
+        .accessibilityLabel(label)
     }
 
     private var recap: some View {
