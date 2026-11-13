@@ -1,0 +1,28 @@
+name: ios
+on:
+  push:
+    paths: ["ios/**", ".github/workflows/ios.yml", "design/**"]
+  pull_request:
+    paths: ["ios/**", ".github/workflows/ios.yml", "design/**"]
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: トークンが最新か
+        run: |
+          python3 Scripts/gen_tokens.py
+          git diff --exit-code -- Sources/NeochiCore/Generated/Tokens.swift
+      - name: NeochiCore のテスト
+        run: swift test
+      - name: XcodeGen
+        run: brew install xcodegen && xcodegen generate
+      - name: アプリをビルド(シミュレータ、署名なし)
+        run: |
+          xcodebuild build -project Neochi.xcodeproj -scheme Neochi \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO | tee build.log | tail -40
+          exit ${PIPESTATUS[0]}
