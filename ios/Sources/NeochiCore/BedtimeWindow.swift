@@ -57,21 +57,6 @@ public struct BedtimeWindow: Hashable, Sendable {
         return byNight.values.sorted()
     }
 
-    /// 就寝時刻を手で決めるときの刻み(分)と、候補の並びの先頭(夜に近い 18:00 から始め、翌日の 17:45 まで)。
-    public static let stepMinutes = 15
-    public static let pickerStartMinute = 18 * 60
-
-    /// ホイールに並べる時刻(0時からの分)。
-    public static var pickerMinutes: [Int] {
-        let n = 24 * 60 / stepMinutes, s = pickerStartMinute / stepMinutes
-        return (0..<n).map { ((s + $0) % n) * stepMinutes }
-    }
-
-    /// 刻みに丸める(最も近い 15 分)。
-    public static func snapped(_ minute: Int) -> Int { ((minute + stepMinutes / 2) / stepMinutes * stepMinutes) % (24 * 60) }
-
-    public static func label(minute: Int) -> String { String(format: "%d:%02d", minute / 60, minute % 60) }
-
     /// 就寝時刻の中央値(0時からの分。夜またぎは正午起点で数える)。記録が最低件数に満たなければ nil。
     public static func typicalMinute(starts: [Date], calendar: Calendar) -> Int? {
         guard starts.count >= minimumSamples else { return nil }

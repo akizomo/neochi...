@@ -116,7 +116,7 @@ struct LogView: View {
     /// ふだんの就寝時刻。履歴が足りないうちは手で決められ、十分になったら自動(ヘルスケアの記録)になる。
     private var bedtimeRow: some View {
         let auto = model.bedtimeIsAuto
-        let text = model.bedtimeMinute.map { BedtimeWindow.label(minute: $0) } ?? "未設定"
+        let text = model.bedtimeMinute.map { String(format: "%d:%02d", $0 / 60, $0 % 60) } ?? "未設定"
         return Button { editingBedtime = true } label: {
             HStack {
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
