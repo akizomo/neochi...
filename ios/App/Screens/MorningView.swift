@@ -113,6 +113,5 @@ struct StarInput: View {
                 .accessibilityLabel("\(i)")
             }
         }
-        .overlay(alignment: .center) { EmptyView() }
     }
 }
