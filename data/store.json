@@ -1,0 +1,1063 @@
+{
+ "show": {
+  "023d5b4d-8991-57ec-8f1e-5399e6b0e822": {
+   "id": "023d5b4d-8991-57ec-8f1e-5399e6b0e822",
+   "title": "深夜の寝落ちラジオ【Japanese Podcast】",
+   "publisher": "じゅんのすけ",
+   "rss_url": "https://anchor.fm/s/684ca8c/podcast/rss",
+   "genre": "寝落ち・睡眠導入",
+   "lang": "ja",
+   "artwork_url": "https://d3t3ozftmdmh3i.cloudfront.net/production/podcast_uploaded_nologo/993659/993659-1621499730696-e0c06de0bf328.jpg",
+   "link_url": "https://podcasters.spotify.com/pod/show/neochi-podcast",
+   "show_star": 3.8
+  },
+  "d3e49a47-f432-568b-8f8e-ad6ba16bf178": {
+   "id": "d3e49a47-f432-568b-8f8e-ad6ba16bf178",
+   "title": "深夜3時の寝るまでラジオ",
+   "publisher": "口癖はソイソース",
+   "rss_url": "https://anchor.fm/s/312b9518/podcast/rss",
+   "genre": "寝落ち・睡眠導入",
+   "lang": "ja",
+   "artwork_url": "https://d3t3ozftmdmh3i.cloudfront.net/staging/podcast_uploaded_nologo/8149398/8149398-1774713651229-1138f695a15e8.jpg",
+   "link_url": "https://lit.link/nerumade",
+   "show_star": 4.5
+  },
+  "4590cd9b-5218-5ff7-acd7-c160a750e8f7": {
+   "id": "4590cd9b-5218-5ff7-acd7-c160a750e8f7",
+   "title": "入眠夜話",
+   "publisher": "興味深い夜話をBGM無しでお届けしています",
+   "rss_url": "https://stand.fm/rss/65236f8b0bc9d6e1d636f313",
+   "genre": "寝落ち・睡眠導入",
+   "lang": "ja",
+   "artwork_url": "https://cdncf.stand.fm/cdn-cgi/image/fit=cover,width=1400,height=1400/images/01HC9FEVRARDEW7H3ST9QBJBGJ.jpg",
+   "link_url": "https://stand.fm/channels/65236f8b0bc9d6e1d636f313",
+   "show_star": 4.0
+  },
+  "b54c75fa-dbfc-5fa3-88c2-df6a279b6c66": {
+   "id": "b54c75fa-dbfc-5fa3-88c2-df6a279b6c66",
+   "title": "ひとりねラジオ～寝落ち用ポッドキャスト～",
+   "publisher": "ゆっきん",
+   "rss_url": "https://api.robotstart.jp/api/v1/feeds/376c04a2/get-feeds/podcast",
+   "genre": "寝落ち・睡眠導入",
+   "lang": "ja",
+   "artwork_url": "https://api.robotstart.jp/storage/13080/f311fc0532d330d3e729df7a6f6eff2e.jpg",
+   "link_url": "https://podcasters.spotify.com/pod/show/diltect406g",
+   "show_star": 4.0
+  },
+  "828a2e2b-0675-5893-8adf-d1653795f052": {
+   "id": "828a2e2b-0675-5893-8adf-d1653795f052",
+   "title": "睡眠大学【寝落ち/おやすみ朗読/睡眠用BGM/男性声優】",
+   "publisher": "睡眠大学",
+   "rss_url": "https://stand.fm/rss/69424e2f4e940c45b521ec9f",
+   "genre": "寝落ち・睡眠導入",
+   "lang": "ja",
+   "artwork_url": "https://cdncf.stand.fm/cdn-cgi/image/fit=cover,width=1400,height=1400/watermarked/png/01KCNPWJCVB61MNWG7GBB0PQT5.png",
+   "link_url": "https://stand.fm/channels/69424e2f4e940c45b521ec9f",
+   "show_star": 3.7
+  },
+  "f7f6ccdb-8499-5a30-9bd5-a0115f49ceb7": {
+   "id": "f7f6ccdb-8499-5a30-9bd5-a0115f49ceb7",
+   "title": "眠れるラジオ - 眠くなる音楽と他愛もない話",
+   "publisher": "がすけつ",
+   "rss_url": "https://anchor.fm/s/6afff4a0/podcast/rss",
+   "genre": "寝落ち・睡眠導入",
+   "lang": "ja",
+   "artwork_url": "https://d3t3ozftmdmh3i.cloudfront.net/staging/podcast_uploaded_nologo/17851592/17851592-1739104964172-fe1b2acdd88ce.jpg",
+   "link_url": "https://linktr.ee/gaskets",
+   "show_star": 3.9
+  }
+ },
+ "episode": {
+  "93a7a6c6-0f6d-5d52-b356-8a0fc482d7e1": {
+   "id": "93a7a6c6-0f6d-5d52-b356-8a0fc482d7e1",
+   "show_id": "023d5b4d-8991-57ec-8f1e-5399e6b0e822",
+   "title": "「歩み寄る必要はない」と恋人に言われたら。",
+   "audio_url": "https://anchor.fm/s/684ca8c/podcast/play/128765292/https%3A%2F%2Fd3ctxlq1ktw2nl.cloudfront.net%2Fstaging%2F2026-10-4%2F435858038-44100-2-8dc2cffc09738.mp3",
+   "duration_sec": 1977,
+   "published_at": "2026-11-04T12:47:09+00:00",
+   "link_url": "https://podcasters.spotify.com/pod/show/neochi-podcast/episodes/ep-e3ro3tc"
+  },
+  "e9d8e55c-53b3-576d-947a-57053502c43e": {
+   "id": "e9d8e55c-53b3-576d-947a-57053502c43e",
+   "show_id": "d3e49a47-f432-568b-8f8e-ad6ba16bf178",
+   "title": "逆輸入がお得になるのは何故？",
+   "audio_url": "https://anchor.fm/s/312b9518/podcast/play/129264198/https%3A%2F%2Fd3ctxlq1ktw2nl.cloudfront.net%2Fstaging%2F2026-10-11%2Fca6f4e2e-4da1-e75a-501b-70a2e1a89a83.mp3",
+   "duration_sec": 971,
+   "published_at": "2026-11-11T14:23:00+00:00",
+   "link_url": "https://podcasters.spotify.com/pod/show/nerumade/episodes/ep-e3s7b46"
+  },
+  "53c7305f-b7ca-5941-9005-8875b19cb7ba": {
+   "id": "53c7305f-b7ca-5941-9005-8875b19cb7ba",
+   "show_id": "4590cd9b-5218-5ff7-acd7-c160a750e8f7",
+   "title": "【夜話４４２】犯罪組織に侵入せよ！ミステリークイズ集６",
+   "audio_url": "https://cdncf.stand.fm/audios/01M452SE63NDVZMY2WK916TVWW.m4a",
+   "duration_sec": 2629,
+   "published_at": "2026-11-11T11:00:11+00:00",
+   "link_url": "https://stand.fm/episodes/6ac31da63bab6c3c7d911e58"
+  },
+  "74d1d08a-ddae-5a32-aae0-05cf2d007d14": {
+   "id": "74d1d08a-ddae-5a32-aae0-05cf2d007d14",
+   "show_id": "b54c75fa-dbfc-5fa3-88c2-df6a279b6c66",
+   "title": "鰹節の力をバーチャルに ＃183",
+   "audio_url": "https://api.robotstart.jp/api/for-media/v1/articles/376c04a2/permanent/with-advertise/podcast/4f057d1969eac2fb6e83245c14d51c80.mp3",
+   "duration_sec": 2331,
+   "published_at": "2026-11-07T23:20:04+09:00",
+   "link_url": "https://podcasters.spotify.com/pod/show/diltect406g/episodes/183-e3rv3eh"
+  },
+  "648315d7-568a-508e-ad87-c5e26dc4d1d4": {
+   "id": "648315d7-568a-508e-ad87-c5e26dc4d1d4",
+   "show_id": "828a2e2b-0675-5893-8adf-d1653795f052",
+   "title": "🌙1週間限定無料公開🌙【眠くなる朗読 Full ver.】 アラビア｜睡",
+   "audio_url": "https://cdncf.stand.fm/audios/01M71W0WJZ0EFXS4ZNYKB94M12.m4a",
+   "duration_sec": 1047,
+   "published_at": "2026-11-10T11:00:20+00:00",
+   "link_url": "https://stand.fm/episodes/6af29fd0a9a8a86e7345d661"
+  },
+  "30f26e1a-5e9c-57cb-93df-988c4a98ad45": {
+   "id": "30f26e1a-5e9c-57cb-93df-988c4a98ad45",
+   "show_id": "f7f6ccdb-8499-5a30-9bd5-a0115f49ceb7",
+   "title": "新宿で酒を飲む",
+   "audio_url": "https://anchor.fm/s/6afff4a0/podcast/play/129040605/https%3A%2F%2Fd3ctxlq1ktw2nl.cloudfront.net%2Fstaging%2F2026-10-8%2F436205217-44100-2-097323869aa7b.mp3",
+   "duration_sec": 3003,
+   "published_at": "2026-11-08T08:55:51+00:00",
+   "link_url": "https://podcasters.spotify.com/pod/show/gaskets9/episodes/ep-e3s0got"
+  }
+ },
+ "analysis": {
+  "93a7a6c6-0f6d-5d52-b356-8a0fc482d7e1": {
+   "episode_id": "93a7a6c6-0f6d-5d52-b356-8a0fc482d7e1",
+   "input_depth": "transcript",
+   "interest_level": "low",
+   "calm_star": 3.5,
+   "ear_star": 4.3,
+   "total_star": 3.8,
+   "final_star": 3.8,
+   "final_reason": null,
+   "reasons": {
+    "llm": "恋人との価値観の違いをめぐる相談で、意見の対立と論点の追跡があります。",
+    "items": {
+     "interest": {
+      "A": {
+       "score": 1,
+       "min": 8
+      },
+      "B": {
+       "score": 0,
+       "min": null
+      },
+      "C": {
+       "score": 0,
+       "min": null
+      },
+      "D": {
+       "score": 1,
+       "min": 2
+      },
+      "E": {
+       "score": 0,
+       "min": null
+      }
+     },
+     "calm": {
+      "A": {
+       "score": 1,
+       "min": 7
+      },
+      "B": {
+       "score": 1,
+       "min": 11
+      },
+      "C": {
+       "score": 1,
+       "min": 16
+      },
+      "D": {
+       "score": 0,
+       "min": null
+      }
+     }
+    },
+    "moments": [
+     {
+      "min": 8,
+      "note": "歩み寄るべきかという相談の核心"
+     }
+    ]
+   },
+   "features": {
+    "duration_sec": 1977.759625,
+    "volume_std_db": 7.82939338684082,
+    "sudden_per_10min": 0.0,
+    "timeline": {
+     "volume_db": [
+      -0.2,
+      0.2,
+      0.1,
+      0.3,
+      -0.4,
+      0.1,
+      0.8,
+      1.3,
+      0.9,
+      -0.7,
+      0.7,
+      0.8,
+      -0.2,
+      -0.9,
+      -0.5,
+      -1.1,
+      -0.1,
+      -0.4,
+      -1.0,
+      0.6,
+      -1.4,
+      0.2,
+      -0.2,
+      -0.2,
+      0.3,
+      0.2,
+      0.5,
+      -0.1,
+      0.0,
+      0.7,
+      -0.5,
+      -0.0,
+      -0.9
+     ],
+     "sudden_at_sec": [],
+     "rate_per_min": [
+      278,
+      356,
+      274,
+      317,
+      327,
+      310,
+      334,
+      345,
+      337,
+      241,
+      256,
+      333,
+      330,
+      263,
+      361,
+      309,
+      265,
+      299,
+      293,
+      355
+     ]
+    },
+    "speech_rate": 309.5287123899944,
+    "speech_rate_unit": "chars_per_min",
+    "speech_rate_cv": 0.11485331862310644,
+    "ear_parts": {
+     "rate": 4.5,
+     "rate_cv": 4.8,
+     "volume": 3.1,
+     "sudden": 5.0
+    }
+   },
+   "analyzed_at": "2026-11-13T08:46:10.765875+00:00",
+   "interest_score": 2
+  },
+  "e9d8e55c-53b3-576d-947a-57053502c43e": {
+   "episode_id": "e9d8e55c-53b3-576d-947a-57053502c43e",
+   "input_depth": "transcript",
+   "interest_level": "mid",
+   "calm_star": 4.0,
+   "ear_star": 4.5,
+   "total_star": 4.5,
+   "final_star": 4.5,
+   "final_reason": null,
+   "reasons": {
+    "llm": "逆輸入の雑談が軽い笑いを交えて進み、数字や固有名詞が少し出ます。",
+    "items": {
+     "interest": {
+      "A": {
+       "score": 1,
+       "min": 0
+      },
+      "B": {
+       "score": 1,
+       "min": 3
+      },
+      "C": {
+       "score": 1,
+       "min": 3
+      },
+      "D": {
+       "score": 0,
+       "min": null
+      },
+      "E": {
+       "score": 1,
+       "min": 10
+      }
+     },
+     "calm": {
+      "A": {
+       "score": 0,
+       "min": null
+      },
+      "B": {
+       "score": 0,
+       "min": null
+      },
+      "C": {
+       "score": 1,
+       "min": 1
+      },
+      "D": {
+       "score": 1,
+       "min": 10
+      }
+     }
+    },
+    "moments": [
+     {
+      "min": 3,
+      "note": "Jリーグ動画の逆輸入の話"
+     }
+    ]
+   },
+   "features": {
+    "duration_sec": 971.27225,
+    "volume_std_db": 5.038818359375,
+    "sudden_per_10min": 0.0,
+    "timeline": {
+     "volume_db": [
+      -1.5,
+      0.8,
+      -0.4,
+      0.9,
+      0.9,
+      0.3,
+      0.9,
+      -1.0,
+      0.4,
+      -0.5,
+      -0.9,
+      -1.2,
+      -1.1,
+      1.1,
+      0.1,
+      -0.1,
+      -8.3
+     ],
+     "sudden_at_sec": [],
+     "rate_per_min": [
+      271,
+      353,
+      368,
+      320,
+      354,
+      399,
+      288,
+      318,
+      223,
+      277,
+      189,
+      331,
+      326,
+      325,
+      319,
+      376
+     ]
+    },
+    "speech_rate": 315.2516413124107,
+    "speech_rate_unit": "chars_per_min",
+    "speech_rate_cv": 0.16934257984183623,
+    "ear_parts": {
+     "rate": 4.4,
+     "rate_cv": 4.1,
+     "volume": 4.5,
+     "sudden": 5.0
+    }
+   },
+   "analyzed_at": "2026-11-13T08:48:46.617230+00:00",
+   "interest_score": 4
+  },
+  "53c7305f-b7ca-5941-9005-8875b19cb7ba": {
+   "episode_id": "53c7305f-b7ca-5941-9005-8875b19cb7ba",
+   "input_depth": "transcript",
+   "interest_level": "mid",
+   "calm_star": 3.0,
+   "ear_star": 4.3,
+   "total_star": 4.0,
+   "final_star": 4.0,
+   "final_reason": null,
+   "reasons": {
+    "llm": "謎かけと30秒の考える時間が続き、潜入の緊張もあるため、聞き入りやすい回です。",
+    "items": {
+     "interest": {
+      "A": {
+       "score": 2,
+       "min": 3
+      },
+      "B": {
+       "score": 1,
+       "min": 14
+      },
+      "C": {
+       "score": 0,
+       "min": null
+      },
+      "D": {
+       "score": 1,
+       "min": 3
+      },
+      "E": {
+       "score": 2,
+       "min": 1
+      }
+     },
+     "calm": {
+      "A": {
+       "score": 1,
+       "min": 6
+      },
+      "B": {
+       "score": 1,
+       "min": 8
+      },
+      "C": {
+       "score": 1,
+       "min": 1
+      },
+      "D": {
+       "score": 1,
+       "min": 2
+      }
+     }
+    },
+    "moments": [
+     {
+      "min": 14,
+      "note": "正体がばれた理由を問う謎かけ"
+     },
+     {
+      "min": 8,
+      "note": "ボスが幹部の前で紹介する場面"
+     }
+    ]
+   },
+   "features": {
+    "duration_sec": 2629.397375,
+    "volume_std_db": 6.520808219909668,
+    "sudden_per_10min": 0.0,
+    "timeline": {
+     "volume_db": [
+      -0.2,
+      -0.1,
+      -1.1,
+      1.0,
+      0.5,
+      0.5,
+      0.3,
+      0.6,
+      0.9,
+      1.4,
+      0.1,
+      0.3,
+      0.9,
+      0.1,
+      0.9,
+      0.7,
+      -0.1,
+      0.8,
+      -0.2,
+      1.4,
+      -1.2,
+      -0.0,
+      0.5,
+      1.3,
+      1.1,
+      1.1,
+      1.8,
+      0.5,
+      -1.1,
+      0.2,
+      -0.6,
+      -0.0,
+      -1.0,
+      -2.2,
+      -0.8,
+      -0.4,
+      1.1,
+      -0.8,
+      -1.0,
+      -1.1,
+      -0.9,
+      -1.2,
+      -2.1,
+      -5.3
+     ],
+     "sudden_at_sec": [],
+     "rate_per_min": [
+      148,
+      100,
+      117,
+      243,
+      231,
+      220,
+      229,
+      232,
+      220,
+      203,
+      190,
+      215,
+      222,
+      135,
+      190,
+      262,
+      137,
+      234,
+      192,
+      220
+     ]
+    },
+    "speech_rate": 196.4020641597422,
+    "speech_rate_unit": "chars_per_min",
+    "speech_rate_cv": 0.22601003988126372,
+    "ear_parts": {
+     "rate": 5.0,
+     "rate_cv": 3.3,
+     "volume": 3.7,
+     "sudden": 5.0
+    }
+   },
+   "analyzed_at": "2026-11-13T08:50:52.138687+00:00",
+   "interest_score": 6
+  },
+  "74d1d08a-ddae-5a32-aae0-05cf2d007d14": {
+   "episode_id": "74d1d08a-ddae-5a32-aae0-05cf2d007d14",
+   "input_depth": "transcript",
+   "interest_level": "low",
+   "calm_star": 5.0,
+   "ear_star": 3.8,
+   "total_star": 4.0,
+   "final_star": 4.0,
+   "final_reason": null,
+   "reasons": {
+    "llm": "子猫やかつお節の思い出話が穏やかに続き、聞き流せる回です。",
+    "items": {
+     "interest": {
+      "A": {
+       "score": 0,
+       "min": null
+      },
+      "B": {
+       "score": 1,
+       "min": 6
+      },
+      "C": {
+       "score": 0,
+       "min": null
+      },
+      "D": {
+       "score": 0,
+       "min": null
+      },
+      "E": {
+       "score": 0,
+       "min": null
+      }
+     },
+     "calm": {
+      "A": {
+       "score": 0,
+       "min": null
+      },
+      "B": {
+       "score": 0,
+       "min": null
+      },
+      "C": {
+       "score": 0,
+       "min": null
+      },
+      "D": {
+       "score": 0,
+       "min": null
+      }
+     }
+    },
+    "moments": []
+   },
+   "features": {
+    "duration_sec": 2331.977125,
+    "volume_std_db": 12.70033073425293,
+    "sudden_per_10min": 0.7718772112741029,
+    "timeline": {
+     "volume_db": [
+      1.5,
+      0.3,
+      0.9,
+      1.4,
+      1.6,
+      0.5,
+      0.7,
+      1.8,
+      -1.9,
+      0.7,
+      0.1,
+      2.7,
+      0.2,
+      0.2,
+      -1.4,
+      -3.4,
+      -2.8,
+      -1.9,
+      1.2,
+      1.8,
+      1.0,
+      1.3,
+      3.0,
+      -0.3,
+      0.4,
+      -0.7,
+      -7.5,
+      1.9,
+      -0.3,
+      -0.9,
+      0.1,
+      -0.1,
+      -1.3,
+      -0.8,
+      2.0,
+      -1.2,
+      -2.1,
+      -1.5,
+      -17.0
+     ],
+     "sudden_at_sec": [
+      340,
+      1177,
+      1409
+     ],
+     "rate_per_min": [
+      111,
+      148,
+      155,
+      152,
+      180,
+      109,
+      147,
+      150,
+      132,
+      161,
+      140,
+      187,
+      182,
+      158,
+      143,
+      127,
+      99,
+      143,
+      178,
+      144
+     ]
+    },
+    "speech_rate": 146.6500062308232,
+    "speech_rate_unit": "chars_per_min",
+    "speech_rate_cv": 0.15928409914738617,
+    "ear_parts": {
+     "rate": 5.0,
+     "rate_cv": 4.2,
+     "volume": 1.0,
+     "sudden": 4.7
+    }
+   },
+   "analyzed_at": "2026-11-13T08:53:00.954251+00:00",
+   "interest_score": 1
+  },
+  "648315d7-568a-508e-ad87-c5e26dc4d1d4": {
+   "episode_id": "648315d7-568a-508e-ad87-c5e26dc4d1d4",
+   "input_depth": "transcript",
+   "interest_level": "low",
+   "calm_star": 5.0,
+   "ear_star": 2.6,
+   "total_star": 3.7,
+   "final_star": 3.7,
+   "final_reason": null,
+   "reasons": {
+    "llm": "情景描写の朗読が続き、問いも対立もなく、穏やかなまま進みます。",
+    "items": {
+     "interest": {
+      "A": {
+       "score": 0,
+       "min": null
+      },
+      "B": {
+       "score": 0,
+       "min": null
+      },
+      "C": {
+       "score": 0,
+       "min": null
+      },
+      "D": {
+       "score": 0,
+       "min": null
+      },
+      "E": {
+       "score": 0,
+       "min": null
+      }
+     },
+     "calm": {
+      "A": {
+       "score": 0,
+       "min": null
+      },
+      "B": {
+       "score": 0,
+       "min": null
+      },
+      "C": {
+       "score": 0,
+       "min": null
+      },
+      "D": {
+       "score": 0,
+       "min": null
+      }
+     }
+    },
+    "moments": []
+   },
+   "features": {
+    "duration_sec": 1047.03425,
+    "volume_std_db": 8.848311424255371,
+    "sudden_per_10min": 44.12463107104663,
+    "timeline": {
+     "volume_db": [
+      10.4,
+      13.7,
+      15.8,
+      7.7,
+      7.6,
+      3.1,
+      -2.0,
+      1.1,
+      4.3,
+      -1.2,
+      -3.5,
+      -2.2,
+      -3.1,
+      -2.4,
+      -3.6,
+      -2.1,
+      -9.2,
+      -12.6
+     ],
+     "sudden_at_sec": [
+      1,
+      4,
+      17,
+      24,
+      28,
+      32,
+      35,
+      39,
+      57,
+      58,
+      62,
+      69,
+      73,
+      77,
+      88,
+      89,
+      96,
+      103,
+      111,
+      114,
+      119,
+      124,
+      127,
+      136,
+      139,
+      142,
+      146,
+      150,
+      154,
+      157,
+      163,
+      167,
+      172,
+      176,
+      265,
+      271,
+      276,
+      282,
+      291,
+      296,
+      299,
+      304,
+      307,
+      310,
+      318,
+      323,
+      325,
+      329,
+      333,
+      344,
+      346,
+      349,
+      351,
+      481,
+      493,
+      496,
+      498,
+      503,
+      505,
+      511,
+      515,
+      518,
+      522,
+      526,
+      530,
+      534,
+      538,
+      545,
+      547,
+      551,
+      556,
+      560,
+      563,
+      599,
+      600,
+      602,
+      608
+     ],
+     "rate_per_min": [
+      115,
+      170,
+      76,
+      null,
+      194,
+      46,
+      null,
+      null,
+      119,
+      75,
+      null
+     ]
+    },
+    "speech_rate": 91.88880719043908,
+    "speech_rate_unit": "chars_per_min",
+    "speech_rate_cv": 0.4367590941382361,
+    "ear_parts": {
+     "rate": 5.0,
+     "rate_cv": 1.0,
+     "volume": 2.6,
+     "sudden": 1.0
+    }
+   },
+   "analyzed_at": "2026-11-13T08:53:40.974310+00:00",
+   "interest_score": 1
+  },
+  "30f26e1a-5e9c-57cb-93df-988c4a98ad45": {
+   "episode_id": "30f26e1a-5e9c-57cb-93df-988c4a98ad45",
+   "input_depth": "transcript",
+   "interest_level": "low",
+   "calm_star": 4.0,
+   "ear_star": 3.5,
+   "total_star": 3.9,
+   "final_star": 3.9,
+   "final_reason": null,
+   "reasons": {
+    "llm": "お便りに軽く答える雑談が続き、笑いはありますが筋の追跡は要りません。",
+    "items": {
+     "interest": {
+      "A": {
+       "score": 0,
+       "min": null
+      },
+      "B": {
+       "score": 1,
+       "min": 2
+      },
+      "C": {
+       "score": 1,
+       "min": 1
+      },
+      "D": {
+       "score": 0,
+       "min": null
+      },
+      "E": {
+       "score": 1,
+       "min": 12
+      }
+     },
+     "calm": {
+      "A": {
+       "score": 1,
+       "min": 7
+      },
+      "B": {
+       "score": 0,
+       "min": null
+      },
+      "C": {
+       "score": 0,
+       "min": null
+      },
+      "D": {
+       "score": 1,
+       "min": 3
+      }
+     }
+    },
+    "moments": []
+   },
+   "features": {
+    "duration_sec": 3003.05075,
+    "volume_std_db": 8.138579368591309,
+    "sudden_per_10min": 9.790044340742494,
+    "timeline": {
+     "volume_db": [
+      4.6,
+      5.9,
+      6.2,
+      3.2,
+      4.3,
+      4.9,
+      3.9,
+      2.6,
+      5.7,
+      5.5,
+      5.8,
+      5.4,
+      0.6,
+      2.9,
+      1.4,
+      2.4,
+      4.7,
+      4.0,
+      2.6,
+      3.4,
+      0.8,
+      -7.8,
+      -12.4,
+      -10.4,
+      -10.9,
+      -12.5,
+      -9.6,
+      4.1,
+      4.1,
+      5.3,
+      4.5,
+      2.0,
+      3.3,
+      2.8,
+      2.0,
+      3.0,
+      2.9,
+      2.8,
+      -2.8,
+      -12.5,
+      -11.9,
+      -10.5,
+      -13.4,
+      -11.0,
+      -12.7,
+      -12.8,
+      -12.4,
+      -11.5,
+      -10.3,
+      -12.3,
+      -13.4
+     ],
+     "sudden_at_sec": [
+      14,
+      77,
+      113,
+      122,
+      138,
+      164,
+      166,
+      176,
+      191,
+      202,
+      275,
+      285,
+      300,
+      310,
+      334,
+      508,
+      516,
+      539,
+      625,
+      673,
+      681,
+      689,
+      706,
+      712,
+      827,
+      905,
+      939,
+      943,
+      975,
+      983,
+      1030,
+      1038,
+      1152,
+      1166,
+      1635,
+      1677,
+      1691,
+      1764,
+      1809,
+      1812,
+      1828,
+      1907,
+      1989,
+      2008,
+      2041,
+      2045,
+      2090,
+      2223,
+      2238
+     ],
+     "rate_per_min": [
+      297,
+      306,
+      280,
+      303,
+      240,
+      242,
+      339,
+      301,
+      269,
+      288,
+      288,
+      222,
+      297,
+      302,
+      262,
+      249,
+      354,
+      280,
+      239,
+      257
+     ]
+    },
+    "speech_rate": 282.03545647051595,
+    "speech_rate_unit": "chars_per_min",
+    "speech_rate_cv": 0.11767975834509534,
+    "ear_parts": {
+     "rate": 5.0,
+     "rate_cv": 4.8,
+     "volume": 2.9,
+     "sudden": 1.1
+    }
+   },
+   "analyzed_at": "2026-11-13T08:56:35.250500+00:00",
+   "interest_score": 3
+  }
+ },
+ "sleep_log": {}
+}
