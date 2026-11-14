@@ -9,6 +9,14 @@ struct NightView: View {
     /// 再生中はその番組。まだなら、今夜の予約、なければ今夜の先頭の候補。
     private var shown: Candidate? { model.playing ?? model.reservation(night: 0) ?? model.slate(night: 0).first }
 
+    private var playLabel: String {
+        switch model.player.state {
+        case .loading: "読み込み中。押すと止めます"
+        case .failed: "もう一度再生"
+        default: model.player.isPlaying ? "一時停止" : "再生"
+        }
+    }
+
     var body: some View {
         ZStack {
             Color.nc(.bgNight).ignoresSafeArea()
@@ -17,14 +25,31 @@ struct NightView: View {
                 Button {
                     if model.playing == nil, let c = shown { model.play(c) } else { model.player.toggle() }
                 } label: {
-                    Image(systemName: model.player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: NCSize.iconPlay))
-                        .frame(width: NCSize.playD, height: NCSize.playD)
-                        .foregroundStyle(Color.nc(.textMain))
-                        .background(Circle().fill(Color.nc(.surface)))
-                        .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
+                    ZStack {
+                        switch model.player.state {
+                        case .loading:
+                            // 読み込み中・通信待ち。止めたいときは、押せる。
+                            ProgressView().controlSize(.large).tint(Color.nc(.textMain))
+                        case .failed:
+                            Image(systemName: "arrow.clockwise").font(.system(size: NCSize.iconPlay))
+                        default:
+                            Image(systemName: model.player.isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: NCSize.iconPlay))
+                        }
+                    }
+                    .frame(width: NCSize.playD, height: NCSize.playD)
+                    .foregroundStyle(Color.nc(.textMain))
+                    .background(Circle().fill(Color.nc(.surface)))
+                    .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
                 }
-                .accessibilityLabel(model.player.isPlaying ? "一時停止" : "再生")
+                .accessibilityLabel(playLabel)
+                // 失敗したときだけ、理由と次の一手を出す(ふだんは、番組名とボタンだけ)。
+                if model.player.state == .failed {
+                    Text("再生できませんでした。通信を確かめて、もう一度押してください")
+                        .ncText(NCText.footnote, .textSub).multilineTextAlignment(.center)
+                }
+                // 声の存在を、静かに示す細い波形。再生中だけ、ごくゆっくり揺れる。
+                SoftWave(playing: model.player.state == .playing)
                 Button { timerOpen = true } label: {
                     HStack(spacing: NCSpace.s2) {
                         Image(systemName: "clock")
@@ -49,6 +74,66 @@ struct NightView: View {
         .statusBarHidden(true)
         .persistentSystemOverlays(.hidden)
         .sheet(isPresented: $timerOpen) { TimerSheet().environment(model) }
+    }
+}
+
+/// 細く柔らかな水平の波形。夜の画面に足す表現は、これだけ(オーブや背景の光は、必要になってから)。
+///
+/// - 動きはごくゆっくり・ごく小さく。振幅は最大でも十数pt。
+/// - 揺れの大きさは、再生中かどうかだけで決める(音量は読まない。再生の安定性に触れない)。
+/// - 再生が始まると約3秒かけて現れ、止まると約8秒かけて、ほぼ静止に戻る(音のフェードと同じ長さ)。
+/// - 周期の違う3つの正弦波を重ねるので、繰り返しの継ぎ目が出ない。
+/// - 「視差効果を減らす」では動かさず、画面が非アクティブの間は描画を止める。
+private struct SoftWave: View {
+    let playing: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var envelope = WaveEnvelope()
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion || scenePhase != .active)) { timeline in
+            Canvas { ctx, size in
+                envelope.advance(to: timeline.date, target: playing ? 1 : 0)
+                draw(&ctx, size, envelope.value, reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate)
+            }
+        }
+        .frame(height: 36)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func draw(_ ctx: inout GraphicsContext, _ size: CGSize, _ m: Double, _ t: Double) {
+        // ゆるい音量の揺らぎ(模擬)。0.3〜0.5 の間を、数秒かけて行き来する。
+        let n = sin(t * 0.9) * 0.5 + sin(t * 0.9 * 2.31 + 1.7) * 0.3 + sin(t * 0.9 * 4.97 + 0.4) * 0.2
+        let level = 0.45 * (0.65 + 0.35 * (n + 0.5))
+        let amp = (reduceMotion ? 0.0 : (0.7 + level * 10)) * (0.25 + 0.75 * m)
+        let cy = size.height / 2, inset = 12.0, steps = 90
+        for (width, alpha, phase) in [(1.2, 0.5, 0.0), (2.6, 0.16, 0.9)] {
+            var path = Path()
+            for i in 0...steps {
+                let u = Double(i) / Double(steps)
+                let x = inset + (size.width - 2 * inset) * u
+                let w = sin(u * 9 + t * 0.55 + phase) * 0.55 + sin(u * 17 - t * 0.8 + phase * 1.3) * 0.3 + sin(u * 31 + t * 1.1 + phase * 0.7) * 0.15
+                let y = cy + w * amp * sin(.pi * u)
+                i == 0 ? path.move(to: CGPoint(x: x, y: y)) : path.addLine(to: CGPoint(x: x, y: y))
+            }
+            ctx.stroke(path, with: .color(Color.nc(.accentResult).opacity(alpha * (0.3 + 0.7 * m))),
+                       style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+        }
+    }
+}
+
+/// 揺れの大きさ(0〜1)。急に変えず、なだらかに追いかける。上がるのは約3秒、下がるのは約8秒。
+private final class WaveEnvelope {
+    private(set) var value = 0.0
+    private var last: Date?
+
+    func advance(to now: Date, target: Double) {
+        defer { last = now }
+        guard let last else { return }
+        let dt = min(now.timeIntervalSince(last), 0.1)   // 長く止まったあとも、飛ばさない
+        let tau = target > value ? 3.0 : 8.0
+        value += (target - value) * (1 - exp(-dt / tau))
     }
 }
 
