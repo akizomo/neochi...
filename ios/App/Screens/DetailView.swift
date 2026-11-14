@@ -39,8 +39,15 @@ struct DetailView: View {
         }
         .background(Color.nc(.bgBase))
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                if let show { FavoriteButton(isOn: model.favorites.contains(show.id), title: show.title, inToolbar: true) { model.toggleFavorite(show) } }
+            // 右上: 元のPodcastへ(外部リンク)と、お気に入り。
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if let show {
+                    if let url = show.appleURL ?? show.linkURL {
+                        Link(destination: url) { Image(systemName: "arrow.up.right.square") }
+                            .accessibilityLabel("元のPodcastを開く")
+                    }
+                    FavoriteButton(isOn: model.favorites.contains(show.id), title: show.title, inToolbar: true) { model.toggleFavorite(show) }
+                }
             }
         }
     }
@@ -92,13 +99,6 @@ struct DetailView: View {
             if let c = TonightEngine.listenNow(show: show, ctx: model.context) {
                 Button { model.play(c) } label: {
                     Text("いま聴く").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.pressable)
-            }
-            if let url = show.appleURL ?? show.linkURL {
-                Link(destination: url) {
-                    Label("元のPodcastを開く", systemImage: "arrow.up.right")
-                        .ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.pressable)
             }
