@@ -14,7 +14,7 @@ import requests
 
 log = logging.getLogger("neochi.feeds")
 NS = {"itunes": "http://www.itunes.com/dtds/podcast-1.0.dtd"}
-_NAMESPACE = uuid.UUID("6f1c0c8e-5f55-4a54-9c1e-6e0c0c0c0001")  # neochi… 固定
+_NAMESPACE = uuid.UUID("6f1c0c8e-5f55-4a54-9c1e-6e0c0c0c0001")  # NeochiPickzz 固定
 
 
 def show_id(rss_url: str) -> str:

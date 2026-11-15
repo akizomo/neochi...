@@ -43,6 +43,11 @@ class JsonStore:
         return [r["latency_min"] for r in self.rows("sleep_log")
                 if r.get("source") == "watch" and r["episode_id"] in eps and r.get("latency_min") is not None]
 
+    def episode_watch_latencies(self, episode_id: str) -> list[float]:
+        """その回の実測(source=watch)の分数。自己申告は入れない。"""
+        return [r["latency_min"] for r in self.rows("sleep_log")
+                if r.get("source") == "watch" and r["episode_id"] == episode_id and r.get("latency_min") is not None]
+
     def final_stars(self, sid: str) -> list[float]:
         eps = {e["id"] for e in self.rows("episode") if e["show_id"] == sid}
         return [a["final_star"] for a in self.rows("analysis")
@@ -104,6 +109,12 @@ class SupabaseStore:
             f"{self.base}/sleep_log?select=latency_min,episode!inner(show_id)"
             f"&source=eq.watch&episode.show_id=eq.{sid}&latency_min=not.is.null",
             headers=self.h, timeout=30)
+        r.raise_for_status()
+        return [x["latency_min"] for x in r.json()]
+
+    def episode_watch_latencies(self, episode_id: str) -> list[float]:
+        r = requests.get(f"{self.base}/sleep_log?select=latency_min&episode_id=eq.{episode_id}"
+                         f"&source=eq.watch&latency_min=not.is.null", headers=self.h, timeout=30)
         r.raise_for_status()
         return [x["latency_min"] for x in r.json()]
 

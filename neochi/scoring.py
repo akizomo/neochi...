@@ -1,4 +1,4 @@
-"""★の算出。数値はすべて config/scoring.yaml から読む。"""
+"""評点の算出。数値はすべて config/scoring.yaml から読む。"""
 from __future__ import annotations
 
 from . import strings
@@ -89,16 +89,35 @@ def total_star(calm: float | None, ear: float | None, interest_level: str | None
     return round(sum(vals[k] * w[k] for k in vals) / sum(w.values()), 1)
 
 
-def final_star(total: float | None, community: float | None, community_n: int, cfg: dict) -> tuple[float | None, str | None]:
-    """最終★と final_reason。みんなが0件の間は AI解析のみ。人の手では上書きしない。"""
+def watch_star(median_min: float, cfg: dict) -> float:
+    """実測の分数の中央値 → 1〜5(短いほど高い。best 以下で 5.0、worst 以上で 1.0、その間は直線)。"""
+    f = cfg["final"]
+    return round(1 + 4 * _norm(median_min, f["watch_best_min"], f["watch_worst_min"]), 1)
+
+
+def final_star(total: float | None, community: float | None, community_n: int, cfg: dict,
+               watch_median: float | None = None, watch_n: int = 0) -> tuple[float | None, str | None]:
+    """総合評点と final_reason。AI解析を土台に、実測とみんなの評価を件数に応じて足す。人の手では上書きしない。
+
+    総合評点 = total×(1−w実測−wみんな) + 実測点×w実測 + みんなの🌊★の平均×wみんな
+    件数が下限(watch_min_n / community_min_n)未満の項目は、計算に入れない。
+    """
     if total is None:
         return None, None
-    if not community_n or community is None:
-        return total, None
     f = cfg["final"]
-    w = min(f["community_max_weight"], community_n / (community_n + f["community_prior_n"]))
-    final = round(total * (1 - w) + community * w, 1)
+    parts = []  # (重み, 点, 名前)
+    if watch_median is not None and watch_n >= f["watch_min_n"]:
+        w = min(f["watch_max_weight"], watch_n / (watch_n + f["watch_prior_n"]))
+        parts.append((w, watch_star(watch_median, cfg), "実測"))
+    if community is not None and community_n >= f["community_min_n"]:
+        w = min(f["community_max_weight"], community_n / (community_n + f["community_prior_n"]))
+        parts.append((w, community, "みんな"))
+    if not parts:
+        return total, None
+    final = round(total * (1 - sum(w for w, _, _ in parts)) + sum(w * v for w, v, _ in parts), 1)
     reason = None
-    if abs(total - community) >= f["divergence_threshold"]:
-        reason = strings.divergence_reason(total, community, community_n)
+    far = [(v, name) for _, v, name in parts if abs(total - v) >= f["divergence_threshold"]]
+    if far:
+        v, name = far[0]
+        reason = strings.divergence_reason(total, v, name, watch_n if name == "実測" else community_n)
     return final, reason

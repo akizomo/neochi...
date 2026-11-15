@@ -111,12 +111,8 @@ public enum NCDuration {
 
 public enum NCOpacity {
     public static let logo1: Double = 1
-    public static let logo2: Double = 0.88
-    public static let logo3: Double = 0.76
-    public static let logo4: Double = 0.64
-    public static let logo5: Double = 0.52
-    public static let logo6: Double = 0.4
-    public static let logo7: Double = 0.28
+    public static let logo2: Double = 0.6
+    public static let logo3: Double = 0.28
     public static let disabled: Double = 0.4
 }
 

@@ -3,10 +3,10 @@
 画面とスコアカードに絵文字は使わない。眠りは Z で表す。診断に見える語は使わない(tests/test_strings.py が検査する)。
 """
 
-PRODUCT = "neochi…"
+PRODUCT = "NeochiPickzz"
 TAGLINE = "寝落ちまでを、番組ごとに測る。"
 
-LABEL_TOTAL = "寝落ち適性"
+LABEL_TOTAL = "評点"
 LABEL_INTEREST = "程よい興味"
 LABEL_CALM = "起伏の少なさ"
 LABEL_EAR = "耳のゆるさ"
@@ -25,7 +25,7 @@ _COMMENTS = [
     (20, "理想の寝落ちでした"),
     (30, "やや粘りました"),
 ]
-_COMMENT_LONG = "最後まで聞いてしまいました"
+_COMMENT_LONG = "最後まで聴いてしまいました"
 
 
 def sleep_comment(minutes: float) -> str:
@@ -41,7 +41,7 @@ def sleep_line(minutes: int | None) -> str:
     return f"本日の寝落ち、{minutes}分。{sleep_comment(minutes)}"
 
 
-def divergence_reason(ai: float, crowd: float, n: int) -> str:
-    """AI解析とみんなが大きくずれたときの final_reason(一行)。"""
-    side = "高い" if crowd > ai else "低い"
-    return f"みんな {crowd:.1f}({n}件)がAI解析 {ai:.1f}より{side}ため、両方を並べて混ぜました"
+def divergence_reason(ai: float, other: float, name: str, n: int) -> str:
+    """AI解析と、実測・みんなが大きくずれたときの final_reason(一行)。"""
+    side = "高い" if other > ai else "低い"
+    return f"{name} {other:.1f}({n}件)がAI解析 {ai:.1f}より{side}ため、両方を並べて混ぜました"

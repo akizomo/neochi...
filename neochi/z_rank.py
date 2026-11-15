@@ -1,22 +1,17 @@
-"""掲載ランク Z / ZZ / ZZZ。実測(source=watch)の入眠までの分数だけで決める。"""
+"""寝落ち格付け Z / ZZ / ZZZ。番組の評点(総合評点の平均)だけで決める。基準未満は None(掲載しない)。"""
 from __future__ import annotations
 
+_ORDER = {None: 0, "Z": 1, "ZZ": 2, "ZZZ": 3}
 
-def z_rank(latencies_min: list[float], cfg: dict) -> str | None:
-    """実測がなければ None(調査中)。条件を満たす最も高いランクを返す。"""
-    if not latencies_min:
-        return None
-    line = cfg["threshold_min"]
-    n = len(latencies_min)
-    under = sum(1 for m in latencies_min if m < line)
-    ratio = under / n
 
-    def ok(rule: dict) -> bool:
-        if under < 1 or n < rule["min_count"]:
-            return False
-        return rule.get("min_ratio") is None or ratio >= rule["min_ratio"]
-
-    for name, key in (("ZZZ", "zzz"), ("ZZ", "zz"), ("Z", "z")):
-        if ok(cfg[key]):
-            return name
-    return None
+def z_rank(show_star: float | None, cfg: dict, current: str | None = None, watch_n: int = 0) -> str | None:
+    """評点から格付けを返す。すでに付いた格付けは、実測が demote_min_watch 件以上になるまで下げない。"""
+    rank = None
+    if show_star is not None:
+        for name, key in (("ZZZ", "zzz"), ("ZZ", "zz"), ("Z", "z")):
+            if show_star >= cfg[key]["min_star"]:
+                rank = name
+                break
+    if _ORDER[rank] < _ORDER.get(current, 0) and watch_n < cfg["demote_min_watch"]:
+        return current
+    return rank

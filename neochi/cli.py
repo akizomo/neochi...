@@ -3,12 +3,13 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import statistics
 import uuid
 from pathlib import Path
 
 import yaml
 
-from . import feeds, pipeline, z_rank
+from . import feeds, pipeline, scoring, z_rank
 from .store import open_store
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -51,16 +52,29 @@ def cmd_run(a) -> int:
             done += 1
             logging.info("%s / %s → final %s (%s)", show.title, ep.title, row["final_star"], row["input_depth"])
     _update_show_stars(store, [s.id for s in shows])
+    update_ratings(store, [s.id for s in shows], load_z_config())
     store.save()
     logging.info("完了: %d 件を解析", done)
     return 0
 
 
 def _update_show_stars(store, show_ids) -> None:
-    for sid in show_ids:  # 番組の★ = 解析済みの回の最終★の平均(機械的な集計。手では動かさない)
+    for sid in show_ids:  # 番組の評点 = 解析済みの回の総合評点の平均(機械的な集計。手では動かさない)
         stars = store.final_stars(sid)
         if stars:
             store.update("show", sid, {"show_star": round(sum(stars) / len(stars), 1)})
+
+
+def update_ratings(store, show_ids, zcfg: dict) -> None:
+    """番組の評点から寝落ち格付けを決める。基準未満は掲載しない(評点は残す)。"""
+    shows = {s["id"]: s for s in store.rows("show")}
+    for sid in show_ids:
+        s = shows.get(sid)
+        if not s:
+            continue
+        rank = z_rank.z_rank(s.get("show_star"), zcfg, s.get("z_rank"), len(store.watch_latencies(sid)))
+        store.update("show", sid, {"z_rank": rank, "listing_status": "listed" if rank else "researching"})
+        logging.info("%s → %s", s["title"], rank or "掲載しない")
 
 
 def cmd_apply(a) -> int:
@@ -79,20 +93,26 @@ def cmd_apply(a) -> int:
         ok += 1
         (Path(a.pending) / f"{pipeline._safe(j['episode_id'])}.json").unlink(missing_ok=True)
         logging.info("%s → final %s", j["episode_id"], row["final_star"])
-    _update_show_stars(store, {e["show_id"] for e in store.rows("episode")})
+    ids = {e["show_id"] for e in store.rows("episode")}
+    _update_show_stars(store, ids)
+    update_ratings(store, ids, load_z_config())
     store.save()
     logging.info("完了: %d 件を取り込み", ok)
     return 0
 
 
 def cmd_z_rank(a) -> int:
-    zcfg, store = load_z_config(), open_store(a.store)
-    shows = store.rows("show")
-    for s in shows:
-        rank = z_rank.z_rank(store.watch_latencies(s["id"]), zcfg)
-        store.update("show", s["id"], {"z_rank": rank,
-                                       "listing_status": "listed" if rank else "researching"})
-        logging.info("%s → %s", s["title"], rank or "調査中")
+    """実測・みんなの評価が増えたあとに、総合評点・番組の評点・格付けを計算し直す。"""
+    cfg, zcfg, store = load_config(), load_z_config(), open_store(a.store)
+    for row in store.rows("analysis"):
+        crowd, n = store.community(row["episode_id"])
+        watch = store.episode_watch_latencies(row["episode_id"])
+        median = statistics.median(watch) if watch else None
+        final, reason = scoring.final_star(row.get("total_star"), crowd, n, cfg, median, len(watch))
+        store.update("analysis", row["episode_id"], {"final_star": final, "final_reason": reason})
+    ids = [s["id"] for s in store.rows("show")]
+    _update_show_stars(store, ids)
+    update_ratings(store, ids, zcfg)
     store.save()
     return 0
 
@@ -115,7 +135,7 @@ def main(argv=None) -> int:
     ap.add_argument("--file", default="work/judgements.jsonl")
     ap.add_argument("--pending", default="work/pending")
     ap.set_defaults(fn=cmd_apply)
-    z = sub.add_parser("z-rank", help="sleep_log の実測から Z ランクを更新する")
+    z = sub.add_parser("z-rank", help="実測・みんなの評価から、総合評点と寝落ち格付けを計算し直す")
     z.set_defaults(fn=cmd_z_rank)
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")

@@ -5,7 +5,7 @@ import tempfile
 
 import numpy as np
 
-from neochi import feeds, pipeline, z_rank
+from neochi import feeds, pipeline
 from neochi.store import JsonStore
 
 SHOW = feeds.Show(id=feeds.show_id("https://x/f"), title="テスト番組", publisher="p", rss_url="https://x/f", genre="雑談")
@@ -59,14 +59,22 @@ def test_llm_failure_still_gets_final_star(cfg, tmp_path):
     assert row["calm_star"] is None and row["final_star"] is not None
 
 
-def test_z_rank_from_dummy_sleep_log(cfg, zcfg, tmp_path):
+def test_rating_from_dummy_sleep_log(cfg, zcfg, tmp_path):
+    from neochi import cli
     store = JsonStore(tmp_path / "s.json")
     pipeline.analyze_episode(SHOW, ep(1), cfg, store, make_deps(made_dirs=[]))
     e = ep(1).id
-    for m in (12, 18, 25, 22, 40):
-        store.upsert("sleep_log", {"id": f"w{m}", "episode_id": e, "source": "watch", "latency_min": m})
-    store.upsert("sleep_log", {"id": "s1", "episode_id": e, "source": "self", "latency_min": 3})  # 自己申告は集計しない
-    assert z_rank.z_rank(store.watch_latencies(SHOW.id), zcfg) == "ZZZ"
+    before = store.get("analysis", e)["final_star"]
+    for i, m in enumerate((12, 18, 25, 22, 40)):
+        store.upsert("sleep_log", {"id": f"w{i}", "episode_id": e, "source": "watch", "latency_min": m})
+    store.upsert("sleep_log", {"id": "s1", "episode_id": e, "source": "self", "latency_min": 3})  # 自己申告は入れない
+    assert store.episode_watch_latencies(e) == [12, 18, 25, 22, 40]
+    store.upsert("show", {"id": SHOW.id, "title": SHOW.title})
+    cli._update_show_stars(store, [SHOW.id])
+    cli.update_ratings(store, [SHOW.id], zcfg)
+    show = store.get("show", SHOW.id)
+    assert show["show_star"] == before
+    assert (show["z_rank"] is not None) == (before >= zcfg["z"]["min_star"])
 
 
 def test_session_judge_writes_pending_and_apply(tmp_path, cfg):

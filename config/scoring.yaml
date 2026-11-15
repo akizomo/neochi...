@@ -37,7 +37,7 @@ ear:
   volume_std_db: {best: 4, worst: 12}
   sudden_per_10min: {best: 0, worst: 10}
 
-# 😴 要因の総合(AI解析)。🎯は mid を最良とする(興味が強すぎても弱すぎても落ちにくい)
+# 評点の元(AI解析の総合)。🎯は mid を最良とする(興味が強すぎても弱すぎても落ちにくい)
 total:
   weights: {interest: 0.3, calm: 0.4, ear: 0.3}
   # 引き込み力(1〜10)のゾーン。数値は仮説。実測(どの段階で早く眠れたか)が溜まったら見直す
@@ -47,11 +47,18 @@ total:
     high_end: [10, 1.0]   # 引き込まれすぎ(聞き続けてしまう)。退屈より悪いとみる
   interest_star: {low: 3.0, mid: 5.0, high: 2.0}   # 旧形式(3段階のみ)の判定用
 
-# 最終★: みんなの評価が入ったらAI解析と混ぜる。みんなが0件の間は AI解析のみ。
+# 総合評点(final_star。格付けとアプリの評点はこれ)。docs/SCORE.md §2。数値は仮。
+# AI解析(total)を土台に、実測とみんなの評価を件数に応じて足す。件数が下限未満の項目は、計算にも画面にも入れない。
 final:
+  community_min_n: 10       # みんなの評価(🌊)は、この件数から使う
   community_prior_n: 10     # w = n / (n + prior_n)
-  community_max_weight: 0.5
-  divergence_threshold: 1.0 # AI解析とみんなの差がこの★以上なら final_reason に一行
+  community_max_weight: 0.3
+  divergence_threshold: 1.0 # AI解析と、実測・みんなの差がこの点以上なら final_reason に一行
+  watch_min_n: 3            # ウォッチの実測は、この件数から使う
+  watch_prior_n: 5
+  watch_max_weight: 0.6
+  watch_best_min: 10        # 実測の中央値がこの分数以下で 5.0
+  watch_worst_min: 40       # この分数以上で 1.0(その間は直線)
 
 llm:
   model: claude-sonnet-5-5

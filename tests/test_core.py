@@ -11,7 +11,7 @@ def test_sleep_comment_boundaries():
     assert strings.sleep_comment(5) == "即落ちでした"
     assert strings.sleep_comment(10) == "理想の寝落ちでした"
     assert strings.sleep_comment(20) == "やや粘りました"
-    assert strings.sleep_comment(30) == "最後まで聞いてしまいました"
+    assert strings.sleep_comment(30) == "最後まで聴いてしまいました"
     assert "―" in strings.sleep_line(None)
 
 
@@ -45,150 +45,39 @@ def test_ear_star_and_totals(cfg):
 
 def test_final_star_ai_only_then_blend(cfg):
     assert scoring.final_star(4.0, None, 0, cfg) == (4.0, None)
+    # みんなの評価は10件未満なら入れない
+    assert scoring.final_star(4.5, 2.5, 9, cfg) == (4.5, None)
     f, reason = scoring.final_star(4.5, 2.5, 20, cfg)
-    assert 2.5 < f < 4.5 and reason and "AI解析" in reason
+    assert 2.5 < f < 4.5 and reason and "AI解析" in reason and "みんな" in reason
     f, reason = scoring.final_star(4.0, 3.8, 20, cfg)
     assert reason is None
 
 
+def test_final_star_watch(cfg):
+    # 実測は3件未満なら入れない
+    assert scoring.final_star(4.5, None, 0, cfg, 40, 2) == (4.5, None)
+    # 実測3件・中央値40分(実測点 1.0)で、AI解析 4.5 から下がる。理由に「実測」が入る
+    f, reason = scoring.final_star(4.5, None, 0, cfg, 40, 3)
+    assert f < 4.5 and reason and "実測" in reason
+    # 実測が短いほど高い。10分以下は 5.0、40分以上は 1.0
+    assert scoring.watch_star(5, cfg) == 5.0 and scoring.watch_star(45, cfg) == 1.0
+    assert scoring.watch_star(25, cfg) == 3.0
+    # 件数が増えるほど実測に寄る(上限 0.6)
+    f3, _ = scoring.final_star(4.5, None, 0, cfg, 40, 3)
+    f50, _ = scoring.final_star(4.5, None, 0, cfg, 40, 50)
+    assert f50 < f3 and f50 >= round(4.5 * 0.4 + 1.0 * 0.6, 1) - 0.05
+
+
 def test_z_rank(zcfg):
-    assert z_rank([], zcfg) is None
-    assert z_rank([45, 50], zcfg) is None          # 実測はあるが30分未満なし
-    assert z_rank([10, 50, 60], zcfg) == "Z"
-    assert z_rank([10, 20, 50], zcfg) == "ZZ"      # 2/3 ≥ 半分
-    assert z_rank([10, 12, 15, 20, 25], zcfg) == "ZZZ"
-    assert z_rank([10, 12, 15, 20], zcfg) == "ZZ"  # 件数が足りない
+    assert z_rank(None, zcfg) is None
+    assert z_rank(2.9, zcfg) is None              # 基準未満は掲載しない
+    assert z_rank(3.0, zcfg) == "Z"
+    assert z_rank(3.6, zcfg) == "ZZ"
+    assert z_rank(4.2, zcfg) == "ZZZ"             # AI解析だけでも付く(実測の件数は条件にしない)
 
 
-def test_plan_segments(cfg):
-    assert transcribe.plan_segments(600, cfg) == [(0.0, 600)]
-    segs = transcribe.plan_segments(3600, cfg)
-    assert segs == [(0.0, 1200.0)]  # 冒頭20分だけ(中盤のランダム区間は使わない)
-
-
-def test_rate_is_plateau_not_slower_is_better(cfg):
-    slow = scoring.ear_star({"speech_rate": 150}, "ja", cfg)
-    ok = scoring.ear_star({"speech_rate": 290}, "ja", cfg)
-    fast = scoring.ear_star({"speech_rate": 400}, "ja", cfg)
-    assert slow == ok == 5.0 and fast < ok
-
-
-def test_rate_profile_weights_front(cfg):
-    # 前半(0〜10分)はゆっくり、中盤は速い。前半の重みが大きいので、単純平均より遅く出る
-    spans = [(m * 60, m * 60 + 60, "あ" * 200) for m in range(10)] + [(m * 60, m * 60 + 60, "あ" * 400) for m in range(20, 25)]
-    p = features.rate_profile(spans, "ja", cfg)
-    simple = (200 * 10 + 400 * 5) / 15
-    assert p["speech_rate"] < simple
-    assert p["speech_rate_cv"] > 0
-
-
-def test_parse_judgement_validates():
-    j = llm.parse_judgement('前置き {"calm_star": 4.2, "interest_level": "mid", "reason": "淡々としています"} ')
-    assert j["calm_star"] == 4.0 and j["interest_level"] == "mid"
-    for bad in ('{"calm_star": 9, "interest_level": "mid"}', "なし", '{"calm_star": 3, "interest_level": "x"}'):
-        try:
-            llm.parse_judgement(bad)
-        except (ValueError, KeyError):
-            continue
-        raise AssertionError(bad)
-
-
-RSS = b"""<?xml version="1.0"?><rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel>
-<item><title>old</title><guid>a</guid><pubDate>Mon, 01 Jan 2024 00:00:00 +0000</pubDate>
-<enclosure url="https://x/a.mp3"/><itunes:duration>10:30</itunes:duration></item>
-<item><title>new</title><guid>b</guid><pubDate>Tue, 02 Jan 2024 00:00:00 +0000</pubDate>
-<enclosure url="https://x/b.mp3"/></item><item><title>no audio</title></item></channel></rss>"""
-
-
-def test_parse_artwork():
-    x = b'<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel><itunes:image href=" https://x/a.jpg "/></channel></rss>'
-    assert feeds.parse_artwork(x) == "https://x/a.jpg"
-    y = b"<rss><channel><image><url>https://x/b.png</url></image></channel></rss>"
-    assert feeds.parse_artwork(y) == "https://x/b.png"
-    assert feeds.parse_artwork(b"<rss><channel></channel></rss>") is None
-
-
-def test_parse_link_only_http():
-    assert feeds.parse_link(b"<rss><channel><link> https://example.com/show </link></channel></rss>") == "https://example.com/show"
-    assert feeds.parse_link(b"<rss><channel><link>javascript:alert(1)</link></channel></rss>") is None
-    assert feeds.parse_link(b"<rss><channel></channel></rss>") is None
-
-
-def test_parse_feed_newest_first_and_stable_ids():
-    sid = feeds.show_id("https://x/feed")
-    eps = feeds.parse_feed(RSS, sid)
-    assert [e.title for e in eps] == ["new", "old"]
-    assert eps[1].duration_sec == 630
-    assert [e.id for e in feeds.parse_feed(RSS, sid)] == [e.id for e in eps]
-
-
-def test_store_update_changes_only_given_columns(tmp_path):
-    from neochi.store import JsonStore
-    st = JsonStore(tmp_path / "s.json")
-    st.upsert("show", {"id": "s1", "title": "T", "rss_url": "u"})
-    st.update("show", "s1", {"show_star": 4.0})
-    st.update("show", "none", {"show_star": 1.0})  # 行がなければ何もしない(作らない)
-    assert st.get("show", "s1") == {"id": "s1", "title": "T", "rss_url": "u", "show_star": 4.0}
-    assert st.get("show", "none") is None
-
-
-def test_shard_splits_shows_without_overlap():
-    from neochi.cli import _shard
-    from neochi import feeds
-    shows = [feeds.Show(id=feeds.show_id(f"http://x/{i}"), title=str(i), publisher="", rss_url=f"http://x/{i}",
-                        genre="", lang="ja") for i in range(30)]
-    parts = [_shard(shows, f"{i}/3") for i in range(3)]
-    assert sum(len(p) for p in parts) == 30
-    assert len({s.id for p in parts for s in p}) == 30
-    assert _shard(shows, None) == shows
-
-
-def test_run_limits_before_sharding(monkeypatch, tmp_path):
-    """--limit は分割より先に効く(3分割しても、対象は先頭 limit 番組の中だけ)。"""
-    from neochi import cli, feeds
-    shows = [feeds.Show(id=feeds.show_id(f"http://x/{i}"), title=str(i), publisher="", rss_url=f"http://x/{i}",
-                        genre="", lang="ja") for i in range(60)]
-    monkeypatch.setattr(feeds, "load_shows", lambda _p: shows)
-    seen = []
-    monkeypatch.setattr(feeds, "fetch_episodes", lambda s: seen.append(s.id) or [])
-    for i in range(3):
-        cli.main(["--store", str(tmp_path / "s.json"), "run", "--limit", "30", "--shard", f"{i}/3"])
-    assert set(seen) == {s.id for s in shows[:30]} and len(seen) == 30
-
-
-def test_timeline_and_ear_parts(cfg):
-    import numpy as np
-    from neochi import features, scoring
-    sr = cfg["acoustic"]["sample_rate"]
-    t = np.arange(sr * 180) / sr
-    x = (0.05 * np.sin(2 * np.pi * 200 * t)).astype(np.float32)
-    x[sr * 100: sr * 101] *= 20  # 100秒目に大きな音
-    f = features.acoustic_features(x, sr, cfg)
-    tl = f["timeline"]
-    assert len(tl["volume_db"]) == 3 and 100 in tl["sudden_at_sec"]
-    spans = [(m * 60.0, m * 60 + 50.0, "あ" * 200) for m in range(3)]
-    rp = features.rate_profile(spans, "ja", cfg)
-    assert rp["rate_per_min"] == [240, 240, 240]
-    f.update({"speech_rate": rp["speech_rate"]})
-    parts = scoring.ear_parts(f, "ja", cfg)
-    assert set(parts) >= {"rate", "volume", "sudden"} and all(1 <= v <= 5 for v in parts.values())
-
-
-def test_item_judgement_and_zone(cfg):
-    from neochi import llm, scoring
-    raw = json.dumps({"interest": {"A": 2, "B": {"score": 1, "min": 3}, "C": 0, "D": 1, "E": 0},
-                      "calm": {"A": 1, "B": 0, "C": 2, "D": 0},
-                      "moments": [{"min": 12, "note": "結末が明かされます"}], "reason": "r"})
-    v = llm.parse_judgement(raw)
-    assert v["interest_score"] == 4 and v["interest_level"] == "mid" and v["calm_star"] == 3.5
-    assert v["items"]["interest"]["B"] == {"score": 1, "min": 3} and v["moments"][0]["min"] == 12
-    assert scoring.interest_star(5, cfg) == 5.0
-    assert scoring.interest_star(1, cfg) == 3.0 and scoring.interest_star(10, cfg) == 1.0
-    assert scoring.interest_star(2.5, cfg) == 4.0 and scoring.interest_star(8, cfg) == 3.0
-    with pytest.raises(ValueError):
-        llm.parse_judgement(json.dumps({"interest": {"A": 3}, "calm": {}}))
-
-
-def test_minute_marks():
-    from neochi.pipeline import with_minute_marks
-    assert with_minute_marks([(0, 5, "あ"), (30, 40, "い"), (61, 70, "う")]) == "[0分] あい\n[1分] う"
+def test_z_rank_demote_needs_watch(zcfg):
+    assert z_rank(3.2, zcfg, current="ZZZ", watch_n=4) == "ZZZ"   # 実測5件未満は下げない
+    assert z_rank(3.2, zcfg, current="ZZZ", watch_n=5) == "Z"
+    assert z_rank(2.0, zcfg, current="Z", watch_n=2) == "Z"
+    assert z_rank(4.5, zcfg, current="Z", watch_n=0) == "ZZZ"      # 上がるのは、いつでも

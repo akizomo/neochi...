@@ -1,4 +1,4 @@
--- neochi… 初期スキーマ。要因(analysis)と結果(sleep_log)は別テーブルのまま混ぜない。
+-- NeochiPickzz 初期スキーマ。要因(analysis)と結果(sleep_log)は別テーブルのまま混ぜない。
 create table if not exists show (
   id uuid primary key,
   title text not null,

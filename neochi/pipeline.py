@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import json
+import statistics
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -110,7 +111,9 @@ def _safe(eid: str) -> str:
 def _stars(calm, ear, level, episode_id: str, cfg: dict, store, interest_score=None):
     total = scoring.total_star(calm, ear, level, cfg, interest_score)
     crowd, n = store.community(episode_id)
-    final, final_reason = scoring.final_star(total, crowd, n, cfg)
+    watch = store.episode_watch_latencies(episode_id)
+    median = statistics.median(watch) if watch else None
+    final, final_reason = scoring.final_star(total, crowd, n, cfg, median, len(watch))
     return total, final, final_reason
 
 
