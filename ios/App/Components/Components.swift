@@ -320,11 +320,13 @@ struct ChoiceScale: View {
     }
 }
 
-/// 差のピル(矢印+値+比べた相手)。色は text-main と、surface の一段上(surface-pressed)だけ。
-/// 良し悪しの色は付けない(分の増減は、睡眠の評価ではないため)。
+/// 差のピル(矢印のアイコン+値+比べた相手)。番組にとって良い向きは positive、良くない向きは negative、差がなければ無彩色。
+/// 向きは矢印でも示し、色だけに頼らない。人の睡眠の良し悪しの評価には使わない(番組の数字の変化だけ)。
 struct DeltaPill: View {
     /// 差(正 = 増えた)。
     let delta: Double
+    /// どちら向きが番組にとって良いか。
+    let polarity: DeltaPolarity
     /// 値の書き方。例 { "\(Int(abs($0).rounded()))分" }
     let format: (Double) -> String
     /// 比べた相手。例「前の4件」
@@ -334,20 +336,23 @@ struct DeltaPill: View {
 
     private var text: String { format(abs(delta)) }
     private var isFlat: Bool { format(0) == text }
+    private var tone: DeltaTone { DetailMath.tone(delta, polarity, flat: isFlat) }
+    private var fg: NCColor { tone == .positive ? .positive : tone == .negative ? .negative : .textMain }
+    private var bg: NCColor { tone == .positive ? .positiveTint : tone == .negative ? .negativeTint : .surfacePressed }
 
     var body: some View {
         HStack(spacing: NCSpace.s1) {
-            HStack(spacing: 2) {
-                if !isFlat {
-                    Image(systemName: delta > 0 ? "arrow.up" : "arrow.down").font(.system(size: 10, weight: .semibold))
-                }
-                Text(isFlat ? "±\(text)" : text).font(.nc(NCText.numSm))
+            HStack(spacing: 3) {
+                Image(systemName: isFlat ? "equal" : delta > 0 ? "arrow.up.right" : "arrow.down.right")
+                    .font(.system(size: NCSize.iconSm, weight: .semibold))
+                    .frame(width: NCSize.iconSm, height: NCSize.iconSm)
+                Text(isFlat ? "\(text)" : text).font(.nc(NCText.numSm))
             }
             Text(caption).font(.nc(NCText.caption))
         }
-        .foregroundStyle(Color.nc(.textMain))
+        .foregroundStyle(Color.nc(fg))
         .padding(.horizontal, NCSpace.s2).padding(.vertical, 3)
-        .background(Capsule().fill(Color.nc(.surfacePressed)))
+        .background(Capsule().fill(Color.nc(bg)))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(isFlat ? "\(caption)と同じ" : "\(caption)より \(text) \(delta > 0 ? spoken.up : spoken.down)")
     }

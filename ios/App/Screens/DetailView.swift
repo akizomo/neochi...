@@ -332,7 +332,7 @@ struct DetailView: View {
                         .accessibilityElement(children: .combine)
                         Spacer()
                         if let d = DetailMath.delta(mins.map(Double.init)) {
-                            DeltaPill(delta: d, format: { "\(Int($0.rounded()))分" }, caption: NCString.deltaCaptionRecords,
+                            DeltaPill(delta: d, polarity: .lowerIsBetter, format: { "\(Int($0.rounded()))分" }, caption: NCString.deltaCaptionRecords,
                                       spoken: ("長い", "短い"))
                         }
                     }
@@ -406,7 +406,7 @@ struct DetailView: View {
                     .accessibilityElement(children: .combine)
                     Spacer()
                     if let d = DetailMath.delta(values) {
-                        DeltaPill(delta: d, format: { String(format: "%.1f", $0) }, caption: NCString.deltaCaptionEpisodes,
+                        DeltaPill(delta: d, polarity: .higherIsBetter, format: { String(format: "%.1f", $0) }, caption: NCString.deltaCaptionEpisodes,
                                   spoken: ("高い", "低い"))
                     }
                 }

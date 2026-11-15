@@ -1,5 +1,16 @@
 import Foundation
 
+/// 差のピルの、どちら向きが番組にとって良いか。
+public enum DeltaPolarity: Sendable {
+    /// 評点など。上がると良い。
+    case higherIsBetter
+    /// 寝落ちまでの分など。短くなると良い。
+    case lowerIsBetter
+}
+
+/// 差のピルの色の意味(semantic token の positive / negative / 無彩色)。
+public enum DeltaTone: Sendable, Equatable { case positive, negative, neutral }
+
 /// 番組詳細の図で使う計算。画面に依存しないので、ここでテストする。
 public enum DetailMath {
     /// 差のピルを出すのに要る件数(直近4件と、その前の4件)。
@@ -11,6 +22,13 @@ public enum DetailMath {
         guard values.count >= w * 2 else { return nil }
         let last = values.suffix(w), prev = values.dropLast(w).suffix(w)
         return last.reduce(0, +) / Double(w) - prev.reduce(0, +) / Double(w)
+    }
+
+    /// 差の色。表示の丸めで 0 になる差(flat)は無彩色。
+    public static func tone(_ delta: Double, _ polarity: DeltaPolarity, flat: Bool) -> DeltaTone {
+        if flat || delta == 0 { return .neutral }
+        let up = delta > 0
+        return (up == (polarity == .higherIsBetter)) ? .positive : .negative
     }
 
     public static func mean(_ values: [Double]) -> Double? {

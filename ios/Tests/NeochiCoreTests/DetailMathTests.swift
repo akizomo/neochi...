@@ -72,4 +72,12 @@ final class DetailMathTests: XCTestCase {
         XCTAssertEqual(NCString.rankMeaning(.zzz), "眠りたい夜は、まずこの番組")
         XCTAssertTrue(NCString.rankCriteriaNote.contains("3.0") && NCString.rankCriteriaNote.contains("3.6") && NCString.rankCriteriaNote.contains("4.2"))
     }
+
+    func testDeltaTone() {
+        XCTAssertEqual(DetailMath.tone(0.2, .higherIsBetter, flat: false), .positive)   // 評点が上がった
+        XCTAssertEqual(DetailMath.tone(-0.2, .higherIsBetter, flat: false), .negative)
+        XCTAssertEqual(DetailMath.tone(-11, .lowerIsBetter, flat: false), .positive)    // 寝落ちまでが短くなった
+        XCTAssertEqual(DetailMath.tone(3, .lowerIsBetter, flat: false), .negative)
+        XCTAssertEqual(DetailMath.tone(0.04, .higherIsBetter, flat: true), .neutral)    // 表示では 0.0
+    }
 }
