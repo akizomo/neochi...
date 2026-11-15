@@ -14,6 +14,9 @@
 | バックグラウンド再生 | `UIBackgroundModes: audio` あり。**実機では未確認** |
 | 暗号化の質問 | `ITSAppUsesNonExemptEncryption: NO` で聞かれない |
 | バージョン | 0.1.0(ビルド 1)。**アップロードのたびにビルド番号を上げる** |
+| 読み込めないとき | Release では見本の番組を出さず、「番組を読み込めませんでした」と「もう一度」を出す(DEBUG と接続先なしは見本で動く) |
+| App Store Connect のアプリ | 作成済み(2026-11-15) |
+| CLI での署名つきアーカイブ | **失敗**: チームに登録済みのデバイスが0台で、開発用のプロファイルが作れない(`Your team has no devices`)。下の「実機を登録する」を先に行う |
 
 ## あなたの作業(私にはできない)
 
@@ -24,6 +27,12 @@
 5. プライバシーポリシーを公開して、URL を App Store Connect の App Privacy に入れる(SETUP.md E の下書き)。App Privacy の回答は、`PrivacyInfo.xcprivacy` と同じ内容(睡眠データ・デバイスID、ユーザーに紐づく、追跡なし、アプリの機能)。
 6. 正式なロゴ(1024×1024、角丸なし)を渡す。`App/Assets.xcassets/AppIcon.appiconset/icon-1024.png` を差し替える。
 7. Xcode で Apple ID を登録する(Settings → Accounts)。
+
+## 実機を登録する(アーカイブの前に1回)
+
+1. iPhone を USB で Mac につなぎ、「このコンピュータを信頼」を押す。iPhone の設定 → プライバシーとセキュリティ → デベロッパモードをオンにして、再起動する。
+2. Xcode → Window → Devices and Simulators に、iPhone が出ることを確かめる。
+3. Neochi ターゲット → Signing & Capabilities で Team を選ぶと、Xcode がデバイスを登録し、プロファイルを作る。(つなげない場合は、developer.apple.com → Devices に、iPhone の UDID を手で足す)
 
 ## アップロード
 
