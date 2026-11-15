@@ -2,7 +2,7 @@ import SwiftUI
 import Charts
 import NeochiCore
 
-/// 番組の詳細。上から: 評点と実測 → AIの見立て → 観点ごとの根拠 → 寝落ちの実績 → 最近の回 → 解析について。
+/// 番組の詳細。上から: 評点と実測 → AI解析 → 観点ごとの根拠 → 寝落ちの実績 → 最近の回 → 解析について。
 /// 要因(★・琥珀)は左、結果(ランク・分・青灰)は右。合算しない。
 struct DetailView: View {
     @Environment(AppModel.self) private var model
@@ -25,10 +25,10 @@ struct DetailView: View {
                     duo(show)
                     actions(show)
                     if let (_, a) = latest {
-                        if let line = a.reason ?? show.oneLiner { card { sectionHead("AIの見立て"); Text(line).ncText(NCText.body) } }
+                        if let line = a.reason ?? show.oneLiner { card { sectionHead("AI解析"); Text(line).ncText(NCText.body) } }
                         evidence(a)
                     } else if let line = show.oneLiner {
-                        card { sectionHead("AIの見立て"); Text(line).ncText(NCText.body) }
+                        card { sectionHead("AI解析"); Text(line).ncText(NCText.body) }
                     }
                     record(show)
                     if analyzed.count >= 2 { recent }
@@ -219,7 +219,7 @@ struct DetailView: View {
             }
             let parts = Explain.earParts(a)
             if !parts.isEmpty {
-                Text("なぜこの★か").ncText(NCText.footnote, .textSub).padding(.top, NCSpace.s1)
+                Text("なぜこの点か").ncText(NCText.footnote, .textSub).padding(.top, NCSpace.s1)
                 VStack(spacing: NCSpace.s2) { ForEach(parts) { partCard($0) } }
             }
         }
@@ -334,7 +334,7 @@ struct DetailView: View {
             HStack {
                 sectionHead("寝落ちの実績")
                 Spacer()
-                Text("ウォッチで測った記録").ncText(NCText.caption, .textSub)
+                Text("ウォッチの実測").ncText(NCText.caption, .textSub)
             }.padding(.top, NCSpace.s2)
             card {
                 if let st = show.stats {
@@ -406,7 +406,7 @@ struct DetailView: View {
         default: depth = "番組の説明文だけで判定しています。"
         }
         let dur = a.durationSec.map { "音量の推移と突発音は、全編(\(Int(($0 / 60).rounded()))分)を測っています。" } ?? ""
-        return dur + "話す速さと、起伏・興味の判定は、冒頭を文字起こしして行っています。30分以降を聴くのは寝つけなかったときだけなので、内容の評価は30分までにしています。" + depth
+        return dur + "話す速さと、起伏・興味の判定は、冒頭を文字起こしして行っています。30分以降を聴くのは寝つけなかったときだけなので、内容の評価は冒頭20分までにしています。" + depth
     }
 
     // MARK: 部品

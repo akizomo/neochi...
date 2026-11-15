@@ -9,7 +9,7 @@ final class ExplainTests: XCTestCase {
     }
 
     func testRateIsTrapezoid() {
-        // 290字/分以下は、遅くても満点(「ゆったり」)
+        // 290字/分以下は、遅くても満点(遅いほど良い、ではない)
         XCTAssertTrue(Explain.earParts(analysis(rate: 92)).first!.good)
         XCTAssertTrue(Explain.earParts(analysis(rate: 290)).first!.good)
         XCTAssertFalse(Explain.earParts(analysis(rate: 380)).first!.good)
@@ -33,6 +33,17 @@ final class ExplainTests: XCTestCase {
     func testInterestTotalFloorIsOne() {
         XCTAssertEqual(Explain.interestTotal([]), 1)
         XCTAssertEqual(Explain.interestTotal([.init(key: "B", score: 1), .init(key: "E", score: 2)]), 3)
+    }
+
+    // 用語集(docs/VOICE.md)の使わない言葉が、説明文に入らない
+    func testExplainAvoidsForbiddenWords() {
+        let banned = ["ゆったり", "癒し", "改善", "効果", "睡眠の質", "聞く", "聞き", "★"]
+        var a = analysis(rate: 300, cv: 0.2, vol: 8, sudden: 5)
+        a.interestItems = [.init(key: "A", score: 1)]
+        let texts = Explain.earParts(a).flatMap { [$0.title, $0.measured, $0.verdict, $0.criterion] }
+            + Array(Explain.interestLabels.values) + Array(Explain.calmLabels.values)
+            + [InterestLevel.low, .mid, .high].map { Explain.interestVerdict($0, total: 3) } + [Explain.calmVerdict(a.interestItems)]
+        for t in texts { for w in banned { XCTAssertFalse(t.contains(w), "\(w) in \(t)") } }
     }
 
     func testPartsOmittedWhenNoData() {

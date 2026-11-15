@@ -118,8 +118,8 @@ final class TonightEngineTests: XCTestCase {
     }
 
     func testCommentBoundaries() {
-        XCTAssertEqual(NCString.comment(minutes: 4), "それは番組の力ではなく、ただの寝不足です")
-        XCTAssertEqual(NCString.comment(minutes: 5), "即落ちでした")
+        XCTAssertEqual(NCString.comment(minutes: 4), "即落ちでした")
+        XCTAssertEqual(NCString.comment(minutes: 9), "即落ちでした")
         XCTAssertEqual(NCString.comment(minutes: 10), "理想の寝落ちでした")
         XCTAssertEqual(NCString.comment(minutes: 20), "やや粘りました")
         XCTAssertEqual(NCString.comment(minutes: 30), "最後まで聴いてしまいました")

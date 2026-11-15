@@ -7,8 +7,8 @@ from neochi.z_rank import z_rank
 
 
 def test_sleep_comment_boundaries():
-    assert strings.sleep_comment(4.9) == "それは番組の力ではなく、ただの寝不足です"
-    assert strings.sleep_comment(5) == "即落ちでした"
+    assert strings.sleep_comment(4.9) == "即落ちでした"
+    assert strings.sleep_comment(9.9) == "即落ちでした"
     assert strings.sleep_comment(10) == "理想の寝落ちでした"
     assert strings.sleep_comment(20) == "やや粘りました"
     assert strings.sleep_comment(30) == "最後まで聴いてしまいました"

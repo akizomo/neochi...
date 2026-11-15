@@ -5,8 +5,7 @@ public enum NCString {
     /// 寝落ちまでの分数 → コメント。
     public static func comment(minutes: Int) -> String {
         switch minutes {
-        case ..<5: return "それは番組の力ではなく、ただの寝不足です"
-        case 5..<10: return "即落ちでした"
+        case ..<10: return "即落ちでした"
         case 10..<20: return "理想の寝落ちでした"
         case 20..<30: return "やや粘りました"
         default: return "最後まで聴いてしまいました"
@@ -18,7 +17,7 @@ public enum NCString {
     public static let resultFrom = "寝落ちまで"
     public static let startedLabel = "再生開始"
     public static let onsetLabel = "入眠"
-    public static let ratingHeader = "このコンテンツの評価"
+    public static let ratingHeader = "この回の評価"
     public static let ratingFooter = "番組の評価に使います。答えなくても記録できます。"
     public static let interestQuestion = "この回の話は、どうでしたか"
     public static func interestLabel(_ a: InterestAnswer) -> String {

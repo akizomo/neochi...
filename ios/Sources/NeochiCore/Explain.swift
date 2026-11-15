@@ -42,7 +42,7 @@ public enum Explain {
         if let r = a.speechRate {
             // 速さは台形: 290字/分以下は、遅くても満点。
             let u = r <= c.rateBestMax ? 1 : unit(r, best: c.rateBestMax, worst: c.rateWorst)
-            let (v, good) = pick(u, "ゆったりした速さです", "やや速めです", "かなり速いです")
+            let (v, good) = pick(u, "寝落ちに向く速さです", "やや速めです", "かなり速いです")
             out.append(.init(title: "話す速さ", star: p?.rate, measured: "1分に\(Int(r.rounded()))字", verdict: v,
                              criterion: "\(Int(c.rateBestMax))字/分までは満点、\(Int(c.rateWorst))字で最低", good: good))
         }
@@ -59,13 +59,13 @@ public enum Explain {
         if let s = a.suddenPer10Min {
             let (v, good) = pick(unit(s, best: c.suddenBest, worst: c.suddenWorst), "急に大きな音は、ほとんどありません", "急な音が、ときどきあります", "急な音が多めです")
             out.append(.init(title: "突発音", star: p?.sudden, measured: "10分に\(String(format: "%.1f", s))回", verdict: v,
-                             criterion: "0回なら満点、\(Int(c.suddenWorst))回で最低(屋外の音や効果音の多い回は、多めに数えます)", good: good))
+                             criterion: "0回なら満点、\(Int(c.suddenWorst))回で最低(屋外の音や、音の演出が多い回は、多めに数えます)", good: good))
         }
         return out
     }
 
     public static let interestLabels: [String: String] = [
-        "A": "未解決の問い", "B": "驚き・新しい情報", "C": "笑い", "D": "追い続ける必要", "E": "聞き手への働きかけ"]
+        "A": "未解決の問い", "B": "驚き・新しい情報", "C": "笑い", "D": "追い続ける必要", "E": "聴き手への働きかけ"]
     public static let calmLabels: [String: String] = [
         "A": "感情の強さ", "B": "対立・緊張", "C": "頭の負荷", "D": "急な転換"]
 
@@ -81,7 +81,7 @@ public enum Explain {
         switch level {
         case .low: "引き込む要素が少なく、頭が静かなぶん、雑念が戻りやすい側です(いまは\(total)。4〜6がちょうどいい)"
         case .mid: "続きは気になるが、追い続けなくていい、ちょうどいい引き込みです(いまは\(total)。4〜6がちょうどいい)"
-        case .high: "引き込む要素が多く、眠らずに聞き続けてしまう側です(いまは\(total)。4〜6がちょうどいい)"
+        case .high: "引き込む要素が多く、眠らずに聴き続けてしまう側です(いまは\(total)。4〜6がちょうどいい)"
         }
     }
 
