@@ -25,6 +25,19 @@ def test_sudden_sound_counts_loud_jumps(cfg):
     assert abs(f["duration_sec"] - 600) < 1
 
 
+def test_acoustics_measure_only_first_30_minutes(cfg):
+    sr = 8000
+    rng = np.random.default_rng(1)
+    x = rng.normal(0, 0.01, sr * 2400).astype(np.float32)   # 40分の静かな音
+    for sec in (100, 200, 1900, 2000, 2100):                 # 突発音: 30分以内に2回、30分より後に3回
+        x[sec * sr:(sec + 1) * sr] *= 20
+    f = features.acoustic_features(x, sr, cfg)
+    assert abs(f["duration_sec"] - 2400) < 1                 # 長さは、回全体
+    assert abs(f["sudden_per_10min"] - 2 / 30 * 10) < 1e-6   # 30分で2回 = 10分あたり 0.67 回
+    assert len(f["timeline"]["volume_db"]) == 30             # 音量の推移も、冒頭30分
+    assert all(s < 1800 for s in f["timeline"]["sudden_at_sec"])
+
+
 def test_speech_rate_units():
     r, u = features.speech_rate("こんにちは、今夜も静かに。", "ja", 1)
     assert u == "chars_per_min" and r == 11

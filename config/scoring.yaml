@@ -10,6 +10,7 @@ transcribe:
 acoustic:
   sample_rate: 8000
   frame_sec: 1.0
+  window_min: 30             # 音量のばらつき・突発音は、冒頭からこの分数だけで測る(寝落ちの線に合わせる。入眠後は見ない)
   silence_floor_db: -60      # これ未満のフレームは音量ばらつきに含めない
   sudden_over_median_db: 10  # 中央値より+10dB超
   sudden_over_prev_db: 6     # かつ直前から+6dB超

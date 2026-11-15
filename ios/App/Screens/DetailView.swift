@@ -200,7 +200,7 @@ struct DetailView: View {
             if !volPts.isEmpty {
                 let band = EarCriteria.volumeBest
                 let span = max(band * 2, (volPts.map { abs($0.1) }.max() ?? 0) + 2)
-                Text("音量の推移(回全体の中央値との差)").ncText(NCText.footnote, .textSub)
+                Text("音量の推移(冒頭30分の中央値との差)").ncText(NCText.footnote, .textSub)
                 Chart {
                     RectangleMark(yStart: .value("下限", -band), yEnd: .value("上限", band)).foregroundStyle(Color.nc(.accentResult).opacity(0.22))
                     RuleMark(y: .value("中央値", 0)).foregroundStyle(Color.nc(.line))
@@ -405,8 +405,7 @@ struct DetailView: View {
         case "transcript": depth = "冒頭を文字起こしして判定しています。"
         default: depth = "番組の説明文だけで判定しています。"
         }
-        let dur = a.durationSec.map { "音量の推移と突発音は、全編(\(Int(($0 / 60).rounded()))分)を測っています。" } ?? ""
-        return dur + "話す速さと、起伏・興味の判定は、冒頭を文字起こしして行っています。30分以降を聴くのは寝つけなかったときだけなので、内容の評価は冒頭20分までにしています。" + depth
+        return "音量の推移と突発音は、冒頭30分を測っています。話す速さと、起伏・興味の判定は、冒頭を文字起こしして行っています。30分以降を聴くのは寝つけなかったときだけなので、内容の評価は冒頭20分までにしています。" + depth
     }
 
     // MARK: 部品

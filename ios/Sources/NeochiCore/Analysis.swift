@@ -49,7 +49,7 @@ public struct EpisodeAnalysis: Hashable, Codable, Sendable {
     public var calmItems: [ScoredItem]
     public var volumeStdDB: Double?
     public var suddenPer10Min: Double?
-    /// 1分ごと。話す速さは冒頭20分、音量は全編。無い分は nil。
+    /// 1分ごと。話す速さは冒頭20分、音量は冒頭30分。無い分は nil。
     public var ratePerMin: [Double?]
     public var volumePerMin: [Double?]
     public var suddenAtSec: [Int]
