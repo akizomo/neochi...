@@ -7,6 +7,7 @@
 | # | 作業 | 場所 | 確認 |
 | --- | --- | --- | --- |
 | 1 | `supabase/migrations/0005_interest_score.sql` を実行 | Supabase の SQL Editor | `analysis` に `interest_score` 列がある |
+| 1b | `supabase/migrations/0007_detail_viz.sql` を実行(2026-11-15 実行済み) | Supabase の SQL Editor | `analysis` に `calm_per_min`・`content_summary` 列、view `show_sleep_points` がある |
 | 2 | 環境変数 `SUPABASE_URL` と `SUPABASE_SERVICE_KEY` を入れる | claude.ai/code → 環境の設定（歯車） | 名前は大文字小文字まで一致。引用符・`export`・前後の空白なし |
 | 3 | 手順2で変数を入れた**同じ環境**を選んでタスクを作る | claude.ai/code → スケジュールタスク → 新規 | タスクの詳細に環境名が出る |
 | 4 | 「今すぐ実行」で1回動かす | 同上 | 報告の「保存先」が Supabase |
