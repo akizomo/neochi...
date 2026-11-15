@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import uuid
 from pathlib import Path
 
@@ -149,6 +150,22 @@ def cmd_z_rank(a) -> int:
     return 0
 
 
+def cmd_site(a) -> int:
+    from . import site
+
+    if a.from_json:
+        data = site.load_json_store(a.from_json)
+    else:
+        url, key = site.public_credentials()
+        if not url or not key:
+            logging.error("SUPABASE_URL(か SUPABASE_HOST)と SUPABASE_ANON_KEY を設定するか、--from-json を指定してください")
+            return 1
+        data = site.fetch_public(url, key)
+    shows = site.build(data, a.out, load_config(), a.base_url)
+    logging.info("サイトを書き出しました: %s(%d番組)", a.out, len(shows))
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="neochi")
     p.add_argument("--store", default="data/store.json", help="Supabase 未設定時の保存先(リポジトリに入れて次回に引き継ぐ)")
@@ -174,6 +191,11 @@ def main(argv=None) -> int:
     z.add_argument("--rules-changed", action="store_true",
                    help="採点ルールや格付けの線を変えたとき。付いている格付けを引き継がず、全番組を計算し直す")
     z.set_defaults(fn=cmd_z_rank)
+    st = sub.add_parser("site", help="紹介サイト(静的HTML)を書き出す。公開キー(SUPABASE_URL か SUPABASE_HOST と SUPABASE_ANON_KEY)で読む")
+    st.add_argument("--out", default="out/site")
+    st.add_argument("--base-url", default=os.environ.get("SITE_URL", ""), help="公開先の URL。OGP と共有のリンクに使う")
+    st.add_argument("--from-json", default=None, help="Supabase ではなく、この store.json から読む")
+    st.set_defaults(fn=cmd_site)
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     return a.fn(a)
