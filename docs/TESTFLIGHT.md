@@ -16,7 +16,7 @@
 | バージョン | 0.1.0(ビルド 1)。**アップロードのたびにビルド番号を上げる** |
 | 読み込めないとき | Release では見本の番組を出さず、「番組を読み込めませんでした」と「もう一度」を出す(DEBUG と接続先なしは見本で動く) |
 | App Store Connect のアプリ | 作成済み(2026-11-15) |
-| CLI での署名つきアーカイブ | **失敗**: チームに登録済みのデバイスが0台で、開発用のプロファイルが作れない(`Your team has no devices`)。下の「実機を登録する」を先に行う |
+| ターミナルでの書き出し | `ios/Scripts/release-testflight.sh` で、IPA の書き出しまで通る(2026-11-15 確認)。配布用の署名(Apple Distribution)、HealthKit のエンタイトルメント、バージョン、アイコン、プライバシーマニフェストが入っていることを確かめた。**実機の登録は要らない** |
 
 ## あなたの作業(私にはできない)
 
@@ -28,7 +28,19 @@
 6. 正式なロゴ(1024×1024、角丸なし)を渡す。`App/Assets.xcassets/AppIcon.appiconset/icon-1024.png` を差し替える。
 7. Xcode で Apple ID を登録する(Settings → Accounts)。
 
-## 実機を登録する(アーカイブの前に1回)
+## ターミナルだけで出す(登録済みの実機なしで可。Bitdone リポジトリの手法)
+
+```bash
+ios/Scripts/release-testflight.sh            # IPA を書き出すまで(アップロードしない)
+ios/Scripts/release-testflight.sh --upload   # App Store Connect にアップロードする
+```
+
+- 署名なしでアーカイブ → 開発用の証明書で仮署名して HealthKit のエンタイトルメントを埋め込む → 書き出しのときに配布用の署名を付ける、の3段。`-allowProvisioningUpdates` で署名つきのアーカイブをすると、開発用プロファイルを作ろうとして `Your team has no devices` で落ちるため、署名を書き出しに回している。
+- Xcode にログイン済みの Apple ID を使う(API キーは不要)。チーム ID と証明書は、この Mac から読む(リポジトリには書かない)。
+- 書き出しが `The request expected results but none were found` で落ちたら、Apple 側の一時的なエラー。少し待って、同じコマンドをもう一度。
+- ビルド番号は、アップロードのたびに上げる(`ios/project.yml` の `CURRENT_PROJECT_VERSION`)。
+
+## 実機を登録する(Xcode の画面から出す場合だけ。ターミナルで出すなら不要)
 
 1. iPhone を USB で Mac につなぎ、「このコンピュータを信頼」を押す。iPhone の設定 → プライバシーとセキュリティ → デベロッパモードをオンにして、再起動する。
 2. Xcode → Window → Devices and Simulators に、iPhone が出ることを確かめる。
