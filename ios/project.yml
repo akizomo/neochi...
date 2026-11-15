@@ -21,11 +21,13 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.neochi
         SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone のみ。iPad の画面は、まだ確かめていない
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_CFBundleDisplayName: NeochiPickzz   # ホーム画面の名前。xcodegen は Info.plist を作り直すので、ここに置く
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_NSHealthShareUsageDescription: 睡眠データから入眠の時刻を推定し、寝落ちまでの分数を記録するために読み取ります。広告や外部への提供には使いません。
         INFOPLIST_KEY_UIUserInterfaceStyle: Automatic
