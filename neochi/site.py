@@ -267,7 +267,7 @@ def delta_pill(d: float, higher_is_better: bool, fmt, caption: str) -> str:
 
 
 def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og_image: str = "",
-         og_type: str = "website", large_card: bool = False) -> str:
+         og_type: str = "website", large_card: bool = False, jsonld: dict | None = None) -> str:
     meta = [
         f'<meta name="description" content="{escape(desc)}">',
         f'<meta property="og:title" content="{escape(title)}">',
@@ -276,16 +276,22 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
         '<meta property="og:site_name" content="NeochiPickzz">',
         '<meta property="og:locale" content="ja_JP">',
         f'<meta name="twitter:card" content="{"summary_large_image" if large_card else "summary"}">',
+        f'<meta name="twitter:title" content="{escape(title)}">',
+        f'<meta name="twitter:description" content="{escape(desc)}">',
     ]
     if canonical:
         meta += [f'<link rel="canonical" href="{escape(canonical)}">', f'<meta property="og:url" content="{escape(canonical)}">']
     if og_image:
-        meta.append(f'<meta property="og:image" content="{escape(og_image)}">')
+        meta += [f'<meta property="og:image" content="{escape(og_image)}">', f'<meta name="twitter:image" content="{escape(og_image)}">',
+                 f'<meta property="og:image:alt" content="{escape(title)}">']
+    if jsonld:
+        meta.append(f'<script type="application/ld+json">{json.dumps(jsonld, ensure_ascii=False).replace("</", "<\\/")}</script>')
     return f"""<!doctype html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
 <title>{escape(title)}</title>
 {chr(10).join(meta)}
 <meta name="theme-color" content="#171C33">
@@ -294,8 +300,9 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 <link rel="stylesheet" href="{root}style.css">
 </head>
 <body>
-<header class="top"><div class="wrap">{wordmark(root)}<nav><a href="{root}about/">解析について</a></nav></div></header>
-<main class="wrap">
+<a class="skip" href="#main">本文へ</a>
+<header class="top"><div class="wrap">{wordmark(root)}<nav aria-label="メニュー"><a href="{root}about/">解析について</a></nav></div></header>
+<main class="wrap" id="main" tabindex="-1">
 {body}
 </main>
 <footer class="foot"><div class="wrap">
@@ -303,6 +310,8 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 <p>{FOOT_NOTE}</p>
 <p>{FOOT_RIGHTS}</p>
 </div></footer>
+<a class="to-top" href="#" id="top-btn" aria-label="ページの先頭へ" hidden><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5L6 4l3.5 3.5"/></svg></a>
+<script>{TOP_JS}</script>
 </body>
 </html>
 """
@@ -678,6 +687,11 @@ def about_html() -> str:
 </section>"""
 
 
+TOP_JS = """
+(()=>{const b=document.getElementById('top-btn');if(!b)return;const f=()=>{b.hidden=scrollY<600;};addEventListener('scroll',f,{passive:true});f();
+b.addEventListener('click',e=>{e.preventDefault();scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});});})();
+"""
+
 FILTER_JS = """
 (()=>{const q=document.getElementById('q'),rows=[...document.querySelectorAll('#list .row')],grps=[...document.querySelectorAll('#list .grp')],empty=document.getElementById('empty');
 const sel={rank:null,genre:null};
@@ -718,7 +732,9 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
     (out / "favicon.svg").write_text(FAVICON, encoding="utf-8")
     og = f"{base_url}og.png" if base_url else ""
     (out / "index.html").write_text(page(title=f"{strings.PRODUCT} — {strings.TAGLINE}", desc=LEAD, root="./",
-                                         body=index_html(shows), canonical=base_url, og_image=og, large_card=True),
+                                         body=index_html(shows), canonical=base_url, og_image=og, large_card=True,
+                                         jsonld={"@context": "https://schema.org", "@type": "WebSite", "name": strings.PRODUCT,
+                                                 "url": base_url, "inLanguage": "ja", "description": LEAD} if base_url else None),
                                     encoding="utf-8")
     (out / "about").mkdir()
     (out / "about" / "index.html").write_text(page(title=f"解析について | {strings.PRODUCT}", desc=FOOT_NOTE, root="../",
@@ -730,7 +746,10 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
         desc = f"評点 {s['show_star']:.1f}、寝落ち格付け {s['z_rank']}。{RANK_MEANING[s['z_rank']]}です。"
         d.joinpath("index.html").write_text(page(
             title=f"{s['title']} | {strings.PRODUCT}", desc=desc, root="../../", body=show_html(s, base_url, cfg),
-            canonical=base_url and f"{base_url}shows/{s['id']}/", og_image=s.get("artwork_url") or og, og_type="article"),
+            canonical=base_url and f"{base_url}shows/{s['id']}/", og_image=s.get("artwork_url") or og, og_type="article",
+            jsonld={"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": strings.PRODUCT, "item": base_url},
+                {"@type": "ListItem", "position": 2, "name": s["title"], "item": f"{base_url}shows/{s['id']}/"}]} if base_url else None),
             encoding="utf-8")
 
     (out / "404.html").write_text(page(title=f"{EMPTY} | {strings.PRODUCT}", desc=LEAD, root="/",
