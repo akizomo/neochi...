@@ -1,0 +1,208 @@
+/* NeochiPickzz 紹介サイト。値は design/tokens.json に合わせる。昼の画面なので、外観はシステムに従う。 */
+:root {
+  --bg: #12151C; --surface: #1A1F28; --surface-pressed: #242932; --line: #2A303B; --border: #646C7A;
+  --text: #C8CDD6; --sub: #808794; --factor: #E0B45A; --result: #9FB7D9;
+  --factor-tint: rgba(224, 180, 90, 0.14); --result-tint: rgba(159, 183, 217, 0.14);
+  --positive: #7CC4A0; --negative: #E8A0A0; --positive-tint: rgba(124, 196, 160, 0.14); --negative-tint: rgba(232, 160, 160, 0.14);
+  --logo: #D9DCEA; --on-accent: #0B0D12;
+  --sans: "Noto Sans JP", "Hiragino Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #E9ECF1; --surface: #F6F7F9; --surface-pressed: #E9EAED; --line: #D3D8E0; --border: #7C8594;
+    --text: #1B2029; --sub: #586070; --factor: #7F5A05; --result: #385C8C;
+    --factor-tint: rgba(127, 90, 5, 0.10); --result-tint: rgba(56, 92, 140, 0.12);
+    --positive: #2C6B4B; --negative: #A13A3A; --positive-tint: rgba(44, 107, 75, 0.12); --negative-tint: rgba(161, 58, 58, 0.12);
+    --logo: #171C33; --on-accent: #F6F7F9;
+    color-scheme: light;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 15px/24px var(--sans); }
+a { color: inherit; }
+img { display: block; }
+p { margin: 0; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+.cap { color: var(--sub); font-size: 12px; line-height: 18px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.big { font-size: 28px; line-height: 34px; font-weight: 600; }
+.fac { color: var(--factor); } .res { color: var(--result); } .muted { color: var(--sub); }
+.headline { font-weight: 600; font-size: 17px; }
+h1 { font-size: 22px; line-height: 30px; font-weight: 700; margin: 0; }
+h2 { font-size: 17px; line-height: 24px; font-weight: 600; margin: 0; }
+:focus-visible { outline: 2px solid var(--result); outline-offset: 2px; }
+
+/* ロゴ: 記号 N + eochiPick + z(1) + z(0.28)。濃さは opacity-logo-1〜3 */
+.top { border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; justify-content: space-between; min-height: 60px; }
+.logo { display: inline-flex; align-items: baseline; color: var(--logo); text-decoration: none;
+  font: 600 20px/1 var(--sans); letter-spacing: 0.01em; }
+.logo-n { width: 0.62em; height: 0.72em; margin-right: 0.05em; overflow: visible; }
+.logo .z2 { opacity: 0.28; }
+.mark { width: 40%; height: 40%; color: var(--sub); }
+nav a { color: var(--sub); text-decoration: none; font-size: 13px; padding: 12px 0; display: inline-block; }
+nav a:hover { color: var(--text); }
+
+/* 一覧 */
+.hero { padding: 48px 0 24px; }
+.hero-mark { width: 40px; height: 46px; color: var(--logo); display: block; margin-bottom: 20px; overflow: visible; }
+.hero h1 { font-size: 28px; line-height: 38px; }
+.lead { margin-top: 8px; color: var(--sub); }
+.count { margin-top: 16px; font-size: 13px; color: var(--sub); }
+.count b { font-family: var(--mono); color: var(--text); font-size: 15px; }
+.filters { display: grid; gap: 12px; padding-bottom: 20px; }
+#q { width: 100%; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit; }
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -20px; padding: 0 20px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; min-height: 36px; padding: 0 12px; border-radius: 9999px; border: 1px solid var(--line);
+  background: transparent; color: var(--sub); font: 500 13px/1 var(--sans); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--result-tint); border-color: var(--result); color: var(--text); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.row a { display: flex; align-items: center; gap: 14px; min-height: 88px; padding: 12px 16px 12px 12px;
+  background: var(--surface); border-radius: 12px; text-decoration: none; transition: background 120ms; }
+.row a:hover { background: var(--surface-pressed); }
+.art-wrap { position: relative; flex: none; }
+.art { object-fit: cover; background: var(--line); }
+.art-s { width: 64px; height: 64px; border-radius: 8px; }
+.art-l { width: 120px; height: 120px; border-radius: 12px; flex: none; }
+.art-empty { display: grid; place-items: center; }
+.art-wrap .badge { position: absolute; top: -5px; right: -7px; }
+.row-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.row-title { font-weight: 600; font-size: 16px; line-height: 22px; display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden; }
+.row-sub { color: var(--sub); font-size: 12px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.star { flex: none; display: inline-flex; align-items: baseline; gap: 3px; font: 600 16px/1 var(--mono); color: var(--factor); }
+.star-glyph { font-family: var(--sans); font-size: 0.72em; font-weight: 400; }
+.star.big { font-size: 34px; line-height: 40px; }
+.empty { color: var(--sub); text-align: center; padding: 32px 0; }
+
+/* 格付けバッジ: 金属の光沢(アプリの RankBadge と同じ。Z は錫、ZZ は青みの銀、ZZZ は真珠) */
+.badge { display: inline-flex; align-items: center; min-height: 22px; padding: 0 10px; border-radius: 9999px;
+  font: 700 12px/1 var(--mono); letter-spacing: 0.02em; box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.35); }
+.badge-s { min-height: 16px; padding: 0 5px; font-size: 10px; }
+.badge-zzz { color: #1C1638; background: linear-gradient(#8C7FC9, #D9D2FA 22%, #FFFFFF 44%, #BFE3F4 64%, #E7D9FB 82%, #9A8BD8); }
+.badge-zz { color: #14202F; background: linear-gradient(#6E86A8, #B9CCE6 25%, #F1F6FD 50%, #A8BEDC 75%, #5F7899); }
+.badge-z { color: #1E232C; background: linear-gradient(#5E6673, #9AA2AE 25%, #C3C9D2 50%, #8A929F 75%, #5A616D); }
+
+/* 番組の詳細 */
+.back { margin-top: 16px; font-size: 13px; }
+.back a { color: var(--sub); text-decoration: none; display: inline-block; padding: 10px 0; }
+.detail-head { display: flex; gap: 16px; align-items: center; padding: 8px 0 20px; }
+.detail-title { min-width: 0; display: grid; gap: 4px; }
+.rank-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.duo { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 6px; }
+.duo > div { display: grid; gap: 2px; }
+.duo p b + span { font-size: 13px; margin-left: 2px; }
+.vr { width: 1px; align-self: stretch; background: var(--line); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 20px 0 4px; }
+.btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 9999px; border: 0;
+  background: var(--text); color: var(--bg); font: 600 14px/1 var(--sans); text-decoration: none; cursor: pointer; }
+.btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.sec { padding-top: 24px; }
+.sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.card { background: var(--surface); border-radius: 12px; padding: 16px; display: grid; gap: 12px; }
+.row-between { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 9999px; font-size: 12px; }
+.pill b { font: 600 13px/1 var(--mono); }
+.pill svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.pill-pos { background: var(--positive-tint); color: var(--positive); }
+.pill-neg { background: var(--negative-tint); color: var(--negative); }
+.pill-flat { background: var(--surface-pressed); color: var(--text); }
+
+/* 観点ごとの根拠 */
+.axes-card { background: var(--surface); border-radius: 12px; padding: 0 16px; }
+.axis + .axis { border-top: 1px solid var(--line); }
+.axis summary, .axis.pending { display: flex; align-items: center; gap: 8px; min-height: 48px; cursor: pointer; list-style: none; }
+.axis summary::-webkit-details-marker { display: none; }
+.axis summary > span:first-child, .axis.pending > span:first-child { flex: 1; }
+.axis.pending { cursor: default; }
+.axis-v .star { font-size: 18px; }
+.chev { width: 12px; height: 12px; fill: none; stroke: var(--sub); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 200ms; }
+.axis[open] .chev { transform: rotate(90deg); }
+.axis-body { display: grid; gap: 12px; padding-bottom: 16px; font-size: 14px; }
+.items, .parts, .moments { list-style: none; margin: 0; padding: 0; }
+.items li { display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: 13px; }
+.items li > span:first-child { flex: 1; }
+.lv { color: var(--sub); } .lv.on { color: var(--factor); }
+.dots { display: inline-flex; gap: 3px; }
+.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.dots i.on { background: var(--factor); }
+.parts li { display: grid; grid-template-columns: 7em 1fr 56px 2.4em; align-items: center; gap: 8px; min-height: 32px; font-size: 13px; }
+.parts .num.fac { text-align: right; }
+.gauge { height: 6px; border-radius: 9999px; background: var(--line); overflow: hidden; }
+.gauge span { display: block; height: 100%; background: var(--factor); border-radius: inherit; }
+.moments li { font-size: 13px; color: var(--sub); }
+.summary { background: var(--bg); border-radius: 8px; padding: 12px; font-size: 13px; line-height: 21px; display: grid; gap: 4px; }
+.scale { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.scale span { display: grid; gap: 4px; padding: 4px 0; justify-items: center; }
+.scale span.zone { background: var(--surface-pressed); }
+.scale i { width: 100%; height: 8px; border-radius: 2px; background: var(--line); }
+.scale b { font: 400 11px/1 var(--mono); color: var(--sub); }
+.scale .on i { background: var(--factor); } .scale .on b { color: var(--factor); }
+
+/* 図 */
+svg text { font-family: var(--sans); }
+.ax { fill: var(--sub); font-size: 10px; } .ax.num, .val.num { font-family: var(--mono); }
+.ax.fell { fill: var(--result); }
+.val { fill: var(--text); font-size: 10px; }
+.grid { stroke: var(--line); stroke-width: 1; }
+.area { fill: var(--factor-tint); }
+.line { fill: none; stroke: var(--factor); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+.pt { fill: var(--factor); }
+.band { fill: var(--line); opacity: 0.7; }
+.tick { stroke: var(--text); stroke-width: 1.5; }
+.peak { cursor: pointer; outline: none; }
+.peak .hit { fill: transparent; }
+.peak .dot { fill: var(--factor); stroke: var(--surface); stroke-width: 2; }
+.peak.on .dot { r: 6.5; }
+.peak:focus-visible .dot { stroke: var(--result); }
+.moment-pick { font-size: 13px; min-height: 22px; }
+.moment-pick b { font-family: var(--mono); color: var(--factor); }
+.moment-pick span { color: var(--sub); font-size: 12px; }
+.chart-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--sub); }
+.calm-chart svg, .ear-chart svg, .sleep-axis { width: 100%; display: block; overflow: visible; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--sub); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.legend .grow { margin-left: auto; }
+.legend i { display: inline-block; }
+.lg-band { width: 14px; height: 8px; border-radius: 2px; background: var(--line); }
+.lg-tick { width: 1.5px; height: 8px; background: var(--text); }
+.lg-fill, .lg-ring { width: 8px; height: 8px; border-radius: 50%; }
+.lg-fill { background: var(--result); } .lg-ring { border: 1.5px solid var(--result); }
+.zone-fell { fill: var(--result); opacity: 0.16; } .zone-rest { fill: var(--line); opacity: 0.35; }
+.sd { fill: none; stroke: var(--result); stroke-width: 1.5; } .sd.fill { fill: var(--result); stroke: none; }
+.bars { display: flex; gap: 6px; align-items: flex-end; position: relative; }
+.bars::after { content: ""; position: absolute; left: 0; right: 0; bottom: calc(18px + 4px + var(--avg)); border-top: 1px dashed var(--sub); pointer-events: none; }
+.bar { flex: 1; min-width: 0; display: grid; gap: 4px; justify-items: center; align-content: end; }
+.bar i { width: 100%; border-radius: 3px; background: var(--factor); opacity: 0.5; }
+.bar.latest i { opacity: 1; }
+.bar i.pend { height: 44px; opacity: 1; background: transparent; border: 1px dashed var(--border); }
+.bar .v { font-size: 10px; color: var(--sub); } .bar.latest .v { color: var(--text); }
+.bar .num.cap { height: 18px; font-size: 10px; white-space: nowrap; overflow: hidden; max-width: 100%; }
+.about { padding-top: 24px; }
+.about summary { color: var(--sub); font-size: 13px; cursor: pointer; padding: 8px 0; }
+.about .cap { display: grid; gap: 8px; }
+
+/* 解析について */
+.prose { padding: 48px 0 8px; }
+.prose h2 { margin-top: 32px; }
+.prose p, .prose dd { margin-top: 8px; }
+.prose dt { font-weight: 600; margin-top: 16px; }
+.prose dd { margin-left: 0; color: var(--sub); }
+.en { color: var(--sub); font-style: italic; font-size: 14px; }
+
+.foot { border-top: 1px solid var(--line); margin-top: 56px; padding: 28px 0 44px; }
+.foot .logo { font-size: 16px; margin-bottom: 12px; }
+.foot p { margin: 4px 0; color: var(--sub); font-size: 12px; line-height: 18px; }
+
+@media (max-width: 480px) {
+  .hero h1 { font-size: 24px; line-height: 32px; }
+  .art-l { width: 96px; height: 96px; }
+  .big { font-size: 24px; } .star.big { font-size: 30px; }
+  .parts li { grid-template-columns: 7.6em 1fr 36px 2.2em; gap: 6px; }
+}
