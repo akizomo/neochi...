@@ -50,20 +50,19 @@ public enum DetailMath {
         return "冒頭\(minutes)分に山が\(moments.count)つ、うち\(strong)つは強めです。"
     }
 
-    /// 寝落ちの実績の軸の区間(ゾーン)。結果のコメント(`NCString.comment`、SCORE.md §3)の区切りと同じ。
-    /// 画面では、記録の点をこの帯の上に置く。「何分で寝落ちできるといいか」を、軸の上で見せる。
+    /// 寝落ちの実績の軸の区間。30分で「寝落ちした」とみなす(SCORE.md §3。DBの集計 `show_stats` の under30 と同じ)。
+    /// 短いほど良い、とは軸の上では言わない(10分以下は、評点の計算では満点だが、即落ちを悪い・良いと評価しない)。
+    public static let fellAsleepMinutes = 30
     public struct SleepZone: Hashable, Sendable {
         public let lo: Int, hi: Int
-        /// 軸の下に出す短い名前。
+        /// 軸の下に出す名前。
         public let label: String
-        /// いちばん勧める区間(理想の寝落ち)。
-        public let ideal: Bool
+        /// 「寝落ちした」とみなす区間。
+        public let fell: Bool
     }
     public static let sleepZones: [SleepZone] = [
-        .init(lo: 0, hi: 10, label: "即落ち", ideal: false),
-        .init(lo: 10, hi: 20, label: "理想", ideal: true),
-        .init(lo: 20, hi: 30, label: "やや粘る", ideal: false),
-        .init(lo: 30, hi: 60, label: "最後まで聴いた", ideal: false),
+        .init(lo: 0, hi: fellAsleepMinutes, label: "寝落ちした", fell: true),
+        .init(lo: fellAsleepMinutes, hi: 60, label: "30分以上", fell: false),
     ]
 
     /// 寝落ちの実績の点。0〜60分の軸に置くので、60分を超える記録は端に寄せる。

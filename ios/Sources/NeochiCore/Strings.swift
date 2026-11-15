@@ -56,8 +56,8 @@ public enum NCString {
     public static let deltaCaptionRecords = "前の4件"
     public static let deltaCaptionEpisodes = "前の4回"
 
-    /// 寝落ちの実績の軸の下の説明。軸の帯(`DetailMath.sleepZones`)と、結果のコメントに合わせる。
-    public static let sleepZoneNote = "10〜20分が、理想の寝落ちです。30分未満で眠れたら、寝落ちしたとみなします。"
+    /// 寝落ちの実績の軸の下の説明。軸の帯(`DetailMath.sleepZones`)に合わせる。
+    public static let sleepZoneNote = "再生を始めてから、30分未満で眠れた記録は、寝落ちしたとみなします。"
 
     /// 格付けのバッジの横に出す、ひとこと(番組の詳細)。基準の数字は出さず、その番組をどう勧めるかを言う。
     /// 効くとも、必ず眠れるとも言わない(`docs/VOICE.md`)。基準の数字は「解析について」に書く。

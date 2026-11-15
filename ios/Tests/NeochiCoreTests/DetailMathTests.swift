@@ -53,15 +53,15 @@ final class DetailMathTests: XCTestCase {
         for (key, r) in [("z", ZRank.z), ("zz", .zz), ("zzz", .zzz)] {
             XCTAssertTrue(yaml.contains("\(key):") && yaml.contains("min_star: \(RankCriteria.minStar(r))"), key)
         }
-        // 実績の軸の帯は、結果のコメントの区切りと同じ(0〜60分を切れ目なく、10・20・30分で区切る)
+        // 実績の軸の帯: 0〜60分を切れ目なく、30分で「寝落ちした」とそれ以外に分ける。即落ちを、別の(低い)区間にしない
         let zones = DetailMath.sleepZones
         XCTAssertEqual(zones.first?.lo, 0); XCTAssertEqual(zones.last?.hi, DetailMath.recordAxisMax)
         for (a, b) in zip(zones, zones.dropFirst()) { XCTAssertEqual(a.hi, b.lo) }
-        for z in zones.dropFirst() {
-            XCTAssertNotEqual(NCString.comment(minutes: z.lo), NCString.comment(minutes: z.lo - 1), "\(z.lo)分で、コメントが変わる")
-        }
-        XCTAssertEqual(zones.filter(\.ideal).map(\.label), ["理想"])
-        XCTAssertEqual(NCString.comment(minutes: 10), "理想の寝落ちでした")
+        XCTAssertEqual(zones.filter(\.fell).map(\.hi), [30])
+        XCTAssertNotEqual(NCString.comment(minutes: 29), NCString.comment(minutes: 30), "30分で、コメントも変わる")
+        let view = try String(contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../supabase/migrations/0006_show_stats.sql").standardized, encoding: .utf8)
+        XCTAssertTrue(view.contains("latency_min < \(DetailMath.fellAsleepMinutes)"), "寝落ちの線は、show_stats(DBの集計)と同じ")
         // バッジの横は、基準の数字ではなく、番組の勧め方のひとこと(ミシュランのように)。基準は「解析について」に書く
         for r in [ZRank.z, .zz, .zzz] {
             XCTAssertFalse(NCString.rankMeaning(r).contains("以上"), "基準の数字を、バッジの横に出さない")

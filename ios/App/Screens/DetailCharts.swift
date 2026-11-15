@@ -260,7 +260,7 @@ struct InterestScale: View {
 }
 
 /// 寝落ちの実績: 0〜60分の1本の軸に、記録を点で置く。30分未満は塗り、30分以上は線だけ。
-/// 軸の背景は、結果のコメントと同じ区間の帯(即落ち / 理想 / やや粘る / 最後まで聴いた)。理想の帯だけ濃い。
+/// 軸の背景は、2つの帯(30分未満=寝落ちした / 30分以上)。短いほど良い、とは見せない。
 /// 点を押すと、その記録の「日付と分数」が出る(もう一度押すか、ほかの点を押すと切り替わる)。
 struct SleepDotAxis: View {
     let points: [SleepPoint]
@@ -284,22 +284,21 @@ struct SleepDotAxis: View {
             let x = { (m: Int) -> CGFloat in 6 + (w - 12) * CGFloat(Double(DetailMath.clampedMinutes(m)) / maxM) }
             let lo = minutes.min() ?? 0, hi = minutes.max() ?? 0
             ZStack(alignment: .topLeading) {
-                // 区間の帯(背景)。理想だけ濃い
+                // 区間の帯(背景)
                 ForEach(DetailMath.sleepZones, id: \.lo) { z in
                     Rectangle()
-                        .fill(z.ideal ? Color.nc(.accentResult).opacity(0.22)
-                              : z.lo >= 30 ? Color.nc(.line).opacity(0.35) : Color.nc(.accentResult).opacity(0.07))
+                        .fill(z.fell ? Color.nc(.accentResult).opacity(0.16) : Color.nc(.line).opacity(0.35))
                         .frame(width: x(z.hi) - x(z.lo), height: 40)
                         .position(x: (x(z.lo) + x(z.hi)) / 2, y: 38)
                     // 区間の名前(軸の下)
                     Text(z.label)
                         .font(.nc(NCText.caption))
-                        .foregroundStyle(Color.nc(z.ideal ? .accentResult : .textSub))
+                        .foregroundStyle(Color.nc(z.fell ? .accentResult : .textSub))
                         .fixedSize().position(x: (x(z.lo) + x(z.hi)) / 2, y: 80)
                 }
                 // 軸と目盛り(区間の境目)
                 Rectangle().fill(Color.nc(.line)).frame(width: w - 12, height: 1).position(x: w / 2, y: 58)
-                ForEach([0, 10, 20, 30, 60], id: \.self) { t in
+                ForEach([0, 15, 30, 45, 60], id: \.self) { t in
                     Text("\(t)").font(.nc(NCText.numXs)).foregroundStyle(Color.nc(.textSub))
                         .fixedSize().position(x: x(t), y: 67)
                 }
