@@ -10,3 +10,5 @@ work/
 ios/Neochi.xcodeproj/
 ios/.build/
 public/
+.vercel
+.env*
