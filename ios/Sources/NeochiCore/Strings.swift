@@ -9,7 +9,7 @@ public enum NCString {
         case 5..<10: return "即落ちでした"
         case 10..<20: return "理想の寝落ちでした"
         case 20..<30: return "やや粘りました"
-        default: return "最後まで聞いてしまいました"
+        default: return "最後まで聴いてしまいました"
         }
     }
 
@@ -41,4 +41,10 @@ public enum NCString {
     public static let noResult = "寝落ちまで ―"
     public static let noResultNote = "寝落ちの記録を確認中です"
     public static let researching = "調査中"
+    /// 検索で見つからないとき。理由は書かず、評点も出さない。
+    public static let notListed = "まだ掲載していません"
+    /// 評点の内訳。あるものだけ並べる(`docs/SCORE.md` §1)。
+    public static func ratingBreakdown(watchCount: Int, avgMinutes: Int) -> String {
+        watchCount >= 3 ? "AI解析・ウォッチの実測 平均\(avgMinutes)分(\(watchCount)件)" : "AI解析"
+    }
 }

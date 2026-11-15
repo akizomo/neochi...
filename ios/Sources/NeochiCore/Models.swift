@@ -8,9 +8,9 @@ public struct Show: Identifiable, Hashable, Codable, Sendable {
     public var artworkURL: URL?
     public var linkURL: URL?
     public var appleURL: URL?
-    /// AI解析の最終★(1.0〜5.0)。解析前は nil。
+    /// 総合評点(1.0〜5.0)。AI解析を土台に、実測とみんなの評価を足したもの。解析前は nil。
     public var star: Double?
-    /// 掲載ランク(実測の集計)。実測がなければ nil(調査中)。
+    /// 寝落ち格付け(総合評点で決まる)。基準未満の番組は掲載しない。
     public var rank: ZRank?
     /// AIの一行(一覧に出す)。
     public var oneLiner: String?

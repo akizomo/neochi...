@@ -2,7 +2,7 @@ import SwiftUI
 import Charts
 import NeochiCore
 
-/// 番組の詳細。上から: 寝落ち適性(★)と実測 → AIの見立て → 観点ごとの根拠 → 寝落ちの実績 → 最近の回 → 解析について。
+/// 番組の詳細。上から: 評点と実測 → AIの見立て → 観点ごとの根拠 → 寝落ちの実績 → 最近の回 → 解析について。
 /// 要因(★・琥珀)は左、結果(ランク・分・青灰)は右。合算しない。
 struct DetailView: View {
     @Environment(AppModel.self) private var model
@@ -70,19 +70,26 @@ struct DetailView: View {
     }
 
     private func duo(_ show: Show) -> some View {
+        VStack(alignment: .leading, spacing: NCSpace.s2) {
+            duoRow(show)
+            Text(NCString.ratingBreakdown(watchCount: show.stats?.count ?? 0, avgMinutes: show.stats?.avgMinutes ?? 0))
+                .ncText(NCText.caption, .textSub)
+        }
+    }
+
+    private func duoRow(_ show: Show) -> some View {
         HStack(alignment: .top, spacing: NCSpace.s4) {
             VStack(alignment: .leading, spacing: NCSpace.s1) {
-                Text("寝落ち適性(AI解析)").ncText(NCText.caption, .textSub)
-                HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
-                    Text("★").ncText(NCText.numMd, .accentFactor)
+                Text("評点").ncText(NCText.caption, .textSub)
+                HStack(spacing: NCSpace.s2) {
+                    RankBadge(rank: show.rank)
                     Text(show.star.map { String(format: "%.1f", $0) } ?? "―").ncText(NCText.numMd, .accentFactor)
                 }
             }
             Rectangle().fill(Color.nc(.line)).frame(width: 1, height: 56)
             VStack(alignment: .leading, spacing: NCSpace.s1) {
-                Text("実測(ウォッチ)").ncText(NCText.caption, .textSub)
+                Text("ウォッチの実測").ncText(NCText.caption, .textSub)
                 HStack(spacing: NCSpace.s2) {
-                    RankBadge(rank: show.rank)
                     if let m = show.avgMinutes {
                         HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
                             Text("\(m)").ncText(NCText.numMd, .accentResult)
@@ -332,7 +339,6 @@ struct DetailView: View {
             card {
                 if let st = show.stats {
                     HStack {
-                        RankBadge(rank: show.rank)
                         Text("\(st.count)回の記録").ncText(NCText.headline)
                         Spacer()
                         HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
@@ -354,7 +360,6 @@ struct DetailView: View {
                     }
                 } else {
                     HStack {
-                        RankBadge(rank: nil)
                         Text("寝落ちの記録").ncText(NCText.headline)
                         Spacer()
                         Text("―").ncText(NCText.numMd, .textSub)
@@ -371,7 +376,7 @@ struct DetailView: View {
             HStack {
                 sectionHead("最近の回")
                 Spacer()
-                Text("寝落ち適性(直近\(items.count)回)").ncText(NCText.caption, .textSub)
+                Text("評点(直近\(items.count)回)").ncText(NCText.caption, .textSub)
             }.padding(.top, NCSpace.s2)
             card {
                 Chart(Array(items.enumerated()), id: \.offset) { i, item in

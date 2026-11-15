@@ -107,14 +107,14 @@ actor SupabaseClient {
         return d
     }
 
-    /// 掲載中(listed)の番組。ランクは掲載中だけ付く。
+    /// 掲載中(listed)の番組だけ。基準未満の番組は返さない。
     func fetchShows() async throws -> [Show] {
         let data = try await request("show", query: [URLQueryItem(name: "select", value: "id,title,genre,show_star,z_rank,listing_status,artwork_url,link_url,apple_url")])
-        return try Self.decoder.decode([ShowRow].self, from: data).map {
+        return try Self.decoder.decode([ShowRow].self, from: data).filter { $0.listing_status == "listed" && $0.z_rank != nil }.map {
             Show(id: $0.id, title: $0.title, genre: $0.genre ?? "",
                  artworkURL: $0.artwork_url.flatMap(URL.init(string:)), linkURL: $0.link_url.flatMap(URL.init(string:)),
                  appleURL: $0.apple_url.flatMap(URL.init(string:)), star: $0.show_star,
-                 rank: $0.listing_status == "listed" ? $0.z_rank.flatMap(ZRank.init(rawValue:)) : nil)
+                 rank: $0.z_rank.flatMap(ZRank.init(rawValue:)))
         }
     }
 

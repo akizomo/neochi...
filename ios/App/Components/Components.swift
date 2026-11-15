@@ -97,44 +97,60 @@ struct FavoriteButton: View {
     }
 }
 
-/// 掲載ランク Z / ZZ / ZZZ。実測がない番組は「調査中」。
+/// 寝落ち格付け Z / ZZ / ZZZ。ランクが上がるほど光沢が強い金属(Z は錫、ZZ は青みの銀、ZZZ は虹色の真珠)。
+/// 光沢はこのバッジだけの例外。ほかの部品は影を使わない。見本はロゴのキャンバスの「格付けバッジの質感」。
 struct RankBadge: View {
     let rank: ZRank?
 
+    private func hex(_ v: UInt32) -> Color {
+        Color(red: Double((v >> 16) & 0xFF) / 255, green: Double((v >> 8) & 0xFF) / 255, blue: Double(v & 0xFF) / 255)
+    }
+
+    private var metal: [Color] {
+        switch rank {
+        case .zzz: return [0x8C7FC9, 0xD9D2FA, 0xFFFFFF, 0xBFE3F4, 0xE7D9FB, 0x9A8BD8].map(hex)
+        case .zz: return [0x6E86A8, 0xB9CCE6, 0xF1F6FD, 0xA8BEDC, 0x5F7899].map(hex)
+        default: return [0x5E6673, 0x9AA2AE, 0xC3C9D2, 0x8A929F, 0x5A616D].map(hex)
+        }
+    }
+
+    private var ink: Color {
+        switch rank {
+        case .zzz: return hex(0x1C1638)
+        case .zz: return hex(0x14202F)
+        default: return hex(0x1E232C)
+        }
+    }
+
     var body: some View {
         if let rank {
-            Text(rank.rawValue).ncText(NCText.caption, .accentResult)
+            Text(rank.rawValue).font(.system(size: 13, weight: .bold, design: .monospaced)).foregroundStyle(ink)
                 .padding(.horizontal, NCSpace.s3).frame(minHeight: NCSize.badgeH)
-                .background(Capsule().fill(Color.nc(.resultTint)))
-        } else {
-            Text(NCString.researching).ncText(NCText.caption, .textSub)
-                .padding(.horizontal, NCSpace.s3).frame(minHeight: NCSize.badgeH)
-                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
+                .background(Capsule().fill(LinearGradient(colors: metal, startPoint: .top, endPoint: .bottom)))
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
+                .accessibilityLabel("寝落ち格付け \(rank.rawValue)")
         }
     }
 }
 
-/// 要因(★・琥珀)を左、結果(Z と分数・青灰)を右に並べる。合算しない。
+/// 左に評点(バッジと数字)、右にウォッチの実測の平均。内訳は別に出すので、★は使わない。
 struct MetricsRow: View {
     let show: Show
 
     var body: some View {
         HStack(spacing: NCSpace.s3) {
-            HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
-                Text("★").ncText(NCText.numSm, .accentFactor)
+            HStack(spacing: NCSpace.s2) {
+                RankBadge(rank: show.rank)
                 Text(show.star.map { String(format: "%.1f", $0) } ?? "―").ncText(NCText.numMd, .accentFactor)
             }
             Rectangle().fill(Color.nc(.line)).frame(width: NCSize.borderW, height: NCSize.dividerH)
-            HStack(spacing: NCSpace.s2) {
-                RankBadge(rank: show.rank)
-                if let m = show.avgMinutes {
-                    HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
-                        Text("\(m)").ncText(NCText.numMd, .accentResult)
-                        Text("分").ncText(NCText.footnote, .accentResult)
-                    }
-                } else {
-                    Text("―").ncText(NCText.numMd, .textSub)
+            if let m = show.avgMinutes {
+                HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
+                    Text("\(m)").ncText(NCText.numMd, .accentResult)
+                    Text("分").ncText(NCText.footnote, .accentResult)
                 }
+            } else {
+                Text("―").ncText(NCText.numMd, .textSub)
             }
         }
     }

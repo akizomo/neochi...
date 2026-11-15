@@ -122,7 +122,7 @@ final class TonightEngineTests: XCTestCase {
         XCTAssertEqual(NCString.comment(minutes: 5), "即落ちでした")
         XCTAssertEqual(NCString.comment(minutes: 10), "理想の寝落ちでした")
         XCTAssertEqual(NCString.comment(minutes: 20), "やや粘りました")
-        XCTAssertEqual(NCString.comment(minutes: 30), "最後まで聞いてしまいました")
+        XCTAssertEqual(NCString.comment(minutes: 30), "最後まで聴いてしまいました")
     }
 
     func testLatencyMinutes() {
