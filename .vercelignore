@@ -1,0 +1,6 @@
+# Vercel に上げるのは、紹介サイトのビルドに要るものだけ(python -m neochi.site)
+/*
+!/vercel.json
+!/neochi
+!/config
+/neochi/__pycache__

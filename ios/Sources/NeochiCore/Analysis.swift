@@ -11,11 +11,12 @@ public struct EarParts: Hashable, Codable, Sendable {
     }
 }
 
-/// 冒頭20分の中の、目立つ箇所。
+/// 冒頭20分の中の、起伏の山。level は 1 = 少し、2 = 多い(古い解析には無い)。
 public struct Moment: Hashable, Codable, Sendable {
     public var minute: Int
     public var note: String
-    public init(minute: Int, note: String) { self.minute = minute; self.note = note }
+    public var level: Int?
+    public init(minute: Int, note: String, level: Int? = nil) { self.minute = minute; self.note = note; self.level = level }
 }
 
 /// 🎯 / 🌊 の採点項目ひとつぶん。score は 0〜2、minute は根拠になった分(なければ nil)。
@@ -54,6 +55,10 @@ public struct EpisodeAnalysis: Hashable, Codable, Sendable {
     public var volumePerMin: [Double?]
     public var suddenAtSec: [Int]
     public var moments: [Moment]
+    /// 冒頭20分の、1分ごとの起伏の強さ(0〜2)。古い解析は空。
+    public var calmPerMin: [Double] = []
+    /// 内容の要約(120字以内)。古い解析は nil。
+    public var contentSummary: String?
 
     public init(episodeID: String, finalStar: Double? = nil, calmStar: Double? = nil, earStar: Double? = nil,
                 interest: InterestLevel? = nil, interestScore: Int? = nil, reason: String? = nil,
@@ -69,12 +74,26 @@ public struct EpisodeAnalysis: Hashable, Codable, Sendable {
         self.ratePerMin = ratePerMin; self.volumePerMin = volumePerMin; self.suddenAtSec = suddenAtSec; self.moments = moments
     }
 
+    /// 起伏と興味の両方を判定済みか。番組の評点・格付け・最近の回の棒には、判定済みの回だけを使う
+    /// (`neochi/scoring.py` の is_judged と同じ)。
+    public var isJudged: Bool { calmStar != nil && (interestScore != nil || interest != nil) }
+
+    /// 観点ごとの根拠に出せるものがあるか(説明文だけの解析には無い)。
+    public var hasAnyAspect: Bool { calmStar != nil || earStar != nil || interest != nil }
+
     /// 観点別の★の平均(番組の一覧・詳細で使う)。
     public static func aspects(_ list: [EpisodeAnalysis]) -> ShowAspects {
         func avg(_ v: [Double]) -> Double? { v.isEmpty ? nil : v.reduce(0, +) / Double(v.count) }
         return ShowAspects(calmStar: avg(list.compactMap(\.calmStar)), earStar: avg(list.compactMap(\.earStar)),
                            interest: list.compactMap(\.interest).first)
     }
+}
+
+/// 番組の実績の点(1晩ぶん。日付と分数だけ)。
+public struct SleepPoint: Hashable, Codable, Sendable {
+    public var night: Date
+    public var minutes: Int
+    public init(night: Date, minutes: Int) { self.night = night; self.minutes = minutes }
 }
 
 /// 番組の実績(みんなの実測の集計)。30分より前に寝落ちした回数で見せる。

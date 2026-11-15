@@ -44,6 +44,43 @@ public enum NCString {
     public static let notListed = "まだ掲載していません"
     /// 評点の内訳。あるものだけ並べる(`docs/SCORE.md` §1)。
     public static func ratingBreakdown(watchCount: Int, avgMinutes: Int) -> String {
-        watchCount >= 3 ? "AI解析・ウォッチの実測 平均\(avgMinutes)分(\(watchCount)件)" : "AI解析"
+        watchCount >= 3 ? "AI解析・寝落ちまで 平均\(avgMinutes)分(ウォッチの実測 \(watchCount)件)" : "AI解析"
+    }
+
+    // 番組詳細の図
+    public static func momentLabel(minute: Int) -> String { "\(minute)分の山" }
+    public static func analyzedEpisode(_ number: Int?) -> String { number.map { "\($0)回の解析" } ?? "最新の回の解析" }
+    public static let summaryHeader = "この回の内容(AIの要約)"
+    public static let interestZoneNote = "4〜6が寝落ち向き"
+    public static let analyzing = "解析中"
+    /// 起伏・興味の AI の判定が、まだ済んでいない観点。
+    public static let judgePending = "判定待ち"
+    public static let deltaCaptionRecords = "前の4件"
+    public static let deltaCaptionEpisodes = "前の4回"
+
+    /// 寝落ちの実績の軸の下の説明。軸の帯(`DetailMath.sleepZones`)に合わせる。
+    public static let sleepZoneNote = "再生を始めてから、30分未満で眠れた記録は、寝落ちしたとみなします。"
+
+    /// 格付けのバッジの横に出す、ひとこと(番組の詳細)。基準の数字は出さず、その番組をどう勧めるかを言う。
+    /// 効くとも、必ず眠れるとも言わない(`docs/VOICE.md`)。基準の数字は「解析について」に書く。
+    public static func rankMeaning(_ r: ZRank) -> String {
+        switch r {
+        case .zzz: "眠りたい夜は、まずこの番組"
+        case .zz: "寝落ちのために選びたい番組"
+        case .z: "寝落ちに向いた番組"
+        }
+    }
+
+    /// 「解析について」に書く、格付けの基準。
+    public static var rankCriteriaNote: String {
+        let f = { (r: ZRank) in String(format: "%.1f", RankCriteria.minStar(r)) }
+        return "寝落ち格付けは、番組の評点で決めます。Z は\(f(.z))以上、ZZ は\(f(.zz))以上、ZZZ は\(f(.zzz))以上です。基準に届かない番組は、掲載しません。評点は、AI解析を土台に、ウォッチの実測とみんなの評価が集まるほど、それらを足したものです。"
+    }
+}
+
+/// 格付けの線(`config/z_rank.yaml` と同じ値。仮)。変えるときは、yaml と一緒に直す。
+public enum RankCriteria {
+    public static func minStar(_ r: ZRank) -> Double {
+        switch r { case .z: 3.0; case .zz: 3.6; case .zzz: 4.2 }
     }
 }

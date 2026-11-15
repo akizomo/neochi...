@@ -34,6 +34,79 @@ def _items(d: dict, keys: tuple[str, ...], name: str) -> dict:
     return out
 
 
+CALM_MINUTES = 20        # 1分ごとの起伏は、冒頭20分
+PEAK_MIN = 1.0           # 山とみなす下限(1 = 少し)
+PEAK_STRONG = 1.5        # これ以上の山は「多い」(level 2)、未満は「少し」(level 1)
+MAX_PEAKS = 3
+SUMMARY_MAX = 120
+
+
+def calm_per_min(v) -> list[float] | None:
+    """1分ごとの起伏の強さ(0〜2、小数1桁、最大20個)。形が違えば None(画面は図を出さない)。"""
+    if not isinstance(v, list) or not v:
+        return None
+    out = []
+    for x in v[:CALM_MINUTES]:
+        if not isinstance(x, (int, float)) or isinstance(x, bool):
+            return None
+        out.append(round(min(2.0, max(0.0, float(x))), 1))
+    return out
+
+
+def calm_peaks(per_min: list[float], notes: list[dict]) -> list[dict]:
+    """calm_per_min の山から、起伏の山(moments)を作る。[{min, note, level}](分の順、最大3件)。
+
+    山 = PEAK_MIN 以上で、左より高く、右以上の分(平らな山は最初の分)。高い順に MAX_PEAKS 件。
+    一言は、AIが書いた moments のうち、山の分に最も近いもの(前後1分まで)。一言のない山は出さない。
+    """
+    peaks = []
+    for i, v in enumerate(per_min):
+        left = per_min[i - 1] if i > 0 else -1.0
+        right = per_min[i + 1] if i + 1 < len(per_min) else -1.0
+        if v >= PEAK_MIN and v > left and v >= right:
+            peaks.append((i, v))
+    out, used = [], set()
+    for i, v in sorted(peaks, key=lambda p: (-p[1], p[0])):
+        cands = [(abs(int(n["min"]) - i), k) for k, n in enumerate(notes)
+                 if k not in used and isinstance(n.get("min"), (int, float)) and abs(int(n["min"]) - i) <= 1
+                 and str(n.get("note", "")).strip()]
+        if not cands:
+            continue
+        _, k = min(cands)
+        used.add(k)
+        out.append({"min": i, "note": str(notes[k]["note"]).strip()[:20], "level": 2 if v >= PEAK_STRONG else 1})
+        if len(out) == MAX_PEAKS:
+            break
+    return sorted(out, key=lambda m: m["min"])
+
+
+def curve_consistent(per_min: list[float], calm_items: dict) -> bool:
+    """1分ごとの起伏の線が、🌊 の4項目の点と食い違っていないか。
+
+    - 4項目がすべて 0 なのに、線に「多い」(1.5 以上)がある → 食い違い
+    - 1 以上を付けた項目があるのに、その分の前後1分(分が無ければ全体)で、線が 0.5 未満のまま → 食い違い
+    """
+    scored = [v for v in calm_items.values() if v["score"] > 0]
+    if not scored:
+        return max(per_min) < PEAK_STRONG
+    for v in scored:
+        m = v.get("min")
+        window = per_min[max(0, m - 1): m + 2] if isinstance(m, int) and 0 <= m < len(per_min) else per_min
+        if max(window) < 0.5:
+            return False
+    return True
+
+
+def content_summary(v) -> str | None:
+    """内容の要約(120字以内)。長すぎる・「！」を含むものは保存しない(画面は箱を出さない)。"""
+    if not isinstance(v, str):
+        return None
+    t = " ".join(v.split())
+    if not t or len(t) > SUMMARY_MAX or "！" in t or "!" in t:
+        return None
+    return t
+
+
 def level_of(score: int) -> str:
     """引き込み力(1〜10)から3段階を決める。表示とユーザーの3択との比較用。"""
     return "low" if score <= 3 else "mid" if score <= 6 else "high"
@@ -56,18 +129,26 @@ def parse_judgement(raw: str) -> dict:
         cc = _items(d.get("calm"), CALM_ITEMS, "calm")
         score = max(1, sum(v["score"] for v in ii.values()))
         calm = 5 - 0.5 * sum(v["score"] for v in cc.values())
-        moments = []
-        for x in (d.get("moments") or [])[:3]:
-            if isinstance(x, dict) and isinstance(x.get("min"), (int, float)) and str(x.get("note", "")).strip():
-                moments.append({"min": int(x["min"]), "note": str(x["note"]).strip()[:60]})
+        per_min = calm_per_min(d.get("calm_per_min"))
+        if per_min and not curve_consistent(per_min, cc):
+            per_min = None   # 4項目の点と食い違う線は保存しない(★は4項目から計算するので、線だけが別のことを言わないように)
+        notes = [x for x in (d.get("moments") or []) if isinstance(x, dict)]
+        if per_min:
+            moments = calm_peaks(per_min, notes)
+        else:  # 旧形式: 山の推移がなければ、AIが挙げた箇所をそのまま使う(強さは無し)
+            moments = []
+            for x in notes[:3]:
+                if isinstance(x.get("min"), (int, float)) and str(x.get("note", "")).strip():
+                    moments.append({"min": int(x["min"]), "note": str(x["note"]).strip()[:60]})
         return {"calm_star": calm, "interest_level": level_of(score), "interest_score": score, "reason": reason,
-                "items": {"interest": ii, "calm": cc}, "moments": moments}
+                "items": {"interest": ii, "calm": cc}, "moments": moments,
+                "calm_per_min": per_min, "content_summary": content_summary(d.get("content_summary"))}
     calm = float(d["calm_star"])
     level = d["interest_level"]
     if not 1 <= calm <= 5 or level not in LEVELS:
         raise ValueError(f"範囲外の値: {d}")
     return {"calm_star": round(calm * 2) / 2, "interest_level": level, "interest_score": None, "reason": reason,
-            "items": None, "moments": []}
+            "items": None, "moments": [], "calm_per_min": None, "content_summary": None}
 
 
 def judge(title: str, show_title: str, text: str, cfg: dict, client=None) -> dict:

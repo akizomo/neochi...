@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import uuid
 from pathlib import Path
 
@@ -58,10 +59,10 @@ def cmd_run(a) -> int:
 
 
 def _update_show_stars(store, show_ids) -> None:
-    for sid in show_ids:  # 番組の評点 = 解析済みの回の総合評点の平均(機械的な集計。手では動かさない)
+    for sid in show_ids:  # 番組の評点 = 起伏・興味を判定済みの回の総合評点の平均(機械的な集計。手では動かさない)
         stars = store.final_stars(sid)
-        if stars:
-            store.update("show", sid, {"show_star": round(sum(stars) / len(stars), 1)})
+        # 判定済みの回がなければ、評点を空にする(耳のゆるさだけの点を、番組の評点として出さない)
+        store.update("show", sid, {"show_star": round(sum(stars) / len(stars), 1) if stars else None})
 
 
 def update_ratings(store, show_ids, zcfg: dict, reset: bool = False) -> None:
@@ -149,6 +150,26 @@ def cmd_z_rank(a) -> int:
     return 0
 
 
+def cmd_sync_shows(a) -> int:
+    """CSV の系統(genre)・集めた目的(cohort)・言語を、登録済みの番組に書き写す。解析はしない。
+    まだ登録していない番組は、何もしない(解析のときに入る)。"""
+    store = open_store(a.store)
+    n = 0
+    for s in feeds.load_shows(a.csv):
+        store.update("show", s.id, {"genre": s.genre, "cohort": s.cohort, "lang": s.lang})
+        n += 1
+    store.save()
+    logging.info("完了: CSV の %d 番組ぶんを書き写し(未登録の番組は対象外)", n)
+    return 0
+
+
+def cmd_site(a) -> int:
+    from . import site
+
+    args = ["--out", a.out, "--base-url", a.base_url] + (["--from-json", a.from_json] if a.from_json else [])
+    return site.main(args)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="neochi")
     p.add_argument("--store", default="data/store.json", help="Supabase 未設定時の保存先(リポジトリに入れて次回に引き継ぐ)")
@@ -174,6 +195,14 @@ def main(argv=None) -> int:
     z.add_argument("--rules-changed", action="store_true",
                    help="採点ルールや格付けの線を変えたとき。付いている格付けを引き継がず、全番組を計算し直す")
     z.set_defaults(fn=cmd_z_rank)
+    ss = sub.add_parser("sync-shows", help="CSV の系統・集めた目的・言語を、登録済みの番組に書き写す(解析はしない)")
+    ss.add_argument("--csv", default="data/shows.csv")
+    ss.set_defaults(fn=cmd_sync_shows)
+    st = sub.add_parser("site", help="紹介サイト(静的HTML)を書き出す。公開キー(SUPABASE_URL か SUPABASE_HOST と SUPABASE_ANON_KEY)で読む")
+    st.add_argument("--out", default="out/site")
+    st.add_argument("--base-url", default=os.environ.get("SITE_URL", ""), help="公開先の URL。OGP と共有のリンクに使う")
+    st.add_argument("--from-json", default=None, help="Supabase ではなく、この store.json から読む")
+    st.set_defaults(fn=cmd_site)
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     return a.fn(a)

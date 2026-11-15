@@ -1,4 +1,5 @@
 import contextlib
+import json
 import logging
 import os
 import tempfile
@@ -104,3 +105,61 @@ def test_session_judge_writes_pending_and_apply(tmp_path, cfg):
     assert row["calm_star"] is None and (tmp_path / "pending" / f"{pl._safe(e.id)}.json").exists()
     new = pl.apply_judgement({"episode_id": e.id, "calm_star": 4, "interest_level": "mid", "reason": "淡々としています"}, cfg, store)
     assert new["calm_star"] == 4.0 and new["final_star"] is not None and new["interest_level"] == "mid"
+
+
+def test_new_outputs_saved_from_api_and_session(tmp_path, cfg):
+    from neochi import llm
+    per = [0.2] * 20
+    per[6] = 1.6
+    j = {"interest": {k: {"score": 1, "min": 3} for k in "ABCDE"},
+         "calm": {**{k: {"score": 0, "min": None} for k in "ABCD"}, "A": {"score": 1, "min": 6}},
+         "calm_per_min": per, "moments": [{"min": 6, "note": "笑いで声が上ずる"}],
+         "content_summary": "冬の布団の話です。後半はお便りを読みます。", "reason": "淡々としています"}
+    # API で判定した回
+    store = JsonStore(tmp_path / "s.json")
+    deps = make_deps(made_dirs=[])
+    deps.judge = lambda *a, **k: llm.parse_judgement(json.dumps(j, ensure_ascii=False))
+    row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, deps)
+    assert row["calm_per_min"][6] == 1.6 and row["content_summary"].startswith("冬の布団")
+    assert row["reasons"]["moments"] == [{"min": 6, "note": "笑いで声が上ずる", "level": 2}]
+    assert row["interest_score"] == 5 and row["reasons"]["items"]["interest"]["A"]["score"] == 1
+    # セッションで判定した回
+    deps2 = make_deps(made_dirs=[])
+    deps2.judge, deps2.pending_dir = None, str(tmp_path / "pending")
+    row2 = pipeline.analyze_episode(SHOW, ep(2), cfg, store, deps2)
+    assert "calm_per_min" not in row2 and "content_summary" not in row2     # 判定前は書かない(null のまま)
+    new = pipeline.apply_judgement({**j, "episode_id": ep(2).id}, cfg, store)
+    assert new["calm_per_min"] == per and new["reasons"]["moments"][0]["level"] == 2
+
+
+def test_old_format_judgement_leaves_new_outputs_empty(tmp_path, cfg):
+    store = JsonStore(tmp_path / "s.json")
+    row = pipeline.analyze_episode(SHOW, ep(3), cfg, store, make_deps(made_dirs=[]))
+    assert "calm_per_min" not in row and "content_summary" not in row
+
+
+def test_shows_csv_genres_are_display_names():
+    """genre は画面に出す系統だけ。集めた目的は cohort に分ける(docs/VOICE.md §7)。"""
+    shows = feeds.load_shows("data/shows.csv")
+    assert {s.genre for s in shows} <= {"寝落ち用", "朗読", "芸人ラジオ", "雑談", "教養", "環境音"}
+    assert {s.cohort for s in shows} <= {"core", "popular", "control", "benchmark_en"}
+    assert all(s.lang == "en" for s in shows if s.cohort == "benchmark_en")
+
+
+def test_sync_shows_copies_genre_and_cohort(tmp_path, monkeypatch):
+    from neochi import cli
+
+    monkeypatch.delenv("SUPABASE_URL", raising=False)  # 本番の DB に書かないように
+    monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
+    csv_path = tmp_path / "s.csv"
+    csv_path.write_text("title,publisher,rss_url,genre,cohort,lang\n"
+                        "テスト番組,p,https://x/f,教養,control,ja\n"
+                        "未登録,p,https://x/g,朗読,core,ja\n", encoding="utf-8")
+    store_path = tmp_path / "store.json"
+    st = JsonStore(store_path)
+    st.upsert("show", {"id": SHOW.id, "title": "テスト番組", "rss_url": SHOW.rss_url, "genre": "人気番組（一般）"})
+    st.save()
+    assert cli.main(["--store", str(store_path), "sync-shows", "--csv", str(csv_path)]) == 0
+    rows = JsonStore(store_path).rows("show")
+    assert len(rows) == 1  # 未登録の番組は足さない
+    assert rows[0]["genre"] == "教養" and rows[0]["cohort"] == "control"

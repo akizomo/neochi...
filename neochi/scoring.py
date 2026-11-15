@@ -4,6 +4,15 @@ from __future__ import annotations
 from . import strings
 
 
+def is_judged(row: dict) -> bool:
+    """起伏(🌊)と興味(🎯)の両方を判定済みか。番組の評点と格付けには、判定済みの回だけを使う。
+
+    耳のゆるさ(🎧)だけの点は、重みを配り直すと高く出やすい(実データで平均 4.49、3軸そろうと 4.16)ので、
+    番組の評点には入れない。回の総合評点(final_star)は内部に残す。"""
+    return row.get("calm_star") is not None and (row.get("interest_score") is not None
+                                                  or row.get("interest_level") is not None)
+
+
 def _norm(v: float, best: float, worst: float) -> float:
     """best で 1、worst で 0 の線形変換(範囲外は丸める)。"""
     if best == worst:

@@ -73,13 +73,42 @@ final class TonightEngineTests: XCTestCase {
         XCTAssertEqual(s[0].playCount, 1)
     }
 
-    // 3本目は、別ジャンル(冒険)。ジャンルが続いた晩数を理由に出す
-    func testThirdIsDifferentGenre() {
+    // 3本目がお気に入りなら、お気に入りを理由にする(お気に入りを先に選んでいるので)
+    func testThirdFavoriteSaysFavorite() {
         let s = TonightEngine.slate(ctx: ctx())
         XCTAssertEqual(s.count, 3)
         XCTAssertEqual(s[2].show.id, "train")
+        XCTAssertEqual(s[2].reason, .favorite(genre: "解説"))
+        XCTAssertEqual(s[2].reason.text, "お気に入りの解説")
+    }
+
+    // 3本目は、別ジャンル(冒険)。晩数を数えていれば晩数を、なければ系統の移り変わりだけを出す
+    func testThirdIsDifferentGenre() {
+        let s = TonightEngine.slate(ctx: ctx(favorites: ["phonebook"]))
+        XCTAssertEqual(s[2].show.id, "train")
         XCTAssertEqual(s[2].reason, .genreStreak(from: "朗読", to: "解説", nights: 3))
-        XCTAssertEqual(s[2].reason.text, "朗読が3晩続いたので、解説の番組")
+        XCTAssertEqual(s[2].reason.text, "朗読が3晩。解説へ")
+        let one = TonightEngine.slate(ctx: ctx(favorites: ["phonebook"], streak: 0))
+        XCTAssertEqual(one[2].reason.text, "朗読から、解説へ")
+    }
+
+    // 理由の文: 内部の分類は系統名に直す。出せない分類は名前を出さない。「1晩続いた」とは書かない
+    func testReasonCopy() {
+        XCTAssertEqual(Reason.genreStreak(from: "寝落ち・睡眠導入", to: "芸人ラジオ・バラエティ", nights: 1).text, "寝落ち用から、芸人ラジオへ")
+        XCTAssertEqual(Reason.genreStreak(from: "寝落ち・睡眠導入", to: "人気番組（一般）", nights: 1).text, "ちがう系統の番組")
+        XCTAssertEqual(Reason.genreContinues(from: "朗読", to: "朗読").text, "ちがう系統の番組")
+        XCTAssertEqual(Reason.sameGenreOther(genre: "教養（比較用含む）").text, "同じ教養の、別の番組")
+        XCTAssertEqual(Reason.sameGenreOther(genre: "人気番組（一般）").text, "同じ系統の、別の番組")
+        XCTAssertEqual(Reason.favorite(genre: "人気番組（一般）").text, "お気に入りの番組")
+        XCTAssertEqual(Reason.tookLong(minutes: 40).text, "昨夜は40分。次の回へ")
+        XCTAssertEqual(GenreLabel.display("寝落ち・睡眠導入（海外基準）"), "寝落ち用")
+        XCTAssertNil(GenreLabel.display("とても長い分類の名前です"))
+        // どの理由も20字まで(カードの1行に収める)
+        let all: [Reason] = [.sleptFast(minutes: 120), .tookLong(minutes: 120), .queued, .continuation, .unlistened,
+                             .favorite(genre: "芸人ラジオ・バラエティ"), .sameGenreOther(genre: "寝落ち・睡眠導入（海外基準）"),
+                             .genreStreak(from: "芸人ラジオ・バラエティ", to: "寝落ち・睡眠導入", nights: 12),
+                             .genreContinues(from: "芸人ラジオ・バラエティ", to: "寝落ち・睡眠導入")]
+        for r in all { XCTAssertLessThanOrEqual(r.text.count, 20, r.text); XCTAssertFalse(r.text.contains("1晩")) }
     }
 
     // 「次に聴く」の先頭は、3枚目に優先して出る

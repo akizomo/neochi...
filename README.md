@@ -11,6 +11,7 @@ python -m neochi run --limit 100 --max-new 12   # 🎧まで計算し、🌊🎯
 python -m neochi apply                          # 判定を取り込んで★を確定、data/store.json に保存
 python -m neochi run --judge api                # API で判定する場合(ANTHROPIC_API_KEY が必要)
 python -m neochi z-rank       # sleep_log の実測(watch)から 総合評点と寝落ち格付けを更新
+python -m neochi site --base-url https://<公開先>/   # 紹介サイトを out/site/ に書き出す(公開キー SUPABASE_HOST と SUPABASE_ANON_KEY で読む)
 python -m neochi remeasure    # 解析済みの回の音響(音量・突発音)だけを測り直す。測る範囲や基準を変えたあとに使う
 ```
 

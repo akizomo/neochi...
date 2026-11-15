@@ -5,3 +5,10 @@ out/
 .pytest_cache/
 *.egg-info/
 work/
+
+# XcodeGen で作る(ios/project.yml が正)
+ios/Neochi.xcodeproj/
+ios/.build/
+public/
+.vercel
+.env*

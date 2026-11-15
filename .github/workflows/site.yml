@@ -1,0 +1,25 @@
+# 紹介サイト(https://neochipickzz.vercel.app)を毎朝つくり直す。番組と解析は Supabase で日々増えるので、Vercel でビルドし直して最新にする。
+# リポジトリの Secrets に VERCEL_TOKEN(Vercel の Account Settings → Tokens で作る)を入れておく。
+# ビルドの中身は vercel.json(python -m neochi.site)、上げるファイルは .vercelignore。環境変数は Vercel のプロジェクトにある。
+name: site
+on:
+  schedule:
+    - cron: "0 21 * * *"   # 毎日 6:00(日本時間)
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_JgRJfRCwLdRM9bfZZT0KtMAV
+      VERCEL_PROJECT_ID: prj_Viv7OdjufTarp9tXqdKcnjdWUmIi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Vercel にビルドし直させる
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then echo "VERCEL_TOKEN が未設定です"; exit 1; fi
+          npx -y vercel@65.16.0 deploy --prod --yes --token "$VERCEL_TOKEN"

@@ -148,7 +148,9 @@ public enum TonightEngine {
         let skip = Set([cur.id] + (queued.map { [$0.id] } ?? []))
         for o in others(excluding: skip, cur: cur, ctx: ctx, differentGenre: nil) where items.count < 3 {
             guard let p = pick(show: o, ctx: ctx) else { continue }
-            let why: Reason = o.genre != cur.genre
+            // お気に入りを先に選んでいるので、お気に入りなら、それを理由にする(選んだ基準と理由を揃える)。
+            let why: Reason = ctx.favorites.contains(o.id) ? .favorite(genre: o.genre)
+                : o.genre != cur.genre
                 ? .genreStreak(from: cur.genre, to: o.genre, nights: max(ctx.genreStreakNights, 1))
                 : .sameGenreOther(genre: cur.genre)
             items.append(make(o, p.episode, why))
