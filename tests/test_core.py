@@ -25,6 +25,15 @@ def test_sudden_sound_counts_loud_jumps(cfg):
     assert abs(f["duration_sec"] - 600) < 1
 
 
+def test_sustained_loud_passage_is_not_sudden(cfg):
+    sr = 8000
+    x = np.random.default_rng(2).normal(0, 0.01, sr * 600).astype(np.float32)
+    x[300 * sr:] *= 20          # 5分から、ずっと大きい(急に大きくなって、そのまま)
+    f = features.acoustic_features(x, sr, cfg)
+    # 切り替わりの1回だけ。大きい区間のあいだ、毎秒を突発音と数えない
+    assert f["sudden_per_10min"] <= 1 / 10 * 10 + 1e-6
+
+
 def test_acoustics_measure_only_first_30_minutes(cfg):
     sr = 8000
     rng = np.random.default_rng(1)

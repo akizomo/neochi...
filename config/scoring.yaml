@@ -12,8 +12,11 @@ acoustic:
   frame_sec: 1.0
   window_min: 30             # 音量のばらつき・突発音は、冒頭からこの分数だけで測る(寝落ちの線に合わせる。入眠後は見ない)
   silence_floor_db: -60      # これ未満のフレームは音量ばらつきに含めない
-  sudden_over_median_db: 10  # 中央値より+10dB超
-  sudden_over_prev_db: 6     # かつ直前から+6dB超
+  # 突発音 = 「それまでの音」より急に大きい音。回全体の中央値ではなく、直前の sudden_context_sec 秒の中央値と比べる。
+  # (全体の中央値で比べると、抑揚の大きい朗読で、ふつうの語りの山を、すべて突発音と数えてしまう。実データ12回で確認)
+  sudden_context_sec: 60
+  sudden_over_context_db: 12 # 直前の中央値より+12dB超
+  sudden_over_prev_db: 8     # かつ直前のフレームから+8dB超
   warn_sudden_per_10min: 100 # 超えたら警告ログ(異常値)
 
 # 前半の重み: 寝つきに関わる指標(話す速さ・速さのばらつき)は、冒頭からの区間ごとに重みを付けて平均する。
