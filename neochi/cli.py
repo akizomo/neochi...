@@ -153,17 +153,8 @@ def cmd_z_rank(a) -> int:
 def cmd_site(a) -> int:
     from . import site
 
-    if a.from_json:
-        data = site.load_json_store(a.from_json)
-    else:
-        url, key = site.public_credentials()
-        if not url or not key:
-            logging.error("SUPABASE_URL(か SUPABASE_HOST)と SUPABASE_ANON_KEY を設定するか、--from-json を指定してください")
-            return 1
-        data = site.fetch_public(url, key)
-    shows = site.build(data, a.out, load_config(), a.base_url)
-    logging.info("サイトを書き出しました: %s(%d番組)", a.out, len(shows))
-    return 0
+    args = ["--out", a.out, "--base-url", a.base_url] + (["--from-json", a.from_json] if a.from_json else [])
+    return site.main(args)
 
 
 def main(argv=None) -> int:

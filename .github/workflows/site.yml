@@ -1,0 +1,17 @@
+# 紹介サイト(Vercel)を毎朝つくり直す。番組と解析は Supabase で日々増えるので、ビルドし直して最新にする。
+# Vercel の Deploy Hook の URL を、リポジトリの Secrets に VERCEL_DEPLOY_HOOK として入れておく。
+name: site
+on:
+  schedule:
+    - cron: "0 21 * * *"   # 毎日 6:00(日本時間)
+  workflow_dispatch:
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vercel にビルドし直させる
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "VERCEL_DEPLOY_HOOK が未設定です"; exit 1; fi
+          curl -fsS -X POST "$HOOK"

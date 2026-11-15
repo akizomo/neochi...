@@ -731,3 +731,34 @@ def public_credentials() -> tuple[str, str]:
     """公開キーだけを使う。サイトは誰でも読める表しか出さないので、service key は使わない。"""
     url = os.environ.get("SUPABASE_URL") or (f"https://{os.environ['SUPABASE_HOST']}" if os.environ.get("SUPABASE_HOST") else "")
     return url, os.environ.get("SUPABASE_ANON_KEY", "")
+
+
+def main(argv=None) -> int:
+    """python -m neochi.site。解析の依存(numpy など)を読まずに書き出す。Vercel のビルドで使う(vercel.json)。"""
+    import argparse
+    import logging
+
+    import yaml
+
+    p = argparse.ArgumentParser(prog="neochi.site", description="紹介サイト(静的HTML)を書き出す")
+    p.add_argument("--out", default="out/site")
+    p.add_argument("--base-url", default=os.environ.get("SITE_URL", ""), help="公開先の URL。OGP と共有のリンクに使う")
+    p.add_argument("--from-json", default=None, help="Supabase ではなく、この store.json から読む")
+    a = p.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    if a.from_json:
+        data = load_json_store(a.from_json)
+    else:
+        url, key = public_credentials()
+        if not url or not key:
+            logging.error("SUPABASE_URL(か SUPABASE_HOST)と SUPABASE_ANON_KEY を設定するか、--from-json を指定してください")
+            return 1
+        data = fetch_public(url, key)
+    cfg = yaml.safe_load((Path(__file__).resolve().parent.parent / "config" / "scoring.yaml").read_text(encoding="utf-8"))
+    shows = build(data, a.out, cfg, a.base_url)
+    logging.info("サイトを書き出しました: %s(%d番組)", a.out, len(shows))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
