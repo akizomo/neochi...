@@ -528,21 +528,19 @@ def record(s: dict) -> str:
     pts, st = s["points"], s["stats"]
     mins = [p["latency_min"] for p in pts]
     avg = round(mean(mins)) if mins else (st or {}).get("avg_min")
-    head = '<div class="sec-head"><h2>寝落ちの実績</h2><span class="cap">再生を始めてから眠るまで(ウォッチの実測)</span></div>'
     if avg is None:
-        body = ('<div class="row-between"><span class="headline">寝落ちの記録</span><span class="num big muted">―</span></div>'
-                '<p class="cap">実測の記録はまだありません。</p>')
-    else:
-        d = delta([float(m) for m in mins])
-        pill = delta_pill(d, False, lambda v: f"{round(v)}分", "前の4件") if d is not None else ""
-        body = (f'<div class="row-between"><span><span class="cap">平均</span> <b class="num big res">{avg}</b>'
-                f'<span class="res">分</span></span>{pill}</div>')
-        if mins:
-            body += (sleep_axis(pts) + f'<p class="legend"><span><i class="lg-fill"></i>30分未満 {sum(m < 30 for m in mins)}件</span>'
-                     f'<span><i class="lg-ring"></i>30分以上 {sum(m >= 30 for m in mins)}件</span></p><p class="cap">{SLEEP_ZONE_NOTE}</p>')
-        elif st:
-            body += (f'<p>最短 {st["min_min"]}分、最長 {st["max_min"]}分。{st["n"]}件のうち {st["under30"]}件が、'
-                     "30分より前に寝落ちしました。</p>")
+        return ""   # データがない間は、欄ごと出さない
+    head = '<div class="sec-head"><h2>寝落ちの実績</h2><span class="cap">再生を始めてから眠るまで(ウォッチの実測)</span></div>'
+    d = delta([float(m) for m in mins])
+    pill = delta_pill(d, False, lambda v: f"{round(v)}分", "前の4件") if d is not None else ""
+    body = (f'<div class="row-between"><span><span class="cap">平均</span> <b class="num big res">{avg}</b>'
+            f'<span class="res">分</span></span>{pill}</div>')
+    if mins:
+        body += (sleep_axis(pts) + f'<p class="legend"><span><i class="lg-fill"></i>30分未満 {sum(m < 30 for m in mins)}件</span>'
+                 f'<span><i class="lg-ring"></i>30分以上 {sum(m >= 30 for m in mins)}件</span></p><p class="cap">{SLEEP_ZONE_NOTE}</p>')
+    elif st:
+        body += (f'<p>最短 {st["min_min"]}分、最長 {st["max_min"]}分。{st["n"]}件のうち {st["under30"]}件が、'
+                 "30分より前に寝落ちしました。</p>")
     return f'<section class="sec">{head}<div class="card">{body}</div></section>'
 
 

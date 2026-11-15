@@ -82,3 +82,13 @@ def test_copy_follows_voice(tmp_path):
         assert not [w for w in BANNED if w in text], f
         assert "！" not in text and "…" not in text and "聞" not in text, f
         assert not re.search("[\U0001F300-\U0001FAFF]", text), f
+
+
+def test_record_hidden_without_data(tmp_path):
+    """寝落ちの実績は、データがない間は欄ごと出さない。ある番組には出す。"""
+    site.build(DATA, tmp_path, cli.load_config())
+    assert "寝落ちの実績" in (tmp_path / "shows" / "a" / "index.html").read_text(encoding="utf-8")
+    empty = {**DATA, "show_stats": [], "show_sleep_points": []}
+    site.build(empty, tmp_path, cli.load_config())
+    h = (tmp_path / "shows" / "a" / "index.html").read_text(encoding="utf-8")
+    assert "寝落ちの実績" not in h and "実測の記録はまだありません" not in h
