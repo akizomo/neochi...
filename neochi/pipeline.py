@@ -77,7 +77,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
     total, final, final_reason = _stars(calm, ear, level, ep.id, cfg, store, interest_score)
 
     store.upsert("show", {"id": show.id, "title": show.title, "publisher": show.publisher,
-                          "rss_url": show.rss_url, "genre": show.genre, "lang": show.lang,
+                          "rss_url": show.rss_url, "genre": show.genre, "cohort": show.cohort, "lang": show.lang,
                           "artwork_url": show.artwork_url, "link_url": show.link_url})
     store.upsert("episode", {"id": ep.id, "show_id": show.id, "title": ep.title, "audio_url": ep.audio_url,
                              "duration_sec": ep.duration_sec or (int(feat["duration_sec"]) if feat.get("duration_sec") else None),

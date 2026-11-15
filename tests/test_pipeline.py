@@ -136,3 +136,30 @@ def test_old_format_judgement_leaves_new_outputs_empty(tmp_path, cfg):
     store = JsonStore(tmp_path / "s.json")
     row = pipeline.analyze_episode(SHOW, ep(3), cfg, store, make_deps(made_dirs=[]))
     assert "calm_per_min" not in row and "content_summary" not in row
+
+
+def test_shows_csv_genres_are_display_names():
+    """genre は画面に出す系統だけ。集めた目的は cohort に分ける(docs/VOICE.md §7)。"""
+    shows = feeds.load_shows("data/shows.csv")
+    assert {s.genre for s in shows} <= {"寝落ち用", "朗読", "芸人ラジオ", "雑談", "教養", "環境音"}
+    assert {s.cohort for s in shows} <= {"core", "popular", "control", "benchmark_en"}
+    assert all(s.lang == "en" for s in shows if s.cohort == "benchmark_en")
+
+
+def test_sync_shows_copies_genre_and_cohort(tmp_path, monkeypatch):
+    from neochi import cli
+
+    monkeypatch.delenv("SUPABASE_URL", raising=False)  # 本番の DB に書かないように
+    monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
+    csv_path = tmp_path / "s.csv"
+    csv_path.write_text("title,publisher,rss_url,genre,cohort,lang\n"
+                        "テスト番組,p,https://x/f,教養,control,ja\n"
+                        "未登録,p,https://x/g,朗読,core,ja\n", encoding="utf-8")
+    store_path = tmp_path / "store.json"
+    st = JsonStore(store_path)
+    st.upsert("show", {"id": SHOW.id, "title": "テスト番組", "rss_url": SHOW.rss_url, "genre": "人気番組（一般）"})
+    st.save()
+    assert cli.main(["--store", str(store_path), "sync-shows", "--csv", str(csv_path)]) == 0
+    rows = JsonStore(store_path).rows("show")
+    assert len(rows) == 1  # 未登録の番組は足さない
+    assert rows[0]["genre"] == "教養" and rows[0]["cohort"] == "control"

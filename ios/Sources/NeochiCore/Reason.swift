@@ -24,7 +24,8 @@ public struct ReasonSegment: Hashable, Sendable {
     public init(_ text: String, emphasized: Bool = false) { self.text = text; self.emphasized = emphasized }
 }
 
-/// 理由に出す系統名。番組を集めるときの分類(shows.csv の genre)は、そのまま画面に出さない(`docs/VOICE.md` §7)。
+/// 理由に出す系統名(`docs/VOICE.md` §7)。genre には系統名がそのまま入る。
+/// map は、データを書き換える前の古い分類の読み替え(sync-shows を流すまでの移行用)。
 public enum GenreLabel {
     static let map: [String: String] = [
         "寝落ち・睡眠導入": "寝落ち用", "寝落ち・睡眠導入（海外基準）": "寝落ち用",
