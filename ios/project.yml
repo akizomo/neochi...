@@ -9,6 +9,10 @@ options:
 packages:
   NeochiCore:
     path: .
+  # カバー画像の取得。表示サイズへの縮小と、縮小後の画像のディスクキャッシュのために使う(標準の AsyncImage は、大きい画像をキャッシュしない)。
+  Nuke:
+    url: https://github.com/kean/Nuke
+    from: 12.8.0
 targets:
   Neochi:
     type: application
@@ -17,6 +21,10 @@ targets:
       - path: App
     dependencies:
       - package: NeochiCore
+      - package: Nuke
+        product: Nuke
+      - package: Nuke
+        product: NukeUI
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.neochi

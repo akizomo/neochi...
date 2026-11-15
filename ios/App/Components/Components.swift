@@ -1,5 +1,7 @@
 import SwiftUI
 import NeochiCore
+import Nuke
+import NukeUI
 
 /// 配信元のカバー画像。複製せず URL から読み込む。ないとき・読み込み前は、頭文字の無地。
 struct ArtworkView: View {
@@ -12,9 +14,10 @@ struct ArtworkView: View {
     var body: some View {
         ZStack {
             Color.nc(.bgBase)
-            if let url = show.artworkURL {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image { image.resizable().scaledToFill() } else { initial }
+            if let url = ArtworkLoader.secure(show.artworkURL) {
+                // 表示サイズに縮小して、縮小後の画像をディスクに残す(原寸は 1.5〜10MB のものがある)。
+                LazyImage(request: ArtworkLoader.request(url, points: size)) { state in
+                    if let image = state.image { image.resizable().scaledToFill() } else { initial }
                 }
             } else {
                 initial
@@ -34,6 +37,31 @@ struct ArtworkView: View {
 
     private var initial: some View {
         Text(String(show.title.prefix(1))).ncText(NCText.headline, .textSub)
+    }
+}
+
+/// カバー画像の取得の設定(Nuke)。
+enum ArtworkLoader {
+    /// 起動時に一度。縮小後の画像だけをディスクに保存する(.automatic: 加工済みの画像は残し、原寸は残さない)。
+    static func configure() {
+        var config = ImagePipeline.Configuration.withDataCache(name: "neochi.artwork", sizeLimit: 150 * 1024 * 1024)
+        config.dataCachePolicy = .automatic
+        ImagePipeline.shared = ImagePipeline(configuration: config)
+    }
+
+    /// 暗号化なしの http は iOS が止めるので、https に置き換えて取る(置き換えて取れない配信元は、頭文字の無地のまま)。
+    static func secure(_ url: URL?) -> URL? {
+        guard let url else { return nil }
+        guard url.scheme == "http", var c = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return url }
+        c.scheme = "https"
+        return c.url
+    }
+
+    /// 表示サイズ(pt)の正方形に、中央で切り抜いて縮小する。
+    static func request(_ url: URL, points: CGFloat) -> ImageRequest {
+        ImageRequest(url: url, processors: [
+            ImageProcessors.Resize(size: CGSize(width: points, height: points), unit: .points, contentMode: .aspectFill, crop: true)
+        ])
     }
 }
 

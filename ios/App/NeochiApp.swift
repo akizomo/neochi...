@@ -5,6 +5,8 @@ import NeochiCore
 struct NeochiApp: App {
     @State private var model = AppModel.launch()
 
+    init() { ArtworkLoader.configure() }
+
     var body: some Scene {
         WindowGroup {
             RootView().environment(model)
