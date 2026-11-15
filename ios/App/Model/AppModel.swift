@@ -100,6 +100,33 @@ final class AppModel {
         self.genreStreakNights = genreStreakNights; self.pendingMorning = pendingMorning
     }
 
+    /// 番組の読み込みの状態。Release で接続先があるときは、見本の番組を出さず、読み込めるまで待つ(取り違えを防ぐ)。
+    enum LoadState: Equatable { case loading, ready, failed }
+    var loadState: LoadState = .ready
+
+    /// 起動時の状態。DEBUG と、接続先がないときは見本で動く。Release で接続先があるときは、空から読み込む。
+    static func launch() -> AppModel {
+        #if DEBUG
+        return sample()
+        #else
+        guard SupabaseClient.shared.isConfigured else { return sample() }
+        let m = AppModel(shows: [], episodes: [:])
+        m.loadState = .loading
+        return m
+        #endif
+    }
+
+    /// 読み込みをやり直す(読み込めなかったとき)。
+    func reload() async {
+        if loadState == .failed { loadState = .loading }
+        await loadRemote()
+    }
+
+    private func loadFailed(_ status: String) {
+        remoteStatus = status
+        if loadState == .loading { loadState = .failed }
+    }
+
     static func sample() -> AppModel {
         let m = AppModel(shows: SampleData.shows, episodes: SampleData.episodeMap,
                  history: [PlayRecord(episodeID: "phonebook-7", showID: "phonebook", playedAt: Date().addingTimeInterval(-86400))],
@@ -170,11 +197,11 @@ final class AppModel {
         #endif
         let fetched: [Show]
         do { fetched = try await SupabaseClient.shared.fetchShows() }
-        catch { remoteStatus = "番組の読み込みに失敗: \(error)"; return }
-        guard !fetched.isEmpty else { remoteStatus = "番組が0件(show が空、または読み取りの権限がない)"; return }
+        catch { loadFailed("番組の読み込みに失敗: \(error)"); return }
+        guard !fetched.isEmpty else { loadFailed("番組が0件(show が空、または読み取りの権限がない)"); return }
         let e: [String: [Episode]]
         do { e = try await SupabaseClient.shared.fetchEpisodes() }
-        catch { remoteStatus = "回の読み込みに失敗: \(error)"; return }
+        catch { loadFailed("回の読み込みに失敗: \(error)"); return }
         var s = fetched
         var notes: [String] = []
         var list: [EpisodeAnalysis] = []
@@ -191,6 +218,7 @@ final class AppModel {
         }
         analyses = Dictionary(list.map { ($0.episodeID, $0) }, uniquingKeysWith: { a, _ in a })
         shows = s; episodes = e; sleepPoints = points
+        loadState = .ready
         remoteStatus = "番組\(s.count)・回\(e.values.reduce(0) { $0 + $1.count })・解析\(list.count)・実績\(stats.count)" + (notes.isEmpty ? "" : "\n" + notes.joined(separator: "\n"))
         // 見本の状態は、実データには存在しない番組を指すので外す。
         let r = SessionState(history: history, favorites: favorites, queue: queue, currentShowID: currentShowID,
