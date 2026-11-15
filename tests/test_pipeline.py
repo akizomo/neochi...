@@ -141,7 +141,10 @@ def test_old_format_judgement_leaves_new_outputs_empty(tmp_path, cfg):
 def test_shows_csv_genres_are_display_names():
     """genre は画面に出す系統だけ。集めた目的は cohort に分ける(docs/VOICE.md §7)。"""
     shows = feeds.load_shows("data/shows.csv")
-    assert {s.genre for s in shows} <= {"寝落ち用", "朗読", "芸人ラジオ", "雑談", "教養", "環境音"}
+    from neochi import genre
+
+    assert {s.genre for s in shows} <= set(genre.GENRES)
+    assert all(s.apple_category for s in shows)  # categorize で読み済み
     assert {s.cohort for s in shows} <= {"core", "popular", "control", "benchmark_en"}
     assert all(s.lang == "en" for s in shows if s.cohort == "benchmark_en")
 
@@ -152,9 +155,9 @@ def test_sync_shows_copies_genre_and_cohort(tmp_path, monkeypatch):
     monkeypatch.delenv("SUPABASE_URL", raising=False)  # 本番の DB に書かないように
     monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
     csv_path = tmp_path / "s.csv"
-    csv_path.write_text("title,publisher,rss_url,genre,cohort,lang\n"
-                        "テスト番組,p,https://x/f,教養,control,ja\n"
-                        "未登録,p,https://x/g,朗読,core,ja\n", encoding="utf-8")
+    csv_path.write_text("title,publisher,rss_url,genre,apple_category,cohort,lang\n"
+                        "テスト番組,p,https://x/f,教養,History,control,ja\n"
+                        "未登録,p,https://x/g,朗読,Arts>Books,core,ja\n", encoding="utf-8")
     store_path = tmp_path / "store.json"
     st = JsonStore(store_path)
     st.upsert("show", {"id": SHOW.id, "title": "テスト番組", "rss_url": SHOW.rss_url, "genre": "人気番組（一般）"})
@@ -162,4 +165,25 @@ def test_sync_shows_copies_genre_and_cohort(tmp_path, monkeypatch):
     assert cli.main(["--store", str(store_path), "sync-shows", "--csv", str(csv_path)]) == 0
     rows = JsonStore(store_path).rows("show")
     assert len(rows) == 1  # 未登録の番組は足さない
-    assert rows[0]["genre"] == "教養" and rows[0]["cohort"] == "control"
+    assert rows[0]["genre"] == "教養" and rows[0]["cohort"] == "control" and rows[0]["apple_category"] == "History"
+
+
+def test_genre_from_apple_category():
+    from neochi import genre
+
+    assert genre.from_apple("Comedy>Improv") == "コメディ"
+    assert genre.from_apple("History") == "教養"
+    assert genre.from_apple("Society & Culture>Documentary") == "雑談"
+    assert genre.from_apple(None) == "雑談"
+    assert genre.resolve("寝落ち用", "Health & Fitness") == "寝落ち用"  # 手で書いた系統が優先
+    assert genre.resolve("", "Comedy") == "コメディ"
+    assert set(genre.APPLE_TO_GENRE.values()) <= set(genre.GENRES)
+    assert not (genre.SLEEP_MADE & genre.NOT_SLEEP_MADE)
+
+
+def test_parse_category():
+    xml = (b'<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel>'
+           b'<itunes:category text="Comedy"><itunes:category text="Improv"/></itunes:category>'
+           b'<itunes:category text="Arts"/></channel></rss>')
+    assert feeds.parse_category(xml) == "Comedy>Improv"
+    assert feeds.parse_category(b"<rss><channel></channel></rss>") is None

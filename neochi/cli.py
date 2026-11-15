@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from . import feeds, pipeline, z_rank
+from . import feeds, genre, pipeline, z_rank
 from .store import open_store
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -156,10 +156,41 @@ def cmd_sync_shows(a) -> int:
     store = open_store(a.store)
     n = 0
     for s in feeds.load_shows(a.csv):
-        store.update("show", s.id, {"genre": s.genre, "cohort": s.cohort, "lang": s.lang})
+        store.update("show", s.id, {"genre": s.genre, "cohort": s.cohort, "apple_category": s.apple_category, "lang": s.lang})
         n += 1
     store.save()
     logging.info("完了: CSV の %d 番組ぶんを書き写し(未登録の番組は対象外)", n)
+    return 0
+
+
+def cmd_categorize(a) -> int:
+    """CSV の番組の RSS を読み、Apple Podcasts のカテゴリを apple_category 列に書く。
+    genre が空の行は、そのカテゴリから系統の初期値を入れる。番組を足したあとに流す。"""
+    import csv
+
+    with open(a.csv, encoding="utf-8-sig", newline="") as f:
+        rows = list(csv.DictReader(f))
+    filled = 0
+    for r in rows:
+        if r.get("apple_category") and not a.refresh:
+            continue
+        try:
+            res = feeds.requests.get(r["rss_url"], timeout=20, headers={"User-Agent": "neochi-bot/0.1"})
+            cat = feeds.parse_category(res.content) if res.status_code == 200 else None
+        except Exception as e:  # noqa: BLE001
+            logging.warning("RSS を読めません: %s (%s)", r.get("title"), e)
+            continue
+        r["apple_category"] = cat or ""
+        if not (r.get("genre") or "").strip():
+            r["genre"] = genre.from_apple(cat)
+            logging.info("系統を入れた: %s → %s(%s)", r.get("title"), r["genre"], cat)
+        filled += 1
+    cols = ["title", "publisher", "rss_url", "genre", "apple_category", "cohort", "lang"]
+    with open(a.csv, "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
+        w.writeheader()
+        w.writerows(rows)
+    logging.info("完了: %d 番組のカテゴリを読んだ。系統は CSV で確かめて、寝落ち用・朗読・環境音は手で直す", filled)
     return 0
 
 
@@ -198,6 +229,10 @@ def main(argv=None) -> int:
     ss = sub.add_parser("sync-shows", help="CSV の系統・集めた目的・言語を、登録済みの番組に書き写す(解析はしない)")
     ss.add_argument("--csv", default="data/shows.csv")
     ss.set_defaults(fn=cmd_sync_shows)
+    ca = sub.add_parser("categorize", help="RSS から Apple Podcasts のカテゴリを読み、CSV の空の系統に初期値を入れる")
+    ca.add_argument("--csv", default="data/shows.csv")
+    ca.add_argument("--refresh", action="store_true", help="読み済みの番組も読み直す")
+    ca.set_defaults(fn=cmd_categorize)
     st = sub.add_parser("site", help="紹介サイト(静的HTML)を書き出す。公開キー(SUPABASE_URL か SUPABASE_HOST と SUPABASE_ANON_KEY)で読む")
     st.add_argument("--out", default="out/site")
     st.add_argument("--base-url", default=os.environ.get("SITE_URL", ""), help="公開先の URL。OGP と共有のリンクに使う")
