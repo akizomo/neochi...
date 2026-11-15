@@ -56,9 +56,20 @@ public enum NCString {
     public static let deltaCaptionRecords = "前の4件"
     public static let deltaCaptionEpisodes = "前の4回"
 
-    /// 格付けのバッジの横に出す、意味の説明(番組の詳細)。
+    /// 格付けのバッジの横に出す、ひとこと(番組の詳細)。基準の数字は出さず、その番組をどう勧めるかを言う。
+    /// 効くとも、必ず眠れるとも言わない(`docs/VOICE.md`)。基準の数字は「解析について」に書く。
     public static func rankMeaning(_ r: ZRank) -> String {
-        "寝落ち格付け・評点\(String(format: "%.1f", RankCriteria.minStar(r)))以上"
+        switch r {
+        case .zzz: "眠りたい夜は、まずこの番組"
+        case .zz: "寝落ちのために選びたい番組"
+        case .z: "寝落ちに向いた番組"
+        }
+    }
+
+    /// 「解析について」に書く、格付けの基準。
+    public static var rankCriteriaNote: String {
+        let f = { (r: ZRank) in String(format: "%.1f", RankCriteria.minStar(r)) }
+        return "寝落ち格付けは、番組の評点で決めます。Z は\(f(.z))以上、ZZ は\(f(.zz))以上、ZZZ は\(f(.zzz))以上です。基準に届かない番組は、掲載しません。評点は、AI解析を土台に、ウォッチの実測とみんなの評価が集まるほど、それらを足したものです。"
     }
 }
 

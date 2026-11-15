@@ -53,6 +53,14 @@ final class DetailMathTests: XCTestCase {
         for (key, r) in [("z", ZRank.z), ("zz", .zz), ("zzz", .zzz)] {
             XCTAssertTrue(yaml.contains("\(key):") && yaml.contains("min_star: \(RankCriteria.minStar(r))"), key)
         }
-        XCTAssertEqual(NCString.rankMeaning(.zz), "寝落ち格付け・評点3.6以上")
+        // バッジの横は、基準の数字ではなく、番組の勧め方のひとこと(ミシュランのように)。基準は「解析について」に書く
+        for r in [ZRank.z, .zz, .zzz] {
+            XCTAssertFalse(NCString.rankMeaning(r).contains("以上"), "基準の数字を、バッジの横に出さない")
+            for banned in ["確実", "必ず", "効", "改善", "安眠", "熟睡", "ぐっすり"] {
+                XCTAssertFalse(NCString.rankMeaning(r).contains(banned), "\(banned) を使わない(docs/VOICE.md)")
+            }
+        }
+        XCTAssertEqual(NCString.rankMeaning(.zzz), "眠りたい夜は、まずこの番組")
+        XCTAssertTrue(NCString.rankCriteriaNote.contains("3.0") && NCString.rankCriteriaNote.contains("3.6") && NCString.rankCriteriaNote.contains("4.2"))
     }
 }

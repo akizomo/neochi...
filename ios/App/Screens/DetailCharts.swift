@@ -260,11 +260,23 @@ struct InterestScale: View {
 }
 
 /// 寝落ちの実績: 0〜60分の1本の軸に、記録を点で置く。30分未満は塗り、30分以上は線だけ。
+/// 点を押すと、その記録の「日付と分数」が出る(もう一度押すか、ほかの点を押すと切り替わる)。
 struct SleepDotAxis: View {
-    let minutes: [Int]
+    let points: [SleepPoint]
     let average: Int
+    @State private var selected: Int?
 
     private let maxM = Double(DetailMath.recordAxisMax)
+    private var minutes: [Int] { points.map(\.minutes) }
+
+    private static let shortDay: DateFormatter = {
+        let f = DateFormatter(); f.calendar = Calendar(identifier: .gregorian)
+        f.timeZone = TimeZone(identifier: "Asia/Tokyo"); f.dateFormat = "M/d"; return f
+    }()
+    private static let spokenDay: DateFormatter = {
+        let f = DateFormatter(); f.calendar = Calendar(identifier: .gregorian)
+        f.timeZone = TimeZone(identifier: "Asia/Tokyo"); f.dateFormat = "M月d日"; return f
+    }()
 
     var body: some View {
         GeometryReader { g in
@@ -283,18 +295,39 @@ struct SleepDotAxis: View {
                     .stroke(Color.nc(.borderControl), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 // 平均の縦線とラベル
                 Rectangle().fill(Color.nc(.accentResult)).frame(width: 1.5, height: 40).position(x: x(average), y: 32)
-                Text("平均\(average)").font(.nc(NCText.numXs)).foregroundStyle(Color.nc(.accentResult))
-                    .fixedSize().position(x: min(max(x(average), 24), w - 24), y: 6)
-                // 記録の点
-                ForEach(Array(minutes.enumerated()), id: \.offset) { _, m in
-                    Group {
-                        if m < 30 { Circle().fill(Color.nc(.accentResult)) }
-                        else { Circle().strokeBorder(Color.nc(.accentResult), lineWidth: 1.5) }
-                    }
-                    .frame(width: 10, height: 10).position(x: x(m), y: 40)
+                if selected == nil {
+                    Text("平均\(average)").font(.nc(NCText.numXs)).foregroundStyle(Color.nc(.accentResult))
+                        .fixedSize().position(x: min(max(x(average), 24), w - 24), y: 6)
                 }
-                // 最短・最長の値
-                if minutes.count >= 2 {
+                // 記録の点。押せる(見た目は10pt、押せる範囲は28pt)
+                ForEach(Array(points.enumerated()), id: \.offset) { i, p in
+                    Button {
+                        withAnimation(.easeOut(duration: 0.15)) { selected = selected == i ? nil : i }
+                    } label: {
+                        ZStack {
+                            Color.clear
+                            if p.minutes < 30 { Circle().fill(Color.nc(.accentResult)).frame(width: 10, height: 10) }
+                            else { Circle().strokeBorder(Color.nc(.accentResult), lineWidth: 1.5).frame(width: 10, height: 10) }
+                            if selected == i { Circle().strokeBorder(Color.nc(.textMain), lineWidth: 1).frame(width: 16, height: 16) }
+                        }
+                        .frame(width: 28, height: 28).contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .position(x: x(p.minutes), y: 40)
+                    .accessibilityLabel("\(Self.spokenDay.string(from: p.night))、\(p.minutes)分")
+                }
+                // 押した点の、日付と分数
+                if let i = selected, points.indices.contains(i) {
+                    let p = points[i]
+                    Text("\(Self.shortDay.string(from: p.night))  \(p.minutes)分")
+                        .font(.nc(NCText.numXs)).foregroundStyle(Color.nc(.textMain))
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Capsule().fill(Color.nc(.surfacePressed)))
+                        .fixedSize()
+                        .position(x: min(max(x(p.minutes), 40), w - 40), y: 10)
+                        .allowsHitTesting(false)
+                } else if points.count >= 2 {
+                    // 最短・最長の値
                     ForEach(Array(Set([lo, hi])), id: \.self) { m in
                         Text("\(m)").font(.nc(NCText.numXs)).foregroundStyle(Color.nc(.textMain))
                             .fixedSize().position(x: x(m), y: 24)
@@ -303,37 +336,7 @@ struct SleepDotAxis: View {
             }
         }
         .frame(height: 72)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("寝落ちまでの分、\(minutes.count)件")
-        .accessibilityValue("最短 \(minutes.min() ?? 0)分、最長 \(minutes.max() ?? 0)分、平均 \(average)分。30分未満 \(minutes.filter { $0 < 30 }.count)件")
-    }
-}
-
-/// 夜ごとの分数と日付(古い順、直近8件)。
-struct NightRow: View {
-    let points: [SleepPoint]
-
-    private static let day: DateFormatter = {
-        let f = DateFormatter(); f.calendar = Calendar(identifier: .gregorian)
-        f.timeZone = TimeZone(identifier: "Asia/Tokyo"); f.dateFormat = "M/d"; return f
-    }()
-    private static let spoken: DateFormatter = {
-        let f = DateFormatter(); f.calendar = Calendar(identifier: .gregorian)
-        f.timeZone = TimeZone(identifier: "Asia/Tokyo"); f.dateFormat = "M月d日"; return f
-    }()
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(Array(points.suffix(8).enumerated()), id: \.offset) { _, p in
-                VStack(spacing: 2) {
-                    Text("\(p.minutes)").font(.nc(NCText.numSm)).foregroundStyle(Color.nc(.accentResult))
-                    Text(Self.day.string(from: p.night)).font(.nc(NCText.numXs)).foregroundStyle(Color.nc(.textSub))
-                }
-                .frame(maxWidth: .infinity)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(Self.spoken.string(from: p.night))、\(p.minutes)分")
-            }
-        }
+        .accessibilityElement(children: .contain)
     }
 }
 

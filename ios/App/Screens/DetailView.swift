@@ -165,7 +165,7 @@ struct DetailView: View {
                 }
                 if let l = a.interest {
                     let total = a.interestScore ?? Explain.interestTotal(a.interestItems)
-                    axis("程よい興味", text: interestWord(l), number: total) { interestDetail(a, total: total) }
+                    axis("程よい興味", text: interestWord(l)) { interestDetail(a, total: total) }
                 }
             }
             .padding(.horizontal, NCSpace.s4)
@@ -273,7 +273,7 @@ struct DetailView: View {
     }
 
     /// 開閉できる観点の行。右に★(または言葉)を出し、押すと根拠が開く。
-    private func axis<Content: View>(_ title: String, star: Double? = nil, text: String? = nil, number: Int? = nil,
+    private func axis<Content: View>(_ title: String, star: Double? = nil, text: String? = nil,
                                      @ViewBuilder content: @escaping () -> Content) -> some View {
         let open = openAxes.contains(title)
         return VStack(alignment: .leading, spacing: 0) {
@@ -291,7 +291,6 @@ struct DetailView: View {
                         Text(String(format: "%.1f", star)).ncText(NCText.numMd, .accentFactor)
                     } else if let text {
                         Text(text).ncText(NCText.body, .accentFactor)
-                        if let number { Text("\(number)").ncText(NCText.numMd, .accentFactor) }
                     }
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
@@ -338,8 +337,7 @@ struct DetailView: View {
                         }
                     }
                     if !mins.isEmpty {
-                        SleepDotAxis(minutes: mins, average: avg)
-                        NightRow(points: points)
+                        SleepDotAxis(points: points, average: avg)
                         HStack(spacing: NCSpace.s4) {
                             legendDot("30分未満 \(mins.filter { $0 < 30 }.count)件", filled: true)
                             legendDot("30分以上 \(mins.filter { $0 >= 30 }.count)件", filled: false)
@@ -418,7 +416,11 @@ struct DetailView: View {
 
     private func about(_ a: EpisodeAnalysis, episode: Episode) -> some View {
         DisclosureGroup {
-            Text(aboutText(a)).ncText(NCText.footnote, .textSub).frame(maxWidth: .infinity, alignment: .leading).padding(.top, NCSpace.s2)
+            VStack(alignment: .leading, spacing: NCSpace.s2) {
+                Text(aboutText(a))
+                Text(NCString.rankCriteriaNote)
+            }
+            .ncText(NCText.footnote, .textSub).frame(maxWidth: .infinity, alignment: .leading).padding(.top, NCSpace.s2)
         } label: {
             Text("解析について").ncText(NCText.footnote, .textSub)
         }.tint(Color.nc(.textSub))
