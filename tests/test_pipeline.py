@@ -46,6 +46,22 @@ def test_rerun_is_idempotent_and_audio_removed(cfg, tmp_path):
     assert dirs and not any(os.path.exists(d) for d in dirs)  # 音声は残っていない
 
 
+def test_remeasure_changes_only_acoustics(cfg, tmp_path):
+    store = JsonStore(tmp_path / "s.json")
+    row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, make_deps(made_dirs=[]))
+    # 測り直し: 🌊🎯と話す速さは、そのまま。音響(🎧の音量・突発音)と、それに連なる点だけが変わる
+    cfg2 = {**cfg, "acoustic": {**cfg["acoustic"], "window_min": 1}}
+    dirs = []
+    new = pipeline.remeasure_acoustics(row, "https://x/a.mp3", "ja", cfg2, store, make_deps(made_dirs=dirs))
+    assert new["calm_star"] == row["calm_star"] and new["interest_level"] == row["interest_level"]
+    assert new["features"]["speech_rate"] == row["features"]["speech_rate"]
+    assert len(new["features"]["timeline"]["volume_db"]) == 1          # 1分だけ測った
+    assert new["features"]["duration_sec"] == row["features"]["duration_sec"]   # 回全体の長さは変わらない
+    assert new["ear_star"] is not None and new["final_star"] is not None
+    assert store.get("analysis", row["episode_id"])["features"]["timeline"]["volume_db"] == new["features"]["timeline"]["volume_db"]
+    assert dirs and not any(os.path.exists(d) for d in dirs)           # 音声は残らない
+
+
 def test_sudden_warning(cfg, tmp_path, caplog):
     with caplog.at_level(logging.WARNING, logger="neochi.pipeline"):
         pipeline.analyze_episode(SHOW, ep(9), cfg, JsonStore(tmp_path / "s.json"), make_deps(loud=True, made_dirs=[]))

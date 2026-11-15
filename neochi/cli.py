@@ -103,6 +103,39 @@ def cmd_apply(a) -> int:
     return 0
 
 
+def cmd_remeasure(a) -> int:
+    """解析済みの回の、音響の特徴だけを測り直す(測る範囲や基準を変えたとき)。🌊🎯と話す速さは触らない。
+
+    終わったら、番組の評点と格付けも、引き継がずに全番組を計算し直す。
+    """
+    cfg, zcfg, store = load_config(), load_z_config(), open_store(a.store)
+    episodes = {e["id"]: e for e in store.rows("episode")}
+    shows = {s["id"]: s for s in store.rows("show")}
+    done = 0
+    for row in store.rows("analysis"):
+        if row.get("input_depth") not in ("audio", "transcript"):
+            continue  # 音声を解析していない回(説明文だけ)は、測り直す音がない
+        if a.max_new and done >= a.max_new:
+            break
+        e = episodes.get(row["episode_id"])
+        if not e or not e.get("audio_url"):
+            continue
+        lang = (shows.get(e["show_id"]) or {}).get("lang") or "ja"
+        try:
+            new = pipeline.remeasure_acoustics(row, e["audio_url"], lang, cfg, store)
+        except Exception as ex:  # noqa: BLE001 - 1件の失敗で全体を止めない
+            logging.warning("測り直せませんでした: %s (%s)", e.get("title"), ex)
+            continue
+        done += 1
+        logging.info("%s → 🎧 %s / 総合評点 %s", e.get("title"), new["ear_star"], new["final_star"])
+    ids = [s["id"] for s in store.rows("show")]
+    _update_show_stars(store, ids)
+    update_ratings(store, ids, zcfg, reset=True)
+    store.save()
+    logging.info("測り直し: %d 件", done)
+    return 0
+
+
 def cmd_z_rank(a) -> int:
     """実測・みんなの評価が増えたあとに、総合評点・番組の評点・格付けを計算し直す。"""
     cfg, zcfg, store = load_config(), load_z_config(), open_store(a.store)
@@ -134,6 +167,9 @@ def main(argv=None) -> int:
     ap.add_argument("--file", default="work/judgements.jsonl")
     ap.add_argument("--pending", default="work/pending")
     ap.set_defaults(fn=cmd_apply)
+    m = sub.add_parser("remeasure", help="解析済みの回の音響(音量・突発音)だけを測り直す。測る範囲や基準を変えたあとに使う")
+    m.add_argument("--max-new", type=int, default=0, help="1回の実行で測り直す件数の上限(0 = 無制限)")
+    m.set_defaults(fn=cmd_remeasure)
     z = sub.add_parser("z-rank", help="実測・みんなの評価から、総合評点と寝落ち格付けを計算し直す")
     z.add_argument("--rules-changed", action="store_true",
                    help="採点ルールや格付けの線を変えたとき。付いている格付けを引き継がず、全番組を計算し直す")

@@ -119,6 +119,33 @@ def _stars(calm, ear, level, episode_id: str, cfg: dict, store, interest_score=N
     return total, final, final_reason
 
 
+def remeasure_acoustics(row: dict, audio_url: str, lang: str, cfg: dict, store, deps: Deps | None = None) -> dict:
+    """保存済みの解析の、音響の特徴(音量のばらつき・突発音・推移)だけを測り直す。🌊🎯と話す速さは、そのまま。
+
+    測る範囲や基準(acoustic.window_min、ear の基準)を変えたあとに使う。音声は、測ったら捨てる。
+    🎧★と総合評点も計算し直して保存する。
+    """
+    deps = deps or Deps()
+    sr = cfg["acoustic"]["sample_rate"]
+    with deps.download(audio_url) as path:
+        new = features.acoustic_features(deps.decode(path, sr=sr), sr, cfg)
+    feat = dict(row.get("features") or {})
+    timeline = dict(feat.get("timeline") or {})
+    for k in ("duration_sec", "volume_std_db", "sudden_per_10min"):
+        feat[k] = new.get(k)
+    timeline.update(new.get("timeline") or {})
+    feat["timeline"] = timeline
+    feat = {k: v for k, v in feat.items() if v is not None}
+    ear = scoring.ear_star(feat, lang, cfg)
+    if ear is not None:
+        feat["ear_parts"] = scoring.ear_parts(feat, lang, cfg)
+    total, final, reason = _stars(row.get("calm_star"), ear, row.get("interest_level"), row["episode_id"], cfg, store,
+                                  row.get("interest_score"))
+    out = {**row, "features": feat, "ear_star": ear, "total_star": total, "final_star": final, "final_reason": reason}
+    store.upsert("analysis", out)
+    return out
+
+
 def restar(row: dict, cfg: dict, store) -> tuple[float | None, str | None]:
     """保存済みの解析から、総合評点と final_reason を計算し直す(実測・みんなの評価が増えたとき、ルールを変えたとき)。"""
     _, final, reason = _stars(row.get("calm_star"), row.get("ear_star"), row.get("interest_level"),
