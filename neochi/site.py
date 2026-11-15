@@ -30,7 +30,7 @@ RANK_MEANING = {"ZZZ": "眠りたい夜は、まずこの番組", "ZZ": "寝落�
 # 格付けの線(config/z_rank.yaml と同じ値)
 RANK_MIN = {"Z": 3.0, "ZZ": 3.6, "ZZZ": 4.2}
 
-LEAD = "AI解析とウォッチの実測をもとに、寝落ちに向いたポッドキャストを格付けしています。"
+LEAD = "AI解析とウォッチの実測をもとに、Z・ZZ・ZZZ の3段階で格付けしています。"
 ENGLISH = "Neochi (n.) — Japanese for drifting off mid-episode. NeochiPickzz picks what to drift off to."
 FOOT_NOTE = "評点は推定です。睡眠の良し悪しは評価していません。"
 FOOT_RIGHTS = "番組名とカバー画像の権利は、各配信元にあります。音声は配信元で聴けます。"
