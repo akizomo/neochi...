@@ -53,11 +53,11 @@ class JsonStore:
         return [a["final_star"] for a in self.rows("analysis")
                 if a["episode_id"] in eps and a.get("final_star") is not None]
 
-    def community(self, episode_id: str) -> tuple[float | None, int]:
-        """みんなの🌊★(sleep_log.calm_vote の平均)と件数。"""
-        v = [r["calm_vote"] for r in self.rows("sleep_log")
-             if r["episode_id"] == episode_id and r.get("calm_vote") is not None]
-        return (sum(v) / len(v), len(v)) if v else (None, 0)
+    def votes(self, episode_id: str) -> tuple[list[int], list[int]]:
+        """みんなの評価。(🌊 calm_vote 1〜5 の一覧, 🎯 interest_vote -1/0/1 の一覧)。"""
+        rows = [r for r in self.rows("sleep_log") if r["episode_id"] == episode_id]
+        return ([r["calm_vote"] for r in rows if r.get("calm_vote") is not None],
+                [r["interest_vote"] for r in rows if r.get("interest_vote") is not None])
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -118,12 +118,13 @@ class SupabaseStore:
         r.raise_for_status()
         return [x["latency_min"] for x in r.json()]
 
-    def community(self, episode_id: str) -> tuple[float | None, int]:
-        r = requests.get(f"{self.base}/sleep_log?select=calm_vote&episode_id=eq.{episode_id}&calm_vote=not.is.null",
+    def votes(self, episode_id: str) -> tuple[list[int], list[int]]:
+        r = requests.get(f"{self.base}/sleep_log?select=calm_vote,interest_vote&episode_id=eq.{episode_id}",
                          headers=self.h, timeout=30)
         r.raise_for_status()
-        v = [x["calm_vote"] for x in r.json()]
-        return (sum(v) / len(v), len(v)) if v else (None, 0)
+        rows = r.json()
+        return ([x["calm_vote"] for x in rows if x.get("calm_vote") is not None],
+                [x["interest_vote"] for x in rows if x.get("interest_vote") is not None])
 
     def save(self) -> None:
         pass

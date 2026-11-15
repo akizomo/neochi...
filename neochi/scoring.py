@@ -70,9 +70,31 @@ def interest_star(score: float, cfg: dict) -> float:
     return round(5.0 + (y1 - 5.0) * (score - hi) / (x1 - hi), 1)
 
 
+def interest_vote_star(vote: int, cfg: dict) -> float:
+    """朝の振り返りの3択(-1 退屈だった / 0 ちょうどよかった / 1 聴き入った)→ 🎯★。ゾーンの式の両端に合わせる。"""
+    return float(cfg["final"]["interest_vote_star"][vote])
+
+
+def blend_axis(ai: float | None, crowd: float | None, n: int, cfg: dict) -> float | None:
+    """1つの軸(🌊 か 🎯)のAI解析の点に、みんなの評価を件数に応じて足す。10件未満は入れない。
+
+    w = min(上限, n / (n + prior_n))。みんなの評価は、話の内容を見る軸(🌊🎯)にだけ効かせる。
+    """
+    f = cfg["final"]
+    if ai is None or crowd is None or n < f["community_min_n"]:
+        return ai
+    w = min(f["community_max_weight"], n / (n + f["community_prior_n"]))
+    return ai * (1 - w) + crowd * w
+
+
 def total_star(calm: float | None, ear: float | None, interest_level: str | None, cfg: dict,
-               interest_score: float | None = None) -> float | None:
-    """😴 AI解析の総合。欠けた要素は除いて重みを再配分する。"""
+               interest_score: float | None = None,
+               calm_votes: list[int] | None = None, interest_votes: list[int] | None = None) -> float | None:
+    """😴 総合の元になる点(🎯🌊🎧)。欠けた要素は除いて重みを再配分する。
+
+    calm_votes / interest_votes を渡すと、その軸にみんなの評価を足してから重み付けする(🎧には足さない)。
+    渡さなければ、AI解析だけの点(`analysis.total_star`)。
+    """
     t = cfg["total"]
     vals = {}
     if interest_score is not None:
@@ -85,6 +107,11 @@ def total_star(calm: float | None, ear: float | None, interest_level: str | None
         vals["ear"] = float(ear)
     if not vals:
         return None
+    if calm_votes and "calm" in vals:
+        vals["calm"] = blend_axis(vals["calm"], sum(calm_votes) / len(calm_votes), len(calm_votes), cfg)
+    if interest_votes and "interest" in vals:
+        stars = [interest_vote_star(v, cfg) for v in interest_votes]
+        vals["interest"] = blend_axis(vals["interest"], sum(stars) / len(stars), len(stars), cfg)
     w = {k: t["weights"][k] for k in vals}
     return round(sum(vals[k] * w[k] for k in vals) / sum(w.values()), 1)
 
@@ -95,29 +122,25 @@ def watch_star(median_min: float, cfg: dict) -> float:
     return round(1 + 4 * _norm(median_min, f["watch_best_min"], f["watch_worst_min"]), 1)
 
 
-def final_star(total: float | None, community: float | None, community_n: int, cfg: dict,
-               watch_median: float | None = None, watch_n: int = 0) -> tuple[float | None, str | None]:
-    """総合評点と final_reason。AI解析を土台に、実測とみんなの評価を件数に応じて足す。人の手では上書きしない。
+def final_star(total: float | None, cfg: dict,
+               watch_median: float | None = None, watch_n: int = 0,
+               ai_total: float | None = None) -> tuple[float | None, str | None]:
+    """総合評点と final_reason。人の手では上書きしない。
 
-    総合評点 = total×(1−w実測−wみんな) + 実測点×w実測 + みんなの🌊★の平均×wみんな
-    件数が下限(watch_min_n / community_min_n)未満の項目は、計算に入れない。
+    total は、みんなの評価を軸ごとに足したあとの点(`total_star(..., calm_votes, interest_votes)`)。
+    それに、ウォッチの実測を足す: 総合評点 = total×(1−w実測) + 実測点×w実測
+    w実測 = min(上限, n / (n + prior_n))。3件(watch_min_n)未満は計算に入れない。
+    ai_total(AI解析だけの点)があれば、実測とのずれが大きいときの理由に使う。
     """
     if total is None:
         return None, None
     f = cfg["final"]
-    parts = []  # (重み, 点, 名前)
-    if watch_median is not None and watch_n >= f["watch_min_n"]:
-        w = min(f["watch_max_weight"], watch_n / (watch_n + f["watch_prior_n"]))
-        parts.append((w, watch_star(watch_median, cfg), "実測"))
-    if community is not None and community_n >= f["community_min_n"]:
-        w = min(f["community_max_weight"], community_n / (community_n + f["community_prior_n"]))
-        parts.append((w, community, "みんな"))
-    if not parts:
+    if watch_median is None or watch_n < f["watch_min_n"]:
         return total, None
-    final = round(total * (1 - sum(w for w, _, _ in parts)) + sum(w * v for w, v, _ in parts), 1)
-    reason = None
-    far = [(v, name) for _, v, name in parts if abs(total - v) >= f["divergence_threshold"]]
-    if far:
-        v, name = far[0]
-        reason = strings.divergence_reason(total, v, name, watch_n if name == "実測" else community_n)
+    w = min(f["watch_max_weight"], watch_n / (watch_n + f["watch_prior_n"]))
+    wstar = watch_star(watch_median, cfg)
+    final = round(total * (1 - w) + wstar * w, 1)
+    base = ai_total if ai_total is not None else total
+    reason = (strings.divergence_reason(base, wstar, "実測", watch_n)
+              if abs(base - wstar) >= f["divergence_threshold"] else None)
     return final, reason

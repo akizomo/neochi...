@@ -43,28 +43,49 @@ def test_ear_star_and_totals(cfg):
     assert scoring.total_star(4, None, None, cfg) == 4.0  # 欠けた要素は除いて再配分
 
 
-def test_final_star_ai_only_then_blend(cfg):
-    assert scoring.final_star(4.0, None, 0, cfg) == (4.0, None)
+def test_final_star_ai_only(cfg):
+    assert scoring.final_star(4.0, cfg) == (4.0, None)
+    assert scoring.final_star(None, cfg) == (None, None)
+
+
+def test_crowd_blends_into_content_axes_only(cfg):
+    # AI解析: 🎯 引き込み力2(🎯★3.7)、🌊 5.0、🎧 4.0
+    base = scoring.total_star(5.0, 4.0, None, cfg, 2)
     # みんなの評価は10件未満なら入れない
-    assert scoring.final_star(4.5, 2.5, 9, cfg) == (4.5, None)
-    f, reason = scoring.final_star(4.5, 2.5, 20, cfg)
-    assert 2.5 < f < 4.5 and reason and "AI解析" in reason and "みんな" in reason
-    f, reason = scoring.final_star(4.0, 3.8, 20, cfg)
-    assert reason is None
+    assert scoring.total_star(5.0, 4.0, None, cfg, 2, calm_votes=[1] * 9) == base
+    assert scoring.total_star(5.0, 4.0, None, cfg, 2, interest_votes=[0] * 9) == base
+    # 🌊: みんなが低く付けると、総合が下がる。🎯: 「ちょうどよかった」が多いと、上がる
+    assert scoring.total_star(5.0, 4.0, None, cfg, 2, calm_votes=[1] * 20) < base
+    assert scoring.total_star(5.0, 4.0, None, cfg, 2, interest_votes=[0] * 20) > base
+    # 🎧 には、みんなの評価を足さない(votes を渡しても、🎧の点は計算値のまま)
+    assert scoring.blend_axis(4.0, 1.0, 5, cfg) == 4.0
+
+
+def test_crowd_weight_is_capped_per_axis(cfg):
+    w_small = scoring.blend_axis(5.0, 1.0, 10, cfg)
+    w_big = scoring.blend_axis(5.0, 1.0, 1000, cfg)
+    assert w_big < w_small
+    assert abs(w_big - (5.0 * 0.5 + 1.0 * 0.5)) < 0.05   # 上限 0.5
+
+
+def test_interest_vote_star_matches_zone_ends(cfg):
+    assert scoring.interest_vote_star(0, cfg) == 5.0   # ちょうどよかった
+    assert scoring.interest_vote_star(-1, cfg) == 3.0  # 退屈だった(ゾーンの低い側の端)
+    assert scoring.interest_vote_star(1, cfg) == 1.0   # 聴き入った(引き込まれすぎの端)
 
 
 def test_final_star_watch(cfg):
     # 実測は3件未満なら入れない
-    assert scoring.final_star(4.5, None, 0, cfg, 40, 2) == (4.5, None)
+    assert scoring.final_star(4.5, cfg, 40, 2) == (4.5, None)
     # 実測3件・中央値40分(実測点 1.0)で、AI解析 4.5 から下がる。理由に「実測」が入る
-    f, reason = scoring.final_star(4.5, None, 0, cfg, 40, 3)
+    f, reason = scoring.final_star(4.5, cfg, 40, 3)
     assert f < 4.5 and reason and "実測" in reason
     # 実測が短いほど高い。10分以下は 5.0、40分以上は 1.0
     assert scoring.watch_star(5, cfg) == 5.0 and scoring.watch_star(45, cfg) == 1.0
     assert scoring.watch_star(25, cfg) == 3.0
     # 件数が増えるほど実測に寄る(上限 0.6)
-    f3, _ = scoring.final_star(4.5, None, 0, cfg, 40, 3)
-    f50, _ = scoring.final_star(4.5, None, 0, cfg, 40, 50)
+    f3, _ = scoring.final_star(4.5, cfg, 40, 3)
+    f50, _ = scoring.final_star(4.5, cfg, 40, 50)
     assert f50 < f3 and f50 >= round(4.5 * 0.4 + 1.0 * 0.6, 1) - 0.05
 
 

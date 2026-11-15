@@ -3,13 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import statistics
 import uuid
 from pathlib import Path
 
 import yaml
 
-from . import feeds, pipeline, scoring, z_rank
+from . import feeds, pipeline, z_rank
 from .store import open_store
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -65,14 +64,17 @@ def _update_show_stars(store, show_ids) -> None:
             store.update("show", sid, {"show_star": round(sum(stars) / len(stars), 1)})
 
 
-def update_ratings(store, show_ids, zcfg: dict) -> None:
-    """番組の評点から寝落ち格付けを決める。基準未満は掲載しない(評点は残す)。"""
+def update_ratings(store, show_ids, zcfg: dict, reset: bool = False) -> None:
+    """番組の評点から寝落ち格付けを決める。基準未満は掲載しない(評点は残す)。
+
+    reset=True は、採点ルールや線を変えたとき。付いている格付けを引き継がず、全番組を計算し直す。
+    (引き継ぎ=格下げの保留は、実測が少ないうちの揺れを抑えるためだけ。ルールが変わったときには使わない)"""
     shows = {s["id"]: s for s in store.rows("show")}
     for sid in show_ids:
         s = shows.get(sid)
         if not s:
             continue
-        rank = z_rank.z_rank(s.get("show_star"), zcfg, s.get("z_rank"), len(store.watch_latencies(sid)))
+        rank = z_rank.z_rank(s.get("show_star"), zcfg, None if reset else s.get("z_rank"), len(store.watch_latencies(sid)))
         store.update("show", sid, {"z_rank": rank, "listing_status": "listed" if rank else "researching"})
         logging.info("%s → %s", s["title"], rank or "掲載しない")
 
@@ -105,14 +107,11 @@ def cmd_z_rank(a) -> int:
     """実測・みんなの評価が増えたあとに、総合評点・番組の評点・格付けを計算し直す。"""
     cfg, zcfg, store = load_config(), load_z_config(), open_store(a.store)
     for row in store.rows("analysis"):
-        crowd, n = store.community(row["episode_id"])
-        watch = store.episode_watch_latencies(row["episode_id"])
-        median = statistics.median(watch) if watch else None
-        final, reason = scoring.final_star(row.get("total_star"), crowd, n, cfg, median, len(watch))
+        final, reason = pipeline.restar(row, cfg, store)
         store.update("analysis", row["episode_id"], {"final_star": final, "final_reason": reason})
     ids = [s["id"] for s in store.rows("show")]
     _update_show_stars(store, ids)
-    update_ratings(store, ids, zcfg)
+    update_ratings(store, ids, zcfg, reset=a.rules_changed)
     store.save()
     return 0
 
@@ -136,6 +135,8 @@ def main(argv=None) -> int:
     ap.add_argument("--pending", default="work/pending")
     ap.set_defaults(fn=cmd_apply)
     z = sub.add_parser("z-rank", help="実測・みんなの評価から、総合評点と寝落ち格付けを計算し直す")
+    z.add_argument("--rules-changed", action="store_true",
+                   help="採点ルールや格付けの線を変えたとき。付いている格付けを引き継がず、全番組を計算し直す")
     z.set_defaults(fn=cmd_z_rank)
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")

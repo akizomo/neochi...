@@ -242,9 +242,9 @@ struct DetailView: View {
                     }
                 }
                 HStack {
-                    Text("退屈寄り").ncText(NCText.caption, .textSub); Spacer()
+                    Text("静かめ").ncText(NCText.caption, .textSub); Spacer()
                     Text("ちょうどいい(4〜6)").ncText(NCText.caption, .accentResult); Spacer()
-                    Text("夢中寄り").ncText(NCText.caption, .textSub)
+                    Text("引き込み強め").ncText(NCText.caption, .textSub)
                 }
             }
             Text("引き込み力 = 5項目の点の合計(0〜10)。真ん中が、眠るにはいちばん向いています").ncText(NCText.caption, .textSub)
@@ -297,7 +297,7 @@ struct DetailView: View {
     }
 
     private func interestWord(_ l: InterestLevel) -> String {
-        switch l { case .low: "退屈寄り"; case .mid: "程よい"; case .high: "夢中寄り" }
+        switch l { case .low: "静かめ"; case .mid: "ちょうどいい"; case .high: "引き込み強め" }
     }
 
     private func legend(_ text: String, _ color: NCColor) -> some View {

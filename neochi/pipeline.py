@@ -109,12 +109,21 @@ def _safe(eid: str) -> str:
 
 
 def _stars(calm, ear, level, episode_id: str, cfg: dict, store, interest_score=None):
+    """(AI解析だけの点, 総合評点, final_reason)。総合評点 = みんなの評価を🌊🎯に足した点に、実測を足したもの。"""
     total = scoring.total_star(calm, ear, level, cfg, interest_score)
-    crowd, n = store.community(episode_id)
+    calm_votes, interest_votes = store.votes(episode_id)
+    with_crowd = scoring.total_star(calm, ear, level, cfg, interest_score, calm_votes, interest_votes)
     watch = store.episode_watch_latencies(episode_id)
     median = statistics.median(watch) if watch else None
-    final, final_reason = scoring.final_star(total, crowd, n, cfg, median, len(watch))
+    final, final_reason = scoring.final_star(with_crowd, cfg, median, len(watch), ai_total=total)
     return total, final, final_reason
+
+
+def restar(row: dict, cfg: dict, store) -> tuple[float | None, str | None]:
+    """保存済みの解析から、総合評点と final_reason を計算し直す(実測・みんなの評価が増えたとき、ルールを変えたとき)。"""
+    _, final, reason = _stars(row.get("calm_star"), row.get("ear_star"), row.get("interest_level"),
+                              row["episode_id"], cfg, store, row.get("interest_score"))
+    return final, reason
 
 
 def apply_judgement(j: dict, cfg: dict, store) -> dict:

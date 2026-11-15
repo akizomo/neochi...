@@ -50,9 +50,11 @@ total:
 # 総合評点(final_star。格付けとアプリの評点はこれ)。docs/SCORE.md §2。数値は仮。
 # AI解析(total)を土台に、実測とみんなの評価を件数に応じて足す。件数が下限未満の項目は、計算にも画面にも入れない。
 final:
-  community_min_n: 10       # みんなの評価(🌊)は、この件数から使う
-  community_prior_n: 10     # w = n / (n + prior_n)
-  community_max_weight: 0.3
+  # みんなの評価は、話の内容の軸(🌊🎯)にだけ、軸ごとに足す。🎧は音響の計算だけ。実測は総合に足す。
+  community_min_n: 10       # みんなの評価は、軸ごとにこの件数から使う
+  community_prior_n: 30     # w = n / (n + prior_n)。10件で 0.25、30件で上限 0.5
+  community_max_weight: 0.5 # 軸ごとの上限(総合への効きは、最大でも約0.35)
+  interest_vote_star: {-1: 3.0, 0: 5.0, 1: 1.0}   # 3択 → 🎯★(退屈だった / ちょうどよかった / 聴き入った)。ゾーンの式の両端に合わせる
   divergence_threshold: 1.0 # AI解析と、実測・みんなの差がこの点以上なら final_reason に一行
   watch_min_n: 3            # ウォッチの実測は、この件数から使う
   watch_prior_n: 5
