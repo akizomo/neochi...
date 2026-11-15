@@ -17,7 +17,7 @@
 
 ## あなたの作業(私にはできない)
 
-1. **Bundle ID を決める**(`com.<名前>.neochi` の形)。いまは `com.example.neochi` の仮。決まったら `ios/project.yml` の `PRODUCT_BUNDLE_IDENTIFIER` と `bundleIdPrefix` を直す(私がやる)。
+1. Bundle ID は `com.example.neochi` で進める(2026-11-15 の決定。`project.yml` はそのまま)。developer.apple.com で App ID を登録するとき、「使用済み」と言われたら、別の名前に変えて教える(`project.yml` の `PRODUCT_BUNDLE_IDENTIFIER` と `bundleIdPrefix` を直す)。
 2. Apple Developer Program に登録済みか確認する。App ID(HealthKit を有効)を作る(SETUP.md A-3)。
 3. App Store Connect でアプリを作る(名前 NeochiPickzz。使用済みと言われたら教える)。
 4. **Supabase の「Allow anonymous sign-ins」をオンにする**(Authentication → Providers)。いまはオフ(登録の応答が 422)。オフのままだと、朝の振り返りの記録がサーバーに送れない。
