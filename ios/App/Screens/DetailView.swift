@@ -8,6 +8,8 @@ struct DetailView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let showID: String
+    /// 開いている観点(観点名)。
+    @State private var openAxes: Set<String> = []
 
     private var show: Show? { model.shows.first { $0.id == showID } }
     private var episodes: [Episode] { model.episodes[showID] ?? [] }
@@ -24,14 +26,14 @@ struct DetailView: View {
                     header(show)
                     duo(show)
                     actions(show)
-                    if let (_, a) = latest {
+                    if let (e, a) = latest {
                         if let line = a.reason ?? show.oneLiner { card { sectionHead("AI解析"); Text(line).ncText(NCText.body) } }
-                        evidence(a)
+                        evidence(e, a)
                     } else if let line = show.oneLiner {
                         card { sectionHead("AI解析"); Text(line).ncText(NCText.body) }
                     }
                     record(show)
-                    if analyzed.count >= 2 { recent }
+                    if analyzed.filter({ $0.1.finalStar != nil }).count >= 2 { recent }
                     if let (e, a) = latest { about(a, episode: e) } else {
                         Text("この番組の解析は、まだありません。").ncText(NCText.footnote, .textSub)
                     }
@@ -63,6 +65,13 @@ struct DetailView: View {
         HStack(spacing: NCSpace.s4) {
             ArtworkView(show: show, size: NCSize.artworkL)
             VStack(alignment: .leading, spacing: NCSpace.s1) {
+                if let r = show.rank {   // 詳細では、格付けはタイトルの上。横に意味を添える
+                    HStack(spacing: NCSpace.s2) {
+                        RankBadge(rank: r)
+                        Text(NCString.rankMeaning(r)).ncText(NCText.caption, .textSub)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
                 Text(show.title).ncText(NCText.title)
                 if let e = episodes.first { Text(e.title).ncText(NCText.footnote, .textSub).lineLimit(1) }
             }
@@ -81,14 +90,11 @@ struct DetailView: View {
         HStack(alignment: .top, spacing: NCSpace.s4) {
             VStack(alignment: .leading, spacing: NCSpace.s1) {
                 Text("評点").ncText(NCText.caption, .textSub)
-                HStack(spacing: NCSpace.s2) {
-                    RankBadge(rank: show.rank)
-                    Text(show.star.map { String(format: "%.1f", $0) } ?? "―").ncText(NCText.numMd, .accentFactor)
-                }
+                StarScore(star: show.star)
             }
             Rectangle().fill(Color.nc(.line)).frame(width: 1, height: 56)
             VStack(alignment: .leading, spacing: NCSpace.s1) {
-                Text("ウォッチの実測").ncText(NCText.caption, .textSub)
+                Text("寝落ちまで(ウォッチの実測の平均)").ncText(NCText.caption, .textSub)
                 HStack(spacing: NCSpace.s2) {
                     if let m = show.avgMinutes {
                         HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
@@ -139,11 +145,15 @@ struct DetailView: View {
         }
     }
 
-    // MARK: 観点ごとの根拠
+    // MARK: 観点ごとの根拠(最新の解析済みの回だけ)
 
-    private func evidence(_ a: EpisodeAnalysis) -> some View {
+    private func evidence(_ e: Episode, _ a: EpisodeAnalysis) -> some View {
         VStack(alignment: .leading, spacing: NCSpace.s2) {
-            sectionHead("観点ごとの根拠").padding(.top, NCSpace.s2)
+            HStack(alignment: .firstTextBaseline) {
+                sectionHead("観点ごとの根拠")
+                Spacer()
+                Text(NCString.analyzedEpisode(DetailMath.episodeNumber(e))).ncText(NCText.caption, .textSub)
+            }.padding(.top, NCSpace.s2)
             VStack(spacing: 0) {
                 if let v = a.calmStar {
                     axis("起伏の少なさ", star: v) { calmDetail(a) }
@@ -154,7 +164,8 @@ struct DetailView: View {
                     if a.interest != nil { Divider().overlay(Color.nc(.line)) }
                 }
                 if let l = a.interest {
-                    axis("程よい興味", text: interestWord(l)) { interestDetail(a, l) }
+                    let total = a.interestScore ?? Explain.interestTotal(a.interestItems)
+                    axis("程よい興味", text: interestWord(l), number: total) { interestDetail(a, total: total) }
                 }
             }
             .padding(.horizontal, NCSpace.s4)
@@ -162,61 +173,35 @@ struct DetailView: View {
         }
     }
 
-    // 🌊 起伏の少なさ: どの項目で、どれだけ昂らせる要素があったか。
+    // 起伏の少なさ: 判定の一行 → 1分ごとの起伏の線 → 4項目の行 → 計算式の注記。
     private func calmDetail(_ a: EpisodeAnalysis) -> some View {
-        VStack(alignment: .leading, spacing: NCSpace.s2) {
-            if !a.calmItems.isEmpty {
+        VStack(alignment: .leading, spacing: NCSpace.s3) {
+            if !a.calmPerMin.isEmpty {
+                Text(DetailMath.calmCurveVerdict(a.moments, minutes: a.calmPerMin.count)).ncText(NCText.body)
+                VStack(alignment: .leading, spacing: NCSpace.s1) {
+                    Text("起伏の強さ(1分ごと)").ncText(NCText.footnote, .textSub)
+                    CalmCurveChart(values: a.calmPerMin, moments: a.moments.filter { $0.minute < a.calmPerMin.count })
+                }
+            } else if !a.calmItems.isEmpty {
                 Text(Explain.calmVerdict(a.calmItems)).ncText(NCText.body)
+            }
+            if !a.calmItems.isEmpty {
                 itemRows(a.calmItems, labels: Explain.calmLabels)
                 Text("項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.5)").ncText(NCText.caption, .textSub)
             }
-            ForEach(a.moments, id: \.self) { m in
-                (Text("\(m.minute)分").font(.nc(NCText.numSm)).foregroundStyle(Color.nc(.accentFactor))
-                 + Text("  \(m.note)").font(.nc(NCText.footnote)).foregroundStyle(Color.nc(.textSub)))
+            if a.calmPerMin.isEmpty {   // 古い解析: 線がないので、目立つ箇所を文字で出す
+                ForEach(a.moments, id: \.self) { m in
+                    (Text("\(m.minute)分").font(.nc(NCText.numSm)).foregroundStyle(Color.nc(.accentFactor))
+                     + Text("  \(m.note)").font(.nc(NCText.footnote)).foregroundStyle(Color.nc(.textSub)))
+                }
             }
         }
     }
 
-    // 🎧 耳のゆるさ: 2つのグラフ(寝落ちに向く範囲を帯で示す)と、4項目それぞれの理由。
+    // 耳のゆるさ: 話す速さと音量を、同じ横軸で縦に並べる。下に4項目それぞれの理由。
     private func earDetail(_ a: EpisodeAnalysis) -> some View {
         VStack(alignment: .leading, spacing: NCSpace.s3) {
-            let ratePts = a.ratePerMin.enumerated().compactMap { i, v in v.map { (i, $0) } }
-            if !ratePts.isEmpty {
-                let top = max(EarCriteria.rateWorst, (ratePts.map(\.1).max() ?? 0) + 20)
-                Text("話す速さ(冒頭の\(a.ratePerMin.count)分)").ncText(NCText.footnote, .textSub)
-                Chart {
-                    RectangleMark(yStart: .value("下限", 0), yEnd: .value("上限", EarCriteria.rateBestMax)).foregroundStyle(Color.nc(.accentResult).opacity(0.22))
-                    ForEach(ratePts, id: \.0) { LineMark(x: .value("分", $0.0), y: .value("字/分", $0.1)).foregroundStyle(Color.nc(.accentFactor)) }
-                }
-                .chartYScale(domain: 0...top)
-                .chartXAxisLabel("分", alignment: .trailing)
-                .frame(height: 120)
-                HStack(spacing: NCSpace.s4) {
-                    bandLegend("寝落ちに向く範囲(\(Int(EarCriteria.rateBestMax))字/分まで)")
-                    legend("この回", .accentFactor)
-                }
-            }
-            let volPts = a.volumePerMin.enumerated().compactMap { i, v in v.map { (i, $0) } }
-            if !volPts.isEmpty {
-                let band = EarCriteria.volumeBest
-                let span = max(band * 2, (volPts.map { abs($0.1) }.max() ?? 0) + 2)
-                Text("音量の推移(冒頭30分の中央値との差)").ncText(NCText.footnote, .textSub)
-                Chart {
-                    RectangleMark(yStart: .value("下限", -band), yEnd: .value("上限", band)).foregroundStyle(Color.nc(.accentResult).opacity(0.22))
-                    RuleMark(y: .value("中央値", 0)).foregroundStyle(Color.nc(.line))
-                    ForEach(volPts, id: \.0) { LineMark(x: .value("分", $0.0), y: .value("dB", $0.1)).foregroundStyle(Color.nc(.textMain)) }
-                    ForEach(a.suddenAtSec.prefix(60), id: \.self) {
-                        PointMark(x: .value("分", Double($0) / 60), y: .value("dB", 0)).foregroundStyle(Color.nc(.accentFactor)).symbolSize(24)
-                    }
-                }
-                .chartYScale(domain: -span...span)
-                .chartXAxisLabel("分", alignment: .trailing)
-                .frame(height: 120)
-                HStack(spacing: NCSpace.s4) {
-                    bandLegend("寝落ちに向く範囲(±\(Int(band))dB)")
-                    legend("突発音", .accentFactor)
-                }
-            }
+            EarCharts(analysis: a)
             let parts = Explain.earParts(a)
             if !parts.isEmpty {
                 Text("なぜこの点か").ncText(NCText.footnote, .textSub).padding(.top, NCSpace.s1)
@@ -225,29 +210,23 @@ struct DetailView: View {
         }
     }
 
-    // 🎯 程よい興味: 5つの項目の点と、ゾーン(4〜6)のどこにいるか。
-    private func interestDetail(_ a: EpisodeAnalysis, _ l: InterestLevel) -> some View {
-        VStack(alignment: .leading, spacing: NCSpace.s2) {
-            let total = a.interestScore ?? Explain.interestTotal(a.interestItems)
-            Text(Explain.interestVerdict(l, total: total)).ncText(NCText.body)
+    // 程よい興味: 内容の要約 → 5項目の行 → 10段の目盛り(と注記)。
+    private func interestDetail(_ a: EpisodeAnalysis, total: Int) -> some View {
+        VStack(alignment: .leading, spacing: NCSpace.s3) {
+            if let summary = a.contentSummary {
+                VStack(alignment: .leading, spacing: NCSpace.s1) {
+                    Text(NCString.summaryHeader).ncText(NCText.caption, .textSub)
+                    Text(summary).ncText(NCText.footnote).fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(NCSpace.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: NCRadius.sm, style: .continuous).fill(Color.nc(.bgBase)))
+                .accessibilityElement(children: .combine)
+            }
             if !a.interestItems.isEmpty {
                 itemRows(a.interestItems, labels: Explain.interestLabels)
             }
-            VStack(spacing: NCSpace.s1) {
-                HStack(spacing: 3) {
-                    ForEach(1...10, id: \.self) { i in
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(i == total ? Color.nc(.accentFactor) : (4...6).contains(i) ? Color.nc(.accentResult).opacity(0.5) : Color.nc(.line))
-                            .frame(height: 8)
-                    }
-                }
-                HStack {
-                    Text("静かめ").ncText(NCText.caption, .textSub); Spacer()
-                    Text("ちょうどいい(4〜6)").ncText(NCText.caption, .accentResult); Spacer()
-                    Text("引き込み強め").ncText(NCText.caption, .textSub)
-                }
-            }
-            Text("引き込み力 = 5項目の点の合計(0〜10)。真ん中が、眠るにはいちばん向いています").ncText(NCText.caption, .textSub)
+            InterestScale(total: total)
         }
     }
 
@@ -289,74 +268,85 @@ struct DetailView: View {
         .background(RoundedRectangle(cornerRadius: NCRadius.sm, style: .continuous).fill(Color.nc(.bgBase)))
     }
 
-    private func bandLegend(_ text: String) -> some View {
-        HStack(spacing: NCSpace.s1) {
-            RoundedRectangle(cornerRadius: 2).fill(Color.nc(.accentResult).opacity(0.22)).frame(width: 14, height: 8)
-            Text(text).ncText(NCText.caption, .textSub)
-        }
-    }
-
     private func interestWord(_ l: InterestLevel) -> String {
-        switch l { case .low: "静かめ"; case .mid: "ちょうどいい"; case .high: "引き込み強め" }
-    }
-
-    private func legend(_ text: String, _ color: NCColor) -> some View {
-        HStack(spacing: NCSpace.s1) {
-            Circle().fill(Color.nc(color)).frame(width: 6, height: 6)
-            Text(text).ncText(NCText.caption, .textSub)
-        }
+        switch l { case .low: "静かめ"; case .mid: "程よい"; case .high: "強め" }
     }
 
     /// 開閉できる観点の行。右に★(または言葉)を出し、押すと根拠が開く。
-    private func axis<Content: View>(_ title: String, star: Double? = nil, text: String? = nil,
+    private func axis<Content: View>(_ title: String, star: Double? = nil, text: String? = nil, number: Int? = nil,
                                      @ViewBuilder content: @escaping () -> Content) -> some View {
-        DisclosureGroup {
-            content().padding(.bottom, NCSpace.s3)
-        } label: {
-            HStack {
-                Text(title).ncText(NCText.body)
-                Spacer()
-                if let star {
-                    Text("★").ncText(NCText.numSm, .accentFactor)
-                    Text(String(format: "%.1f", star)).ncText(NCText.numMd, .accentFactor)
-                } else if let text {
-                    Text(text).ncText(NCText.body, .accentFactor)
+        let open = openAxes.contains(title)
+        return VStack(alignment: .leading, spacing: 0) {
+            // 見出しの行だけが開閉する(中の図を押しても閉じない)。
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    if open { openAxes.remove(title) } else { openAxes.insert(title) }
                 }
-            }.frame(minHeight: NCSize.tapMin)
+            } label: {
+                HStack(spacing: NCSpace.s2) {
+                    Text(title).ncText(NCText.body)
+                    Spacer()
+                    if let star {
+                        Text("★").ncText(NCText.numSm, .accentFactor)
+                        Text(String(format: "%.1f", star)).ncText(NCText.numMd, .accentFactor)
+                    } else if let text {
+                        Text(text).ncText(NCText.body, .accentFactor)
+                        if let number { Text("\(number)").ncText(NCText.numMd, .accentFactor) }
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.nc(.textSub))
+                        .rotationEffect(.degrees(open ? 90 : 0))
+                }
+                .frame(minHeight: NCSize.tapMin)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityValue(open ? "開いています" : "閉じています")
+            if open {
+                content().padding(.bottom, NCSpace.s3)
+            }
         }
-        .tint(Color.nc(.textSub))
     }
 
     // MARK: 実績・最近の回・解析について
 
     private func record(_ show: Show) -> some View {
-        VStack(alignment: .leading, spacing: NCSpace.s2) {
+        let points = model.sleepPoints[show.id] ?? []
+        let mins = points.map(\.minutes)
+        let avg = DetailMath.mean(mins.map(Double.init)).map { Int($0.rounded()) } ?? show.stats?.avgMinutes
+        return VStack(alignment: .leading, spacing: NCSpace.s2) {
             HStack {
                 sectionHead("寝落ちの実績")
                 Spacer()
-                Text("ウォッチの実測").ncText(NCText.caption, .textSub)
+                Text("再生を始めてから眠るまで(ウォッチの実測)").ncText(NCText.caption, .textSub)
             }.padding(.top, NCSpace.s2)
             card {
-                if let st = show.stats {
-                    HStack {
-                        Text("\(st.count)回の記録").ncText(NCText.headline)
-                        Spacer()
+                if let avg {
+                    HStack(alignment: .center, spacing: NCSpace.s2) {
                         HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
-                            Text("\(st.avgMinutes)").ncText(NCText.numMd, .accentResult)
-                            Text("分(平均)").ncText(NCText.footnote, .accentResult)
+                            Text("平均").ncText(NCText.footnote, .textSub)
+                            Text("\(avg)").ncText(NCText.numMd, .accentResult)
+                            Text("分").ncText(NCText.footnote, .accentResult)
+                        }
+                        .accessibilityElement(children: .combine)
+                        Spacer()
+                        if let d = DetailMath.delta(mins.map(Double.init)) {
+                            DeltaPill(delta: d, format: { "\(Int($0.rounded()))分" }, caption: NCString.deltaCaptionRecords,
+                                      spoken: ("長い", "短い"))
                         }
                     }
-                    Text("最短 \(st.minMinutes)分、最長 \(st.maxMinutes)分。\(st.count)回のうち \(st.under30)回が、30分より前に寝落ちしました。")
-                        .ncText(NCText.body)
-                    GeometryReader { g in
-                        HStack(spacing: 2) {
-                            Capsule().fill(Color.nc(.accentResult)).frame(width: max(0, g.size.width * CGFloat(st.under30) / CGFloat(st.count)))
-                            Capsule().strokeBorder(Color.nc(.accentResult), lineWidth: 1.5)
+                    if !mins.isEmpty {
+                        SleepDotAxis(minutes: mins, average: avg)
+                        NightRow(points: points)
+                        HStack(spacing: NCSpace.s4) {
+                            legendDot("30分未満 \(mins.filter { $0 < 30 }.count)件", filled: true)
+                            legendDot("30分以上 \(mins.filter { $0 >= 30 }.count)件", filled: false)
                         }
-                    }.frame(height: 10)
-                    HStack(spacing: NCSpace.s4) {
-                        legend("30分未満 \(st.under30)回", .accentResult)
-                        legend("30分以上 \(st.count - st.under30)回", .textSub)
+                    } else if let st = show.stats {
+                        Text("最短 \(st.minMinutes)分、最長 \(st.maxMinutes)分。\(st.count)件のうち \(st.under30)件が、30分より前に寝落ちしました。")
+                            .ncText(NCText.footnote)
                     }
                 } else {
                     HStack {
@@ -370,22 +360,58 @@ struct DetailView: View {
         }
     }
 
+    private func legendDot(_ text: String, filled: Bool) -> some View {
+        HStack(spacing: NCSpace.s1) {
+            Group {
+                if filled { Circle().fill(Color.nc(.accentResult)) }
+                else { Circle().strokeBorder(Color.nc(.accentResult), lineWidth: 1.5) }
+            }.frame(width: 8, height: 8)
+            Text(text).ncText(NCText.caption, .textSub)
+        }
+    }
+
+    /// 最近の回の列(古い順)。解析済みの回を直近8回まで。それより新しい未解析の回は「解析中」として2回まで。
+    private var recentColumns: [RecentBars.Column] {
+        let scored = analyzed.filter { $0.1.finalStar != nil }
+        guard let newest = scored.first?.0, let idx = episodes.firstIndex(where: { $0.id == newest.id }) else { return [] }
+        let pending = episodes[..<idx].filter { model.analyses[$0.id] == nil }.prefix(2)
+        func label(_ e: Episode) -> String {
+            if let n = DetailMath.episodeNumber(e) { return "\(n)回" }
+            return e.publishedAt.map { Self.monthDay.string(from: $0) } ?? ""
+        }
+        let cols = pending.map { RecentBars.Column(id: $0.id, label: label($0), value: nil, isLatest: false) }
+            + scored.prefix(8).map { RecentBars.Column(id: $0.0.id, label: label($0.0), value: $0.1.finalStar, isLatest: $0.0.id == newest.id) }
+        return cols.reversed()
+    }
+
+    private static let monthDay: DateFormatter = {
+        let f = DateFormatter(); f.calendar = Calendar(identifier: .gregorian); f.dateFormat = "M/d"; return f
+    }()
+
     private var recent: some View {
-        let items = Array(analyzed.prefix(8).reversed())
+        let cols = recentColumns
+        let values = cols.compactMap(\.value)          // 古い順
+        let avg = DetailMath.mean(values) ?? 0
         return VStack(alignment: .leading, spacing: NCSpace.s2) {
             HStack {
                 sectionHead("最近の回")
                 Spacer()
-                Text("評点(直近\(items.count)回)").ncText(NCText.caption, .textSub)
+                Text("回ごとの評点").ncText(NCText.caption, .textSub)
             }.padding(.top, NCSpace.s2)
             card {
-                Chart(Array(items.enumerated()), id: \.offset) { i, item in
-                    BarMark(x: .value("回", i), y: .value("★", item.1.finalStar ?? 0))
-                        .foregroundStyle(Color.nc(.accentFactor)).cornerRadius(3)
+                HStack(alignment: .center, spacing: NCSpace.s2) {
+                    HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
+                        Text(String(format: "%.1f", avg)).ncText(NCText.numMd, .accentFactor)
+                        Text("\(values.count)回の平均").ncText(NCText.footnote, .textSub)
+                    }
+                    .accessibilityElement(children: .combine)
+                    Spacer()
+                    if let d = DetailMath.delta(values) {
+                        DeltaPill(delta: d, format: { String(format: "%.1f", $0) }, caption: NCString.deltaCaptionEpisodes,
+                                  spoken: ("高い", "低い"))
+                    }
                 }
-                .chartYScale(domain: 0...5)
-                .chartXAxis(.hidden)
-                .frame(height: 100)
+                RecentBars(columns: cols, average: avg)
             }
         }
     }

@@ -44,6 +44,27 @@ public enum NCString {
     public static let notListed = "まだ掲載していません"
     /// 評点の内訳。あるものだけ並べる(`docs/SCORE.md` §1)。
     public static func ratingBreakdown(watchCount: Int, avgMinutes: Int) -> String {
-        watchCount >= 3 ? "AI解析・ウォッチの実測 平均\(avgMinutes)分(\(watchCount)件)" : "AI解析"
+        watchCount >= 3 ? "AI解析・寝落ちまで 平均\(avgMinutes)分(ウォッチの実測 \(watchCount)件)" : "AI解析"
+    }
+
+    // 番組詳細の図
+    public static func momentLabel(minute: Int) -> String { "\(minute)分の山" }
+    public static func analyzedEpisode(_ number: Int?) -> String { number.map { "\($0)回の解析" } ?? "最新の回の解析" }
+    public static let summaryHeader = "この回の内容(AIの要約)"
+    public static let interestZoneNote = "4〜6が寝落ち向き"
+    public static let analyzing = "解析中"
+    public static let deltaCaptionRecords = "前の4件"
+    public static let deltaCaptionEpisodes = "前の4回"
+
+    /// 格付けのバッジの横に出す、意味の説明(番組の詳細)。
+    public static func rankMeaning(_ r: ZRank) -> String {
+        "寝落ち格付け・評点\(String(format: "%.1f", RankCriteria.minStar(r)))以上"
+    }
+}
+
+/// 格付けの線(`config/z_rank.yaml` と同じ値。仮)。変えるときは、yaml と一緒に直す。
+public enum RankCriteria {
+    public static func minStar(_ r: ZRank) -> Double {
+        switch r { case .z: 3.0; case .zz: 3.6; case .zzz: 4.2 }
     }
 }

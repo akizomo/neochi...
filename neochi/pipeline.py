@@ -54,7 +54,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
     except Exception as e:  # noqa: BLE001
         log.warning("音声を扱えませんでした(メタ情報のみ): %s (%s)", ep.title, e)
 
-    calm, level, reason = None, None, ""
+    calm, level, reason, j = None, None, "", None
     if input_depth == "transcript" and deps.judge is None:
         d = Path(deps.pending_dir)
         d.mkdir(parents=True, exist_ok=True)
@@ -67,12 +67,14 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
             j = deps.judge(ep.title, show.title, text, cfg)
             calm, level, reason = j["calm_star"], j["interest_level"], j["reason"]
         except Exception as e:  # noqa: BLE001
+            j = None
             log.warning("LLM 判定に失敗(🌊🎯は空): %s (%s)", ep.title, e)
 
     ear = scoring.ear_star(feat, show.lang, cfg)
     if ear is not None:
         feat["ear_parts"] = scoring.ear_parts(feat, show.lang, cfg)
-    total, final, final_reason = _stars(calm, ear, level, ep.id, cfg, store)
+    interest_score = j.get("interest_score") if j else None
+    total, final, final_reason = _stars(calm, ear, level, ep.id, cfg, store, interest_score)
 
     store.upsert("show", {"id": show.id, "title": show.title, "publisher": show.publisher,
                           "rss_url": show.rss_url, "genre": show.genre, "lang": show.lang,
@@ -84,12 +86,33 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
         "episode_id": ep.id, "input_depth": input_depth, "interest_level": level,
         "calm_star": calm, "ear_star": ear, "total_star": total,
         "final_star": final, "final_reason": final_reason,
-        "reasons": {"llm": reason} if reason else {},
+        "reasons": _reasons({}, j) if j else ({"llm": reason} if reason else {}),
         "features": {k: v for k, v in feat.items() if v is not None},
         "analyzed_at": datetime.now(timezone.utc).isoformat(),
     }
+    if interest_score is not None:
+        row["interest_score"] = interest_score
+    row.update(_new_outputs(j))
     store.upsert("analysis", row)
     return row
+
+
+def _reasons(base: dict, v: dict) -> dict:
+    """判定の結果を reasons に入れる(根拠の一行・項目ごとの点・起伏の山)。"""
+    out = {**base}
+    if v.get("reason"):
+        out["llm"] = v["reason"]
+    if v.get("items"):
+        out["items"] = v["items"]
+    out["moments"] = v.get("moments") or []
+    return out
+
+
+def _new_outputs(v: dict | None) -> dict:
+    """1分ごとの起伏と内容の要約(列)。無いときは書かない(古い回は null のまま、画面はその図と箱を出さない)。"""
+    if not v:
+        return {}
+    return {k: v[k] for k in ("calm_per_min", "content_summary") if v.get(k) is not None}
 
 
 def with_minute_marks(spans) -> str:
@@ -164,12 +187,9 @@ def apply_judgement(j: dict, cfg: dict, store) -> dict:
         raise KeyError(f"解析が見つかりません: {j['episode_id']}")
     total, final, final_reason = _stars(v["calm_star"], row.get("ear_star"), v["interest_level"], j["episode_id"],
                                         cfg, store, v["interest_score"])
-    reasons = {**(row.get("reasons") or {}), "llm": v["reason"]}
-    if v["items"]:
-        reasons["items"] = v["items"]
-    reasons["moments"] = v["moments"]
     new = {**row, "calm_star": v["calm_star"], "interest_level": v["interest_level"],
            "interest_score": v["interest_score"],
-           "total_star": total, "final_star": final, "final_reason": final_reason, "reasons": reasons}
+           "total_star": total, "final_star": final, "final_reason": final_reason,
+           "reasons": _reasons(row.get("reasons") or {}, v), **_new_outputs(v)}
     store.upsert("analysis", new)
     return new

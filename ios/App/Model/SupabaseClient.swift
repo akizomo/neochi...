@@ -133,9 +133,10 @@ actor SupabaseClient {
         let episode_id: String; let calm_star: Double?; let ear_star: Double?; let final_star: Double?
         let interest_level: String?; let interest_score: Int?; let input_depth: String?
         let reasons: Reasons?; let features: Features?
+        let calm_per_min: [Double]?; let content_summary: String?
         struct Reasons: Decodable {
             let llm: String?; let moments: [M]?; let items: Items?
-            struct M: Decodable { let min: Int; let note: String }
+            struct M: Decodable { let min: Int; let note: String; let level: Int? }
             struct Item: Decodable { let score: Int; let min: Int? }
             struct Items: Decodable { let interest: [String: Item]?; let calm: [String: Item]? }
         }
@@ -151,11 +152,18 @@ actor SupabaseClient {
         (d ?? [:]).map { ScoredItem(key: $0.key, score: $0.value.score, minute: $0.value.min) }.sorted { $0.key < $1.key }
     }
 
+    private static let analysisColumns = "episode_id,calm_star,ear_star,final_star,interest_level,interest_score,input_depth,reasons,features"
+
     /// 各回の解析。★と、根拠のデータ(古い解析にない項目は nil)。
+    /// 1分ごとの起伏と要約の列(migration 0007)がまだ無い環境では、その列を除いて読み直す。
     func fetchAnalyses() async throws -> [EpisodeAnalysis] {
-        let data = try await request("analysis", query: [
-            URLQueryItem(name: "select", value: "episode_id,calm_star,ear_star,final_star,interest_level,interest_score,input_depth,reasons,features"),
-            URLQueryItem(name: "order", value: "analyzed_at.desc")])
+        func fetch(_ select: String) async throws -> Data {
+            try await request("analysis", query: [URLQueryItem(name: "select", value: select),
+                                                  URLQueryItem(name: "order", value: "analyzed_at.desc")])
+        }
+        let data: Data
+        do { data = try await fetch(Self.analysisColumns + ",calm_per_min,content_summary") }
+        catch ClientError.http(400) { data = try await fetch(Self.analysisColumns) }
         return try Self.decoder.decode([AnalysisRow].self, from: data).map { r in
             let f = r.features
             var a = EpisodeAnalysis(
@@ -170,7 +178,9 @@ actor SupabaseClient {
             a.ratePerMin = f?.timeline?.rate_per_min ?? []
             a.volumePerMin = f?.timeline?.volume_db ?? []
             a.suddenAtSec = f?.timeline?.sudden_at_sec ?? []
-            a.moments = (r.reasons?.moments ?? []).map { Moment(minute: $0.min, note: $0.note) }
+            a.moments = (r.reasons?.moments ?? []).map { Moment(minute: $0.min, note: $0.note, level: $0.level) }
+            a.calmPerMin = r.calm_per_min ?? []
+            a.contentSummary = r.content_summary
             return a
         }
     }
@@ -184,6 +194,21 @@ actor SupabaseClient {
         return Dictionary(uniqueKeysWithValues: rows.map {
             ($0.show_id, ShowStats(count: $0.n, avgMinutes: $0.avg_min, minMinutes: $0.min_min, maxMinutes: $0.max_min, under30: $0.under30))
         })
+    }
+
+    private struct PointRow: Decodable { let show_id: String; let night: String; let latency_min: Int }
+
+    /// 番組ごとの実績の点(view `show_sleep_points`。古い順)。未作成・失敗のときは呼び出し側で無視する。
+    func fetchSleepPoints() async throws -> [String: [SleepPoint]] {
+        let data = try await request("show_sleep_points", query: [URLQueryItem(name: "select", value: "show_id,night,latency_min"),
+                                                                  URLQueryItem(name: "order", value: "night.asc")])
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian); f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "Asia/Tokyo"); f.dateFormat = "yyyy-MM-dd"
+        let rows = try Self.decoder.decode([PointRow].self, from: data)
+        return Dictionary(grouping: rows.compactMap { r in
+            f.date(from: r.night).map { (r.show_id, SleepPoint(night: $0, minutes: r.latency_min)) }
+        }, by: \.0).mapValues { $0.map(\.1) }
     }
 
     private struct LogUpload: Encodable {

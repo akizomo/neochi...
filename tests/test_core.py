@@ -124,3 +124,46 @@ def test_z_rank_demote_needs_watch(zcfg):
     assert z_rank(3.2, zcfg, current="ZZZ", watch_n=5) == "Z"
     assert z_rank(2.0, zcfg, current="Z", watch_n=2) == "Z"
     assert z_rank(4.5, zcfg, current="Z", watch_n=0) == "ZZZ"      # 上がるのは、いつでも
+
+
+def _judgement(**extra):
+    base = {"interest": {k: {"score": 1, "min": 3} for k in "ABCDE"},
+            "calm": {k: {"score": 0, "min": None} for k in "ABCD"}, "reason": "淡々としています"}
+    return json.dumps({**base, **extra}, ensure_ascii=False)
+
+
+def test_calm_per_min_is_clamped_and_rounded():
+    v = llm.parse_judgement(_judgement(calm_per_min=[0.04, 2.7, -1, 1.25] + [0.2] * 20))
+    assert v["calm_per_min"][:4] == [0.0, 2.0, 0.0, 1.2] and len(v["calm_per_min"]) == 20
+    assert llm.parse_judgement(_judgement(calm_per_min=["x"]))["calm_per_min"] is None
+    assert llm.parse_judgement(_judgement())["calm_per_min"] is None
+
+
+def test_moments_come_from_calm_peaks():
+    per = [0.2] * 20
+    per[6], per[14], per[17] = 1.6, 1.1, 0.9          # 山は6分(多い)と14分(少し)。17分は1.0未満で山ではない
+    notes = [{"min": 7, "note": "笑いで声が上ずる"}, {"min": 14, "note": "話題が急に変わる"}, {"min": 17, "note": "x"},
+             {"min": 2, "note": "山ではない"}]
+    v = llm.parse_judgement(_judgement(calm_per_min=per, moments=notes))
+    assert v["moments"] == [{"min": 6, "note": "笑いで声が上ずる", "level": 2},
+                            {"min": 14, "note": "話題が急に変わる", "level": 1}]
+
+
+def test_peak_without_note_is_dropped_and_max_three():
+    per = [0.0, 1.2, 0.0, 1.4, 0.0, 1.6, 0.0, 1.8, 0.0, 1.1]
+    notes = [{"min": m, "note": f"{m}分"} for m in (1, 3, 5, 7)]
+    out = llm.calm_peaks(per, notes)
+    assert [m["min"] for m in out] == [3, 5, 7]          # 高い順に3件、分の順に並べる
+    assert llm.calm_peaks(per, []) == []
+
+
+def test_flat_peak_counts_once():
+    assert [m["min"] for m in llm.calm_peaks([0, 1.5, 1.5, 0], [{"min": 1, "note": "a"}, {"min": 2, "note": "b"}])] == [1]
+
+
+def test_content_summary_limits():
+    ok = "冬に布団を買い替えた話から、実家の毛布の思い出へ移ります。後半はお便りを2通読みます。"
+    assert llm.parse_judgement(_judgement(content_summary=ok))["content_summary"] == ok
+    assert llm.parse_judgement(_judgement(content_summary="あ" * 121))["content_summary"] is None
+    assert llm.parse_judgement(_judgement(content_summary="驚きの結末！"))["content_summary"] is None
+    assert llm.parse_judgement(_judgement())["content_summary"] is None

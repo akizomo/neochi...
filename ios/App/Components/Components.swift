@@ -6,6 +6,8 @@ struct ArtworkView: View {
     let show: Show
     var size: CGFloat = NCSize.artworkS
     var radius: CGFloat = NCRadius.md
+    /// 寝落ち格付けのバッジを、右上に重ねる(評点の数字の横には置かない)。
+    var showsRank = false
 
     var body: some View {
         ZStack {
@@ -21,7 +23,13 @@ struct ArtworkView: View {
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Color.nc(.line), lineWidth: NCSize.borderW))
-        .accessibilityHidden(true)
+        .overlay(alignment: .topTrailing) {
+            if showsRank, show.rank != nil {
+                RankBadge(rank: show.rank, compact: size < NCSize.artworkL)
+                    .padding(size < NCSize.artworkL ? 3 : NCSpace.s2)
+            }
+        }
+        .accessibilityElement(children: .contain)
     }
 
     private var initial: some View {
@@ -101,6 +109,8 @@ struct FavoriteButton: View {
 /// 光沢はこのバッジだけの例外。ほかの部品は影を使わない。見本はロゴのキャンバスの「格付けバッジの質感」。
 struct RankBadge: View {
     let rank: ZRank?
+    /// 小さなカバー画像(一覧の行)に重ねるときの、小さい版。
+    var compact = false
 
     private func hex(_ v: UInt32) -> Color {
         Color(red: Double((v >> 16) & 0xFF) / 255, green: Double((v >> 8) & 0xFF) / 255, blue: Double(v & 0xFF) / 255)
@@ -124,8 +134,8 @@ struct RankBadge: View {
 
     var body: some View {
         if let rank {
-            Text(rank.rawValue).font(.system(size: 13, weight: .bold, design: .monospaced)).foregroundStyle(ink)
-                .padding(.horizontal, NCSpace.s3).frame(minHeight: NCSize.badgeH)
+            Text(rank.rawValue).font(.system(size: compact ? 10 : 13, weight: .bold, design: .monospaced)).foregroundStyle(ink)
+                .padding(.horizontal, compact ? NCSpace.s1 + 1 : NCSpace.s3).frame(minHeight: compact ? 16 : NCSize.badgeH)
                 .background(Capsule().fill(LinearGradient(colors: metal, startPoint: .top, endPoint: .bottom)))
                 .overlay(Capsule().strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
                 .accessibilityLabel("寝落ち格付け \(rank.rawValue)")
@@ -133,16 +143,28 @@ struct RankBadge: View {
     }
 }
 
-/// 左に評点(バッジと数字)、右にウォッチの実測の平均。内訳は別に出すので、★は使わない。
+/// 評点は ★ と数字(琥珀)。格付けのバッジは、カバー画像の右上に置く。
+struct StarScore: View {
+    let star: Double?
+    var style: NCTextStyle = NCText.numMd
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
+            Text("★").font(.system(size: style.size * 0.6)).foregroundStyle(Color.nc(.accentFactor))
+            Text(star.map { String(format: "%.1f", $0) } ?? "―").ncText(style, .accentFactor)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(star.map { "評点 \(String(format: "%.1f", $0))" } ?? "評点 なし")
+    }
+}
+
+/// 左に評点(★と数字)、右にウォッチの実測の平均。
 struct MetricsRow: View {
     let show: Show
 
     var body: some View {
         HStack(spacing: NCSpace.s3) {
-            HStack(spacing: NCSpace.s2) {
-                RankBadge(rank: show.rank)
-                Text(show.star.map { String(format: "%.1f", $0) } ?? "―").ncText(NCText.numMd, .accentFactor)
-            }
+            StarScore(star: show.star)
             Rectangle().fill(Color.nc(.line)).frame(width: NCSize.borderW, height: NCSize.dividerH)
             if let m = show.avgMinutes {
                 HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
@@ -177,7 +199,7 @@ struct ScoreRow: View {
 
     var body: some View {
         HStack(spacing: NCSpace.s3) {
-            ArtworkView(show: show)
+            ArtworkView(show: show, showsRank: true)
             VStack(alignment: .leading, spacing: NCSpace.s1) {
                 Text(show.title).ncText(NCText.headline).lineLimit(1)
                 if let line = show.oneLiner {
@@ -216,7 +238,7 @@ struct TonightCard: View {
                 Group {
                     // どのカードも同じ高さにする。題名は2行ぶん、理由と回の行は1行ぶんを、いつも確保する。
                     ReasonText(reason: candidate.reason).lineLimit(1).frame(minHeight: NCSpace.s5)
-                    ArtworkView(show: candidate.show, size: NCSize.artworkXl, radius: NCRadius.lg)
+                    ArtworkView(show: candidate.show, size: NCSize.artworkXl, radius: NCRadius.lg, showsRank: true)
                     Text(candidate.show.title).ncText(NCText.title)
                         .lineLimit(2, reservesSpace: true).multilineTextAlignment(.center)
                     Text(episodeLine).ncText(NCText.footnote, .textSub).lineLimit(1)
@@ -295,5 +317,38 @@ struct ChoiceScale: View {
             }
             .ncText(NCText.footnote, .textSub)
         }
+    }
+}
+
+/// 差のピル(矢印+値+比べた相手)。色は text-main と、surface の一段上(surface-pressed)だけ。
+/// 良し悪しの色は付けない(分の増減は、睡眠の評価ではないため)。
+struct DeltaPill: View {
+    /// 差(正 = 増えた)。
+    let delta: Double
+    /// 値の書き方。例 { "\(Int(abs($0).rounded()))分" }
+    let format: (Double) -> String
+    /// 比べた相手。例「前の4件」
+    let caption: String
+    /// 読み上げの言葉(増えた/減った)。例 ("長い", "短い")
+    var spoken: (up: String, down: String) = ("多い", "少ない")
+
+    private var text: String { format(abs(delta)) }
+    private var isFlat: Bool { format(0) == text }
+
+    var body: some View {
+        HStack(spacing: NCSpace.s1) {
+            HStack(spacing: 2) {
+                if !isFlat {
+                    Image(systemName: delta > 0 ? "arrow.up" : "arrow.down").font(.system(size: 10, weight: .semibold))
+                }
+                Text(isFlat ? "±\(text)" : text).font(.nc(NCText.numSm))
+            }
+            Text(caption).font(.nc(NCText.caption))
+        }
+        .foregroundStyle(Color.nc(.textMain))
+        .padding(.horizontal, NCSpace.s2).padding(.vertical, 3)
+        .background(Capsule().fill(Color.nc(.surfacePressed)))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(isFlat ? "\(caption)と同じ" : "\(caption)より \(text) \(delta > 0 ? spoken.up : spoken.down)")
     }
 }
