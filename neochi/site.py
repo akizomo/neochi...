@@ -30,7 +30,7 @@ RANK_MEANING = {"ZZZ": "眠りたい夜は、まずこの番組", "ZZ": "寝落�
 # 格付けの線(config/z_rank.yaml と同じ値)
 RANK_MIN = {"Z": 3.0, "ZZ": 3.6, "ZZZ": 4.2}
 
-LEAD = "寝落ちに向いたポッドキャストを、評点と格付けで紹介しています。"
+LEAD = "AI解析とウォッチの実測をもとに、寝落ちに向いたポッドキャストを格付けしています。"
 ENGLISH = "Neochi (n.) — Japanese for drifting off mid-episode. NeochiPickzz picks what to drift off to."
 FOOT_NOTE = "評点は推定です。睡眠の良し悪しは評価していません。"
 FOOT_RIGHTS = "番組名とカバー画像の権利は、各配信元にあります。音声は配信元で聴けます。"
@@ -239,6 +239,11 @@ def badge(rank: str, small: bool = False) -> str:
     return f'<span class="badge badge-{rank.lower()}{" badge-s" if small else ""}" aria-label="寝落ち格付け {rank}">{rank}</span>'
 
 
+def score(v: float | None, cls: str = "") -> str:
+    """番組の総合評点。★は使わない(docs/VOICE.md)。観点ごとの点は star() で★を使う。"""
+    return f'<span class="score {cls}" aria-label="評点 {n1(v)}"><span class="score-l">評点</span>{n1(v)}</span>'
+
+
 def star(v: float | None, cls: str = "star") -> str:
     return f'<span class="{cls}" aria-label="評点 {n1(v)}"><span class="star-glyph">★</span>{n1(v)}</span>'
 
@@ -305,38 +310,53 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 
 # ---------- 一覧 ----------
 
+def rank_guide() -> str:
+    """格付けの見かた(一行)。各格付けのひとことは、下のまとまりの見出しに出す。"""
+    rule = "、".join(f"{r} は{RANK_MIN[r]:.1f}以上" for r in ("ZZZ", "ZZ", "Z"))
+    return (f'<p class="guide cap" aria-label="寝落ち格付けの見かた">寝落ち格付けは、評点で決めます。{rule}。'
+            '基準に届かない番組は、掲載しません。<a href="about/">解析について</a></p>')
+
+
 def index_html(shows: list[dict]) -> str:
     counts: dict[str, int] = {}
     for s in shows:
         if s.get("genre"):
             counts[s["genre"]] = counts.get(s["genre"], 0) + 1
     genres = sorted(counts, key=lambda g: -counts[g])
-    rows = []
-    for s in shows:
-        search = f"{s['title']} {s.get('publisher') or ''} {s.get('genre') or ''}".lower()
-        sub = escape(s.get("genre") or "") + (" · " + escape(s["publisher"]) if s.get("publisher") else "")
-        rows.append(f"""<li class="row" data-rank="{s['z_rank']}" data-genre="{escape(s.get('genre') or '')}" data-q="{escape(search)}">
+    groups = []
+    for r in ("ZZZ", "ZZ", "Z"):
+        rows = []
+        for s in (x for x in shows if x["z_rank"] == r):
+            search = f"{s['title']} {s.get('publisher') or ''} {s.get('genre') or ''}".lower()
+            sub = escape(s.get("genre") or "") + (" · " + escape(s["publisher"]) if s.get("publisher") else "")
+            rows.append(f"""<li class="row" data-rank="{r}" data-genre="{escape(s.get('genre') or '')}" data-q="{escape(search)}">
 <a href="shows/{s['id']}/">
-<span class="art-wrap">{artwork(s.get('artwork_url'), 'art-s')}{badge(s['z_rank'], small=True)}</span>
+{artwork(s.get('artwork_url'), 'art-s')}
 <span class="row-text"><span class="row-title">{escape(s['title'])}</span><span class="row-sub">{sub}</span></span>
-{star(s['show_star'])}
+{score(s['show_star'])}
 </a></li>""")
+        if rows:
+            groups.append(f"""<section class="grp" data-grp="{r}">
+<h2 class="grp-head">{badge(r)}<span>{RANK_MEANING[r]}</span><span class="cap num">{len(rows)}番組</span></h2>
+<ul class="list">
+{chr(10).join(rows)}
+</ul>
+</section>""")
     chips = "".join(f'<button type="button" class="chip" data-genre="{escape(g)}" aria-pressed="false">{escape(g)}</button>' for g in genres)
-    ranks = "".join(f'<button type="button" class="chip" data-rank="{r}" aria-pressed="false">{r}</button>' for r in ("ZZZ", "ZZ", "Z"))
     return f"""<section class="hero">
 {mark_svg("hero-mark")}
 <h1>{strings.TAGLINE}</h1>
 <p class="lead">{LEAD}</p>
 <p class="count">掲載 <b>{len(shows)}</b>番組</p>
 </section>
+{rank_guide()}
 <section class="filters" aria-label="絞り込み">
 <input id="q" type="search" placeholder="番組名・配信者で探す" aria-label="番組名・配信者で探す" autocomplete="off">
-<div class="chips" role="group" aria-label="寝落ち格付け">{ranks}</div>
 <div class="chips" role="group" aria-label="ジャンル">{chips}</div>
 </section>
-<ul class="list" id="list">
-{chr(10).join(rows)}
-</ul>
+<div id="list">
+{chr(10).join(groups)}
+</div>
 <p class="empty" id="empty" hidden>{EMPTY}</p>
 <script>{FILTER_JS}</script>"""
 
@@ -596,7 +616,7 @@ def show_html(s: dict, base_url: str, cfg: dict) -> str:
     st = s["stats"]
     sub = escape(s["episodes"][0].get("title") or "") if s["episodes"] else ""
     avg = (st or {}).get("avg_min") if (st or {}).get("n") else None
-    duo = (f'<section class="duo"><div><p class="cap">評点</p>{star(s["show_star"], "star big")}</div><span class="vr"></span>'
+    duo = (f'<section class="duo"><div><p class="cap">評点</p>{score(s["show_star"], "big")}</div><span class="vr"></span>'
            f'<div><p class="cap">寝落ちまで(ウォッチの実測の平均)</p>'
            + (f'<p><b class="num big res">{avg}</b><span class="res">分</span></p>' if avg is not None else '<p class="num big muted">―</p>')
            + f'</div></section><p class="cap">{breakdown(st)}</p>')
@@ -606,7 +626,7 @@ def show_html(s: dict, base_url: str, cfg: dict) -> str:
     if s.get("link_url"):
         links.append(f'<a class="btn{" btn-ghost" if links else ""}" href="{escape(s["link_url"])}" rel="noopener" target="_blank">配信元で聴く</a>')
     url = f"{base_url}shows/{s['id']}/" if base_url else ""
-    share_text = f"{s['title']}。評点 ★ {s['show_star']:.1f}、寝落ち格付け {s['z_rank']}。"
+    share_text = f"{s['title']}。評点 {s['show_star']:.1f}、寝落ち格付け {s['z_rank']}。"
     x_url = "https://x.com/intent/post?" + urllib.parse.urlencode({"text": share_text, **({"url": url} if url else {})})
     parts = [f"""<p class="back"><a href="../../">一覧へ</a></p>
 <section class="detail-head">
@@ -659,11 +679,11 @@ def about_html() -> str:
 
 
 FILTER_JS = """
-(()=>{const q=document.getElementById('q'),rows=[...document.querySelectorAll('#list .row')],empty=document.getElementById('empty');
+(()=>{const q=document.getElementById('q'),rows=[...document.querySelectorAll('#list .row')],grps=[...document.querySelectorAll('#list .grp')],empty=document.getElementById('empty');
 const sel={rank:null,genre:null};
 function apply(){const t=q.value.trim().toLowerCase();let n=0;
 rows.forEach(r=>{const ok=(!t||r.dataset.q.includes(t))&&(!sel.rank||r.dataset.rank===sel.rank)&&(!sel.genre||r.dataset.genre===sel.genre);r.hidden=!ok;if(ok)n++;});
-empty.hidden=n>0;}
+grps.forEach(g=>{g.hidden=![...g.querySelectorAll('.row')].some(r=>!r.hidden);});empty.hidden=n>0;}
 document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{const k=c.dataset.rank?'rank':'genre',v=c.dataset[k];
 sel[k]=sel[k]===v?null:v;document.querySelectorAll('.chip[data-'+k+']').forEach(o=>o.setAttribute('aria-pressed',String(o.dataset[k]===sel[k])));apply();}));
 q.addEventListener('input',apply);})();
@@ -707,7 +727,7 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
     for s in shows:
         d = out / "shows" / s["id"]
         d.mkdir(parents=True)
-        desc = f"評点 ★ {s['show_star']:.1f}、寝落ち格付け {s['z_rank']}。{RANK_MEANING[s['z_rank']]}です。"
+        desc = f"評点 {s['show_star']:.1f}、寝落ち格付け {s['z_rank']}。{RANK_MEANING[s['z_rank']]}です。"
         d.joinpath("index.html").write_text(page(
             title=f"{s['title']} | {strings.PRODUCT}", desc=desc, root="../../", body=show_html(s, base_url, cfg),
             canonical=base_url and f"{base_url}shows/{s['id']}/", og_image=s.get("artwork_url") or og, og_type="article"),

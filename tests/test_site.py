@@ -1,7 +1,7 @@
 """紹介サイトの書き出し。掲載のルール(docs/SCORE.md)と、言葉の決まり(docs/VOICE.md)を守ること。"""
 import re
 
-from neochi import cli, site
+from neochi import cli, site, strings
 from tests.test_strings import BANNED
 
 DATA = {
@@ -44,7 +44,7 @@ def test_only_listed_and_judged_shows(tmp_path):
 def test_show_page_has_breakdown_and_ogp(tmp_path):
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     h = (tmp_path / "shows" / "a" / "index.html").read_text(encoding="utf-8")
-    assert "★ 4.4" in h and "眠りたい夜は、まずこの番組" in h
+    assert "評点 4.4" in h and "★ 4.4" not in h and "眠りたい夜は、まずこの番組" in h
     assert "AI解析・寝落ちまで 平均14分(ウォッチの実測 4件)" in h
     assert 'property="og:image" content="https://img/a.jpg"' in h
     assert 'href="https://example.com/shows/a/"' in h
@@ -92,3 +92,11 @@ def test_record_hidden_without_data(tmp_path):
     site.build(empty, tmp_path, cli.load_config())
     h = (tmp_path / "shows" / "a" / "index.html").read_text(encoding="utf-8")
     assert "寝落ちの実績" not in h and "実測の記録はまだありません" not in h
+
+
+def test_index_has_rank_guide_and_no_star_on_total(tmp_path):
+    """トップに格付けの見かたがあり、番組の総合の点に★を使わない(docs/VOICE.md)。"""
+    site.build(DATA, tmp_path, cli.load_config())
+    h = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert strings.TAGLINE in h and "寝落ち格付けの見かた" in h and "ZZZ は4.2以上" in h
+    assert 'class="grp"' in h and "★" not in h[h.index("<main"):h.index("</main>")]

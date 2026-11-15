@@ -4,7 +4,7 @@
 """
 
 PRODUCT = "NeochiPickzz"
-TAGLINE = "寝落ちまでを、番組ごとに測る。"
+TAGLINE = "寝落ち向きの番組を、Z で格付け。"
 
 LABEL_TOTAL = "評点"
 LABEL_INTEREST = "程よい興味"
