@@ -220,8 +220,7 @@ struct DetailView: View {
             EarCharts(analysis: a)
             let parts = Explain.earParts(a)
             if !parts.isEmpty {
-                Text("なぜこの点か").ncText(NCText.footnote, .textSub).padding(.top, NCSpace.s1)
-                VStack(spacing: NCSpace.s2) { ForEach(parts) { partCard($0) } }
+                VStack(spacing: 0) { ForEach(parts) { partRow($0) } }
             }
         }
     }
@@ -265,23 +264,27 @@ struct DetailView: View {
         }
     }
 
-    /// 🎧 の1項目: 測った値・結果のひとこと・基準。
-    private func partCard(_ r: EarPartReport) -> some View {
-        VStack(alignment: .leading, spacing: NCSpace.s1) {
-            HStack {
-                Text(r.title).ncText(NCText.footnote)
-                Spacer()
-                if let s = r.star {
-                    Text("★").ncText(NCText.numSm, .accentFactor)
-                    Text(String(format: "%.1f", s)).ncText(NCText.numSm, .accentFactor)
+    /// 🎧 の1項目を1行で: 項目名・測った値・満点から最低の間の位置(ゲージ)・★。
+    /// 結果のひとこと(「音量が安定しています」など)は読み上げに回し、基準は「解析について」にまとめた。
+    private func partRow(_ r: EarPartReport) -> some View {
+        HStack(spacing: NCSpace.s2) {
+            Text(r.title).ncText(NCText.footnote).frame(width: 92, alignment: .leading)
+            Text(r.short).ncText(NCText.numSm).frame(maxWidth: .infinity, alignment: .leading)
+                .minimumScaleFactor(0.8).lineLimit(1)
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.nc(.line))
+                    Capsule().fill(Color.nc(.accentFactor)).frame(width: max(4, g.size.width * CGFloat(r.fill)))
                 }
             }
-            Text("\(r.measured)。\(r.verdict)").ncText(NCText.footnote, r.good ? .accentResult : .textMain)
-            Text(r.criterion).ncText(NCText.caption, .textSub)
+            .frame(width: 56, height: 6)
+            Text(r.star.map { String(format: "%.1f", $0) } ?? "―").ncText(NCText.numSm, .accentFactor)
+                .frame(width: 30, alignment: .trailing)
         }
-        .padding(NCSpace.s3)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: NCRadius.sm, style: .continuous).fill(Color.nc(.bgBase)))
+        .frame(minHeight: 32)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(r.title)
+        .accessibilityValue("\(r.short)。\(r.verdict)。評点 \(r.star.map { String(format: "%.1f", $0) } ?? "なし")")
     }
 
     private func interestWord(_ l: InterestLevel) -> String {
@@ -451,7 +454,9 @@ struct DetailView: View {
         case "transcript": depth = "冒頭を文字起こしして判定しています。"
         default: depth = "番組の説明文だけで判定しています。"
         }
-        return "音量の推移と突発音は、冒頭30分を測っています。話す速さと、起伏・興味の判定は、冒頭を文字起こしして行っています。30分以降を聴くのは寝つけなかったときだけなので、内容の評価は冒頭20分までにしています。" + depth
+        let criteria = Explain.earParts(EpisodeAnalysis(episodeID: "", speechRate: 0, speechRateCV: 0, volumeStdDB: 0, suddenPer10Min: 0))
+            .map { "\($0.title): \($0.criterion)" }.joined(separator: "\n")
+        return "耳のゆるさの基準(★5が満点、★1が最低)\n" + criteria + "\n\n" + "音量の推移と突発音は、冒頭30分を測っています。話す速さと、起伏・興味の判定は、冒頭を文字起こしして行っています。30分以降を聴くのは寝つけなかったときだけなので、内容の評価は冒頭20分までにしています。" + depth
     }
 
     // MARK: 部品

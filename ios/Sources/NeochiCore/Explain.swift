@@ -21,6 +21,10 @@ public struct EarPartReport: Hashable, Identifiable, Sendable {
     /// 基準。例「290字/分までは満点、450字で最低」
     public let criterion: String
     public let good: Bool
+    /// 行に出す、測った値の短い形。例「274字/分」
+    public let short: String
+    /// 満点(1)から最低(0)の間の位置。ゲージの長さ。
+    public let fill: Double
 }
 
 /// ★の理由を、言葉にする(画面に出す文言)。
@@ -44,22 +48,29 @@ public enum Explain {
             let u = r <= c.rateBestMax ? 1 : unit(r, best: c.rateBestMax, worst: c.rateWorst)
             let (v, good) = pick(u, "寝落ちに向く速さです", "やや速めです", "かなり速いです")
             out.append(.init(title: "話す速さ", star: p?.rate, measured: "1分に\(Int(r.rounded()))字", verdict: v,
-                             criterion: "\(Int(c.rateBestMax))字/分までは満点、\(Int(c.rateWorst))字で最低", good: good))
+                             criterion: "\(Int(c.rateBestMax))字/分までは満点、\(Int(c.rateWorst))字で最低", good: good,
+                             short: "\(Int(r.rounded()))字/分", fill: u))
         }
         if let cv = a.speechRateCV {
-            let (v, good) = pick(unit(cv, best: c.cvBest, worst: c.cvWorst), "速さがほぼ一定です", "速さが、ところどころ変わります", "速さが大きく揺れます")
+            let u = unit(cv, best: c.cvBest, worst: c.cvWorst)
+            let (v, good) = pick(u, "速さがほぼ一定です", "速さが、ところどころ変わります", "速さが大きく揺れます")
             out.append(.init(title: "速さのばらつき", star: p?.rateCV, measured: "1分ごとの速さの揺れ \(Int((cv * 100).rounded()))%", verdict: v,
-                             criterion: "揺れが\(Int(c.cvBest * 100))%以下なら満点、\(Int(c.cvWorst * 100))%で最低", good: good))
+                             criterion: "揺れが\(Int(c.cvBest * 100))%以下なら満点、\(Int(c.cvWorst * 100))%で最低", good: good,
+                             short: "\(Int((cv * 100).rounded()))%", fill: u))
         }
         if let d = a.volumeStdDB {
-            let (v, good) = pick(unit(d, best: c.volumeBest, worst: c.volumeWorst), "音量が安定しています", "音量に、ところどころ大小があります", "音量が大きく上下します")
+            let u = unit(d, best: c.volumeBest, worst: c.volumeWorst)
+            let (v, good) = pick(u, "音量が安定しています", "音量に、ところどころ大小があります", "音量が大きく上下します")
             out.append(.init(title: "音量の変化", star: p?.volume, measured: "音量のばらつき \(String(format: "%.1f", d))dB", verdict: v,
-                             criterion: "\(Int(c.volumeBest))dB以下なら満点、\(Int(c.volumeWorst))dBで最低", good: good))
+                             criterion: "\(Int(c.volumeBest))dB以下なら満点、\(Int(c.volumeWorst))dBで最低", good: good,
+                             short: "\(String(format: "%.1f", d))dB", fill: u))
         }
         if let s = a.suddenPer10Min {
-            let (v, good) = pick(unit(s, best: c.suddenBest, worst: c.suddenWorst), "急に大きな音は、ほとんどありません", "急な音が、ときどきあります", "急な音が多めです")
+            let u = unit(s, best: c.suddenBest, worst: c.suddenWorst)
+            let (v, good) = pick(u, "急に大きな音は、ほとんどありません", "急な音が、ときどきあります", "急な音が多めです")
             out.append(.init(title: "突発音", star: p?.sudden, measured: "10分に\(String(format: "%.1f", s))回", verdict: v,
-                             criterion: "0回なら満点、\(Int(c.suddenWorst))回で最低(屋外の音や、音の演出が多い回は、多めに数えます)", good: good))
+                             criterion: "0回なら満点、\(Int(c.suddenWorst))回で最低(屋外の音や、音の演出が多い回は、多めに数えます)", good: good,
+                             short: "\(String(format: "%.1f", s))回/10分", fill: u))
         }
         return out
     }
