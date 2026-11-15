@@ -80,6 +80,23 @@ def calm_peaks(per_min: list[float], notes: list[dict]) -> list[dict]:
     return sorted(out, key=lambda m: m["min"])
 
 
+def curve_consistent(per_min: list[float], calm_items: dict) -> bool:
+    """1分ごとの起伏の線が、🌊 の4項目の点と食い違っていないか。
+
+    - 4項目がすべて 0 なのに、線に「多い」(1.5 以上)がある → 食い違い
+    - 1 以上を付けた項目があるのに、その分の前後1分(分が無ければ全体)で、線が 0.5 未満のまま → 食い違い
+    """
+    scored = [v for v in calm_items.values() if v["score"] > 0]
+    if not scored:
+        return max(per_min) < PEAK_STRONG
+    for v in scored:
+        m = v.get("min")
+        window = per_min[max(0, m - 1): m + 2] if isinstance(m, int) and 0 <= m < len(per_min) else per_min
+        if max(window) < 0.5:
+            return False
+    return True
+
+
 def content_summary(v) -> str | None:
     """内容の要約(120字以内)。長すぎる・「！」を含むものは保存しない(画面は箱を出さない)。"""
     if not isinstance(v, str):
@@ -113,6 +130,8 @@ def parse_judgement(raw: str) -> dict:
         score = max(1, sum(v["score"] for v in ii.values()))
         calm = 5 - 0.5 * sum(v["score"] for v in cc.values())
         per_min = calm_per_min(d.get("calm_per_min"))
+        if per_min and not curve_consistent(per_min, cc):
+            per_min = None   # 4項目の点と食い違う線は保存しない(★は4項目から計算するので、線だけが別のことを言わないように)
         notes = [x for x in (d.get("moments") or []) if isinstance(x, dict)]
         if per_min:
             moments = calm_peaks(per_min, notes)

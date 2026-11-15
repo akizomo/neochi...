@@ -80,4 +80,11 @@ final class DetailMathTests: XCTestCase {
         XCTAssertEqual(DetailMath.tone(3, .lowerIsBetter, flat: false), .negative)
         XCTAssertEqual(DetailMath.tone(0.04, .higherIsBetter, flat: true), .neutral)    // 表示では 0.0
     }
+
+    func testIsJudgedNeedsBothAIAspects() {
+        XCTAssertFalse(EpisodeAnalysis(episodeID: "e", finalStar: 4.8, earStar: 4.8).isJudged)          // 耳だけ
+        XCTAssertFalse(EpisodeAnalysis(episodeID: "e", calmStar: 4, earStar: 4).isJudged)
+        XCTAssertTrue(EpisodeAnalysis(episodeID: "e", calmStar: 4, interest: .mid).isJudged)
+        XCTAssertFalse(EpisodeAnalysis(episodeID: "e").hasAnyAspect)                                     // 説明文だけ
+    }
 }

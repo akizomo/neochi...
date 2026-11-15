@@ -28,12 +28,12 @@ struct DetailView: View {
                     actions(show)
                     if let (e, a) = latest {
                         if let line = a.reason ?? show.oneLiner { card { sectionHead("AI解析"); Text(line).ncText(NCText.body) } }
-                        evidence(e, a)
+                        if a.hasAnyAspect { evidence(e, a) }   // 説明文だけの解析には、根拠の欄を出さない
                     } else if let line = show.oneLiner {
                         card { sectionHead("AI解析"); Text(line).ncText(NCText.body) }
                     }
                     record(show)
-                    if analyzed.filter({ $0.1.finalStar != nil }).count >= 2 { recent }
+                    if analyzed.filter({ $0.1.finalStar != nil && $0.1.isJudged }).count >= 2 { recent }
                     if let (e, a) = latest { about(a, episode: e) } else {
                         Text("この番組の解析は、まだありません。").ncText(NCText.footnote, .textSub)
                     }
@@ -154,23 +154,39 @@ struct DetailView: View {
                 Spacer()
                 Text(NCString.analyzedEpisode(DetailMath.episodeNumber(e))).ncText(NCText.caption, .textSub)
             }.padding(.top, NCSpace.s2)
+            // 起伏と興味は、判定が済んでいなくても行を出し「判定待ち」と書く(評点に何が入っているかを見せる)。
             VStack(spacing: 0) {
                 if let v = a.calmStar {
                     axis("起伏の少なさ", star: v) { calmDetail(a) }
-                    if a.earStar != nil || a.interest != nil { Divider().overlay(Color.nc(.line)) }
+                } else {
+                    pendingAxis("起伏の少なさ")
                 }
                 if let v = a.earStar {
+                    Divider().overlay(Color.nc(.line))
                     axis("耳のゆるさ", star: v) { earDetail(a) }
-                    if a.interest != nil { Divider().overlay(Color.nc(.line)) }
                 }
+                Divider().overlay(Color.nc(.line))
                 if let l = a.interest {
                     let total = a.interestScore ?? Explain.interestTotal(a.interestItems)
                     axis("程よい興味", text: interestWord(l)) { interestDetail(a, total: total) }
+                } else {
+                    pendingAxis("程よい興味")
                 }
             }
             .padding(.horizontal, NCSpace.s4)
             .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
         }
+    }
+
+    /// 判定がまだの観点の行。開かない。
+    private func pendingAxis(_ title: String) -> some View {
+        HStack(spacing: NCSpace.s2) {
+            Text(title).ncText(NCText.body)
+            Spacer()
+            Text(NCString.judgePending).ncText(NCText.footnote, .textSub)
+        }
+        .frame(minHeight: NCSize.tapMin)
+        .accessibilityElement(children: .combine)
     }
 
     // 起伏の少なさ: 判定の一行 → 1分ごとの起伏の線 → 4項目の行 → 計算式の注記。
@@ -179,7 +195,7 @@ struct DetailView: View {
             if !a.calmPerMin.isEmpty {
                 Text(DetailMath.calmCurveVerdict(a.moments, minutes: a.calmPerMin.count)).ncText(NCText.body)
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
-                    Text("起伏の強さ(1分ごと)").ncText(NCText.footnote, .textSub)
+                    Text("起伏の強さ(1分ごと、AIの推定)").ncText(NCText.footnote, .textSub)
                     CalmCurveChart(values: a.calmPerMin, moments: a.moments.filter { $0.minute < a.calmPerMin.count })
                 }
             } else if !a.calmItems.isEmpty {
@@ -371,9 +387,10 @@ struct DetailView: View {
 
     /// 最近の回の列(古い順)。解析済みの回を直近8回まで。それより新しい未解析の回は「解析中」として2回まで。
     private var recentColumns: [RecentBars.Column] {
-        let scored = analyzed.filter { $0.1.finalStar != nil }
+        // 棒は、起伏・興味を判定済みの回だけ(耳だけの点を、回の評点として並べない)。それより新しい未判定の回は「解析中」。
+        let scored = analyzed.filter { $0.1.finalStar != nil && $0.1.isJudged }
         guard let newest = scored.first?.0, let idx = episodes.firstIndex(where: { $0.id == newest.id }) else { return [] }
-        let pending = episodes[..<idx].filter { model.analyses[$0.id] == nil }.prefix(2)
+        let pending = episodes[..<idx].filter { model.analyses[$0.id]?.isJudged != true }.prefix(2)
         func label(_ e: Episode) -> String {
             if let n = DetailMath.episodeNumber(e) { return "\(n)回" }
             return e.publishedAt.map { Self.monthDay.string(from: $0) } ?? ""

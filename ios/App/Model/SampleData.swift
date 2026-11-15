@@ -35,7 +35,8 @@ enum SampleData {
         var out: [String: EpisodeAnalysis] = [:]
         let stars = [4.0, 4.2, 3.9, 4.4, 4.1, 4.5, 4.3, 4.4]   // 74回〜81回
         for (i, v) in stars.enumerated() {
-            out["plant-\(74 + i)"] = EpisodeAnalysis(episodeID: "plant-\(74 + i)", finalStar: v)
+            out["plant-\(74 + i)"] = EpisodeAnalysis(episodeID: "plant-\(74 + i)", finalStar: v, calmStar: 4.5, earStar: 4.0,
+                                                    interest: .mid, interestScore: 5)   // 起伏・興味も判定済み
         }
         var a = EpisodeAnalysis(
             episodeID: "plant-81", finalStar: 4.4, calmStar: 4.5, earStar: 4.1, interest: .mid, interestScore: 5,

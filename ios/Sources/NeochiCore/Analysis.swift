@@ -74,6 +74,13 @@ public struct EpisodeAnalysis: Hashable, Codable, Sendable {
         self.ratePerMin = ratePerMin; self.volumePerMin = volumePerMin; self.suddenAtSec = suddenAtSec; self.moments = moments
     }
 
+    /// 起伏と興味の両方を判定済みか。番組の評点・格付け・最近の回の棒には、判定済みの回だけを使う
+    /// (`neochi/scoring.py` の is_judged と同じ)。
+    public var isJudged: Bool { calmStar != nil && (interestScore != nil || interest != nil) }
+
+    /// 観点ごとの根拠に出せるものがあるか(説明文だけの解析には無い)。
+    public var hasAnyAspect: Bool { calmStar != nil || earStar != nil || interest != nil }
+
     /// 観点別の★の平均(番組の一覧・詳細で使う)。
     public static func aspects(_ list: [EpisodeAnalysis]) -> ShowAspects {
         func avg(_ v: [Double]) -> Double? { v.isEmpty ? nil : v.reduce(0, +) / Double(v.count) }

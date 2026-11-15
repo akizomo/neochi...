@@ -112,7 +112,7 @@ def test_new_outputs_saved_from_api_and_session(tmp_path, cfg):
     per = [0.2] * 20
     per[6] = 1.6
     j = {"interest": {k: {"score": 1, "min": 3} for k in "ABCDE"},
-         "calm": {k: {"score": 0, "min": None} for k in "ABCD"},
+         "calm": {**{k: {"score": 0, "min": None} for k in "ABCD"}, "A": {"score": 1, "min": 6}},
          "calm_per_min": per, "moments": [{"min": 6, "note": "笑いで声が上ずる"}],
          "content_summary": "冬の布団の話です。後半はお便りを読みます。", "reason": "淡々としています"}
     # API で判定した回

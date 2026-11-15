@@ -10,6 +10,8 @@ from pathlib import Path
 
 import requests
 
+from .scoring import is_judged
+
 
 class JsonStore:
     TABLES = ("show", "episode", "analysis", "sleep_log")
@@ -49,9 +51,10 @@ class JsonStore:
                 if r.get("source") == "watch" and r["episode_id"] == episode_id and r.get("latency_min") is not None]
 
     def final_stars(self, sid: str) -> list[float]:
+        """番組の評点に使う、回の総合評点。起伏と興味の両方を判定済みの回だけ(scoring.is_judged)。"""
         eps = {e["id"] for e in self.rows("episode") if e["show_id"] == sid}
         return [a["final_star"] for a in self.rows("analysis")
-                if a["episode_id"] in eps and a.get("final_star") is not None]
+                if a["episode_id"] in eps and a.get("final_star") is not None and is_judged(a)]
 
     def votes(self, episode_id: str) -> tuple[list[int], list[int]]:
         """みんなの評価。(🌊 calm_vote 1〜5 の一覧, 🎯 interest_vote -1/0/1 の一覧)。"""
@@ -99,10 +102,10 @@ class SupabaseStore:
         return r.json()
 
     def final_stars(self, sid: str) -> list[float]:
-        r = requests.get(f"{self.base}/analysis?select=final_star,episode!inner(show_id)"
-                         f"&episode.show_id=eq.{sid}&final_star=not.is.null", headers=self.h, timeout=30)
+        r = requests.get(f"{self.base}/analysis?select=final_star,calm_star,interest_score,interest_level,episode!inner(show_id)"
+                         f"&episode.show_id=eq.{sid}&final_star=not.is.null&calm_star=not.is.null", headers=self.h, timeout=30)
         r.raise_for_status()
-        return [x["final_star"] for x in r.json()]
+        return [x["final_star"] for x in r.json() if is_judged(x)]
 
     def watch_latencies(self, sid: str) -> list[float]:
         r = requests.get(

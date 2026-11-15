@@ -133,7 +133,8 @@ def _judgement(**extra):
 
 
 def test_calm_per_min_is_clamped_and_rounded():
-    v = llm.parse_judgement(_judgement(calm_per_min=[0.04, 2.7, -1, 1.25] + [0.2] * 20))
+    calm = {**{k: {"score": 0, "min": None} for k in "ABCD"}, "A": {"score": 2, "min": 1}}   # 1分の山と合う
+    v = llm.parse_judgement(_judgement(calm=calm, calm_per_min=[0.04, 2.7, -1, 1.25] + [0.2] * 20))
     assert v["calm_per_min"][:4] == [0.0, 2.0, 0.0, 1.2] and len(v["calm_per_min"]) == 20
     assert llm.parse_judgement(_judgement(calm_per_min=["x"]))["calm_per_min"] is None
     assert llm.parse_judgement(_judgement())["calm_per_min"] is None
@@ -144,7 +145,9 @@ def test_moments_come_from_calm_peaks():
     per[6], per[14], per[17] = 1.6, 1.1, 0.9          # 山は6分(多い)と14分(少し)。17分は1.0未満で山ではない
     notes = [{"min": 7, "note": "笑いで声が上ずる"}, {"min": 14, "note": "話題が急に変わる"}, {"min": 17, "note": "x"},
              {"min": 2, "note": "山ではない"}]
-    v = llm.parse_judgement(_judgement(calm_per_min=per, moments=notes))
+    calm = {"A": {"score": 2, "min": 6}, "B": {"score": 0, "min": None}, "C": {"score": 0, "min": None},
+            "D": {"score": 1, "min": 14}}
+    v = llm.parse_judgement(_judgement(calm=calm, calm_per_min=per, moments=notes))
     assert v["moments"] == [{"min": 6, "note": "笑いで声が上ずる", "level": 2},
                             {"min": 14, "note": "話題が急に変わる", "level": 1}]
 
@@ -167,3 +170,42 @@ def test_content_summary_limits():
     assert llm.parse_judgement(_judgement(content_summary="あ" * 121))["content_summary"] is None
     assert llm.parse_judgement(_judgement(content_summary="驚きの結末！"))["content_summary"] is None
     assert llm.parse_judgement(_judgement())["content_summary"] is None
+
+
+def test_curve_that_contradicts_items_is_dropped():
+    calm_zero = {k: {"score": 0, "min": None} for k in "ABCD"}
+    per = [0.2] * 20
+    per[6] = 1.8                                   # 「多い」の山があるのに、4項目はすべて 0
+    assert llm.parse_judgement(_judgement(calm=calm_zero, calm_per_min=per))["calm_per_min"] is None
+    calm_a = {**calm_zero, "A": {"score": 2, "min": 12}}
+    flat = [0.1] * 20                              # 12分に「多い」を付けたのに、線は平ら
+    assert llm.parse_judgement(_judgement(calm=calm_a, calm_per_min=flat))["calm_per_min"] is None
+    ok = [0.1] * 20
+    ok[12] = 1.6
+    assert llm.parse_judgement(_judgement(calm=calm_a, calm_per_min=ok))["calm_per_min"][12] == 1.6
+
+
+def test_z_rank_cleared_when_not_judged(zcfg):
+    assert z_rank(None, zcfg, current="ZZZ", watch_n=0) is None   # 判定待ちは、格付けを引き継がない
+
+
+def test_show_star_uses_judged_episodes_only(cfg, tmp_path):
+    from neochi import cli
+    from neochi.store import JsonStore
+    s = JsonStore(tmp_path / "s.json")
+    s.upsert("show", {"id": "sh", "title": "t", "show_star": 4.8, "z_rank": "ZZZ", "listing_status": "listed"})
+    s.upsert("episode", {"id": "e1", "show_id": "sh"})
+    s.upsert("episode", {"id": "e2", "show_id": "sh"})
+    s.upsert("analysis", {"episode_id": "e1", "final_star": 4.8, "ear_star": 4.8})            # 耳だけ
+    cli._update_show_stars(s, ["sh"])
+    cli.update_ratings(s, ["sh"], yaml_z())
+    assert s.get("show", "sh")["show_star"] is None and s.get("show", "sh")["listing_status"] == "researching"
+    s.upsert("analysis", {"episode_id": "e2", "final_star": 3.7, "calm_star": 4.0, "interest_level": "mid"})
+    cli._update_show_stars(s, ["sh"])
+    cli.update_ratings(s, ["sh"], yaml_z())
+    assert s.get("show", "sh")["show_star"] == 3.7 and s.get("show", "sh")["z_rank"] == "ZZ"
+
+
+def yaml_z():
+    from neochi import cli
+    return cli.load_z_config()

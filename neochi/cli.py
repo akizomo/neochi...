@@ -58,10 +58,10 @@ def cmd_run(a) -> int:
 
 
 def _update_show_stars(store, show_ids) -> None:
-    for sid in show_ids:  # 番組の評点 = 解析済みの回の総合評点の平均(機械的な集計。手では動かさない)
+    for sid in show_ids:  # 番組の評点 = 起伏・興味を判定済みの回の総合評点の平均(機械的な集計。手では動かさない)
         stars = store.final_stars(sid)
-        if stars:
-            store.update("show", sid, {"show_star": round(sum(stars) / len(stars), 1)})
+        # 判定済みの回がなければ、評点を空にする(耳のゆるさだけの点を、番組の評点として出さない)
+        store.update("show", sid, {"show_star": round(sum(stars) / len(stars), 1) if stars else None})
 
 
 def update_ratings(store, show_ids, zcfg: dict, reset: bool = False) -> None:

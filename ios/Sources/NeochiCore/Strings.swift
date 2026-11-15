@@ -53,6 +53,8 @@ public enum NCString {
     public static let summaryHeader = "この回の内容(AIの要約)"
     public static let interestZoneNote = "4〜6が寝落ち向き"
     public static let analyzing = "解析中"
+    /// 起伏・興味の AI の判定が、まだ済んでいない観点。
+    public static let judgePending = "判定待ち"
     public static let deltaCaptionRecords = "前の4件"
     public static let deltaCaptionEpisodes = "前の4回"
 
