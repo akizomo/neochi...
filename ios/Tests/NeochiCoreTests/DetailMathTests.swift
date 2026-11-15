@@ -53,6 +53,15 @@ final class DetailMathTests: XCTestCase {
         for (key, r) in [("z", ZRank.z), ("zz", .zz), ("zzz", .zzz)] {
             XCTAssertTrue(yaml.contains("\(key):") && yaml.contains("min_star: \(RankCriteria.minStar(r))"), key)
         }
+        // 実績の軸の帯は、結果のコメントの区切りと同じ(0〜60分を切れ目なく、10・20・30分で区切る)
+        let zones = DetailMath.sleepZones
+        XCTAssertEqual(zones.first?.lo, 0); XCTAssertEqual(zones.last?.hi, DetailMath.recordAxisMax)
+        for (a, b) in zip(zones, zones.dropFirst()) { XCTAssertEqual(a.hi, b.lo) }
+        for z in zones.dropFirst() {
+            XCTAssertNotEqual(NCString.comment(minutes: z.lo), NCString.comment(minutes: z.lo - 1), "\(z.lo)分で、コメントが変わる")
+        }
+        XCTAssertEqual(zones.filter(\.ideal).map(\.label), ["理想"])
+        XCTAssertEqual(NCString.comment(minutes: 10), "理想の寝落ちでした")
         // バッジの横は、基準の数字ではなく、番組の勧め方のひとこと(ミシュランのように)。基準は「解析について」に書く
         for r in [ZRank.z, .zz, .zzz] {
             XCTAssertFalse(NCString.rankMeaning(r).contains("以上"), "基準の数字を、バッジの横に出さない")

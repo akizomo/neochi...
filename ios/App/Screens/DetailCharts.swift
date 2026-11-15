@@ -260,10 +260,10 @@ struct InterestScale: View {
 }
 
 /// 寝落ちの実績: 0〜60分の1本の軸に、記録を点で置く。30分未満は塗り、30分以上は線だけ。
+/// 軸の背景は、結果のコメントと同じ区間の帯(即落ち / 理想 / やや粘る / 最後まで聴いた)。理想の帯だけ濃い。
 /// 点を押すと、その記録の「日付と分数」が出る(もう一度押すか、ほかの点を押すと切り替わる)。
 struct SleepDotAxis: View {
     let points: [SleepPoint]
-    let average: Int
     @State private var selected: Int?
 
     private let maxM = Double(DetailMath.recordAxisMax)
@@ -284,20 +284,24 @@ struct SleepDotAxis: View {
             let x = { (m: Int) -> CGFloat in 6 + (w - 12) * CGFloat(Double(DetailMath.clampedMinutes(m)) / maxM) }
             let lo = minutes.min() ?? 0, hi = minutes.max() ?? 0
             ZStack(alignment: .topLeading) {
-                // 軸と目盛り
-                Rectangle().fill(Color.nc(.line)).frame(width: w - 12, height: 1).position(x: w / 2, y: 52)
-                ForEach([0, 15, 30, 45, 60], id: \.self) { t in
-                    Text("\(t)").font(.nc(NCText.numXs)).foregroundStyle(Color.nc(.textSub))
-                        .fixedSize().position(x: x(t), y: 64)
+                // 区間の帯(背景)。理想だけ濃い
+                ForEach(DetailMath.sleepZones, id: \.lo) { z in
+                    Rectangle()
+                        .fill(z.ideal ? Color.nc(.accentResult).opacity(0.22)
+                              : z.lo >= 30 ? Color.nc(.line).opacity(0.35) : Color.nc(.accentResult).opacity(0.07))
+                        .frame(width: x(z.hi) - x(z.lo), height: 40)
+                        .position(x: (x(z.lo) + x(z.hi)) / 2, y: 38)
+                    // 区間の名前(軸の下)
+                    Text(z.label)
+                        .font(.nc(NCText.caption))
+                        .foregroundStyle(Color.nc(z.ideal ? .accentResult : .textSub))
+                        .fixedSize().position(x: (x(z.lo) + x(z.hi)) / 2, y: 80)
                 }
-                // 30分の破線
-                Path { p in p.move(to: CGPoint(x: x(30), y: 20)); p.addLine(to: CGPoint(x: x(30), y: 52)) }
-                    .stroke(Color.nc(.borderControl), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                // 平均の縦線とラベル
-                Rectangle().fill(Color.nc(.accentResult)).frame(width: 1.5, height: 40).position(x: x(average), y: 32)
-                if selected == nil {
-                    Text("平均\(average)").font(.nc(NCText.numXs)).foregroundStyle(Color.nc(.accentResult))
-                        .fixedSize().position(x: min(max(x(average), 24), w - 24), y: 6)
+                // 軸と目盛り(区間の境目)
+                Rectangle().fill(Color.nc(.line)).frame(width: w - 12, height: 1).position(x: w / 2, y: 58)
+                ForEach([0, 10, 20, 30, 60], id: \.self) { t in
+                    Text("\(t)").font(.nc(NCText.numXs)).foregroundStyle(Color.nc(.textSub))
+                        .fixedSize().position(x: x(t), y: 67)
                 }
                 // 記録の点。押せる(見た目は10pt、押せる範囲は28pt)
                 ForEach(Array(points.enumerated()), id: \.offset) { i, p in
@@ -313,7 +317,7 @@ struct SleepDotAxis: View {
                         .frame(width: 28, height: 28).contentShape(Circle())
                     }
                     .buttonStyle(.plain)
-                    .position(x: x(p.minutes), y: 40)
+                    .position(x: x(p.minutes), y: 44)
                     .accessibilityLabel("\(Self.spokenDay.string(from: p.night))、\(p.minutes)分")
                 }
                 // 押した点の、日付と分数
@@ -324,18 +328,18 @@ struct SleepDotAxis: View {
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Capsule().fill(Color.nc(.surfacePressed)))
                         .fixedSize()
-                        .position(x: min(max(x(p.minutes), 40), w - 40), y: 10)
+                        .position(x: min(max(x(p.minutes), 40), w - 40), y: 8)
                         .allowsHitTesting(false)
                 } else if points.count >= 2 {
                     // 最短・最長の値
                     ForEach(Array(Set([lo, hi])), id: \.self) { m in
                         Text("\(m)").font(.nc(NCText.numXs)).foregroundStyle(Color.nc(.textMain))
-                            .fixedSize().position(x: x(m), y: 24)
+                            .fixedSize().position(x: x(m), y: 26)
                     }
                 }
             }
         }
-        .frame(height: 72)
+        .frame(height: 92)
         .accessibilityElement(children: .contain)
     }
 }

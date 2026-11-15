@@ -50,6 +50,22 @@ public enum DetailMath {
         return "冒頭\(minutes)分に山が\(moments.count)つ、うち\(strong)つは強めです。"
     }
 
+    /// 寝落ちの実績の軸の区間(ゾーン)。結果のコメント(`NCString.comment`、SCORE.md §3)の区切りと同じ。
+    /// 画面では、記録の点をこの帯の上に置く。「何分で寝落ちできるといいか」を、軸の上で見せる。
+    public struct SleepZone: Hashable, Sendable {
+        public let lo: Int, hi: Int
+        /// 軸の下に出す短い名前。
+        public let label: String
+        /// いちばん勧める区間(理想の寝落ち)。
+        public let ideal: Bool
+    }
+    public static let sleepZones: [SleepZone] = [
+        .init(lo: 0, hi: 10, label: "即落ち", ideal: false),
+        .init(lo: 10, hi: 20, label: "理想", ideal: true),
+        .init(lo: 20, hi: 30, label: "やや粘る", ideal: false),
+        .init(lo: 30, hi: 60, label: "最後まで聴いた", ideal: false),
+    ]
+
     /// 寝落ちの実績の点。0〜60分の軸に置くので、60分を超える記録は端に寄せる。
     public static let recordAxisMax = 60
     public static func clampedMinutes(_ m: Int) -> Int { min(max(0, m), recordAxisMax) }

@@ -337,11 +337,12 @@ struct DetailView: View {
                         }
                     }
                     if !mins.isEmpty {
-                        SleepDotAxis(points: points, average: avg)
+                        SleepDotAxis(points: points)
                         HStack(spacing: NCSpace.s4) {
                             legendDot("30分未満 \(mins.filter { $0 < 30 }.count)件", filled: true)
                             legendDot("30分以上 \(mins.filter { $0 >= 30 }.count)件", filled: false)
                         }
+                        Text(NCString.sleepZoneNote).ncText(NCText.caption, .textSub)
                     } else if let st = show.stats {
                         Text("最短 \(st.minMinutes)分、最長 \(st.maxMinutes)分。\(st.count)件のうち \(st.under30)件が、30分より前に寝落ちしました。")
                             .ncText(NCText.footnote)
