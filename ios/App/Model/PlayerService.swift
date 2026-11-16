@@ -15,8 +15,8 @@ enum PlaybackState: Equatable {
     case failed
 }
 
-/// 再生。バックグラウンドで再生し、ロック画面には番組名と再生/一時停止だけを出す。
-/// 進捗、残り時間、シーク、スキップは出さない(夜の画面の方針)。
+/// 再生。バックグラウンドで再生し、ロック画面には回のタイトル・番組名と再生/一時停止だけを出す。
+/// 夜の画面には、経過と長さを「12:34 / 42:10」の文字で出す。シークバー、シーク、スキップは出さない。
 ///
 /// 夜に、気づかないうちに止まっていた、が一番困る。次の3つを守る:
 /// - 電話・アラーム・Siri などで中断されたら止まった状態を画面に出し、終わったら(システムが許せば)自動で再開する
@@ -30,6 +30,10 @@ final class PlayerService {
     var isPlaying: Bool { state == .playing || state == .loading }
     /// スリープタイマー(分)。0 = なし(回の最後まで再生して止まる)。
     var timerMinutes = 0 { didSet { restartTimer() } }
+    /// 経過(秒)。1秒ごとに更新する。
+    private(set) var elapsedSec: Double = 0
+    /// 長さ(秒)。音声から分かったときだけ入る(番組の情報に長さがないときの補い)。
+    private(set) var loadedDurationSec: Double?
 
     private var player: AVPlayer?
     private var observers: [NSKeyValueObservation] = []
@@ -37,12 +41,14 @@ final class PlayerService {
     private var itemNotifications: [NSObjectProtocol] = []
     /// ずっと持つ通知(中断など)。
     private var sessionNotifications: [NSObjectProtocol] = []
+    private var timeObserver: Any?
     private var timerTask: Task<Void, Never>?
     private var fadeTask: Task<Void, Never>?
     private var watchdog: Task<Void, Never>?
     /// やり直し用。
     private var lastURL: URL?
     private var lastTitle = ""
+    private var lastSubtitle: String?
     private var remoteReady = false
 
     /// 読み込みがこの秒数を超えて戻らなければ、失敗とみなす。
@@ -63,10 +69,11 @@ final class PlayerService {
     }
 
     /// 音声URLがない(サンプル)ときは、音を出さず、状態だけを進める。
-    func start(url: URL?, title: String) {
+    /// title は回のタイトル、subtitle は番組名(ロック画面の2行目)。
+    func start(url: URL?, title: String, subtitle: String? = nil) {
         stop()
-        lastURL = url; lastTitle = title
-        setUpNowPlaying(title: title)
+        lastURL = url; lastTitle = title; lastSubtitle = subtitle
+        setUpNowPlaying(title: title, subtitle: subtitle)
         setUpRemoteCommands()
         guard let url else { state = .playing; restartTimer(); return }
         state = .loading
@@ -106,17 +113,27 @@ final class PlayerService {
 
     func toggle() { isPlaying ? pause() : resume() }
 
+    /// 指定の秒から聴く。再生中でも一時停止中でも使える。
+    func seek(to seconds: Double) {
+        guard let player, state != .failed, state != .idle else { return }
+        let t = max(0, seconds)
+        elapsedSec = t
+        player.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
     /// 失敗したあと、同じ回をもう一度。
     func retry() {
         guard state == .failed || state == .idle else { return }
-        start(url: lastURL, title: lastTitle)
+        start(url: lastURL, title: lastTitle, subtitle: lastSubtitle)
     }
 
     func stop() {
         timerTask?.cancel(); fadeTask?.cancel(); watchdog?.cancel()
         observers.forEach { $0.invalidate() }; observers = []
         itemNotifications.forEach { NotificationCenter.default.removeObserver($0) }; itemNotifications = []
+        if let timeObserver { player?.removeTimeObserver(timeObserver) }; timeObserver = nil
         player?.pause(); player = nil
+        elapsedSec = 0; loadedDurationSec = nil
         state = .idle
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
@@ -124,6 +141,14 @@ final class PlayerService {
     // MARK: 実際の再生の状態を見る
 
     private func observe(_ p: AVPlayer, _ item: AVPlayerItem) {
+        timeObserver = p.addPeriodicTimeObserver(forInterval: CMTime(seconds: 1, preferredTimescale: 1), queue: .main) { [weak self] t in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if t.seconds.isFinite { self.elapsedSec = t.seconds }
+                let d = item.duration.seconds
+                if d.isFinite, d > 0, self.loadedDurationSec == nil { self.loadedDurationSec = d }
+            }
+        }
         observers = [
             item.observe(\.status, options: [.new]) { [weak self] item, _ in
                 Task { @MainActor in
@@ -239,18 +264,20 @@ final class PlayerService {
 
     // MARK: ロック画面
 
-    private func setUpNowPlaying(title: String) {
+    private func setUpNowPlaying(title: String, subtitle: String?) {
         let size = CGSize(width: 600, height: 600) // ロック画面の画像の生成サイズ(画面の寸法ではない)
         let night = UIGraphicsImageRenderer(size: size).image { ctx in
             UIColor(red: 11 / 255, green: 13 / 255, blue: 18 / 255, alpha: 1).setFill()   // bg-night の無地
             ctx.fill(CGRect(origin: .zero, size: size))
         }
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+        var info: [String: Any] = [
             MPMediaItemPropertyTitle: title,
             MPMediaItemPropertyArtwork: MPMediaItemArtwork(boundsSize: size) { _ in night },
             MPNowPlayingInfoPropertyPlaybackRate: 1.0,
             // 経過時間と長さは入れない(入れるとロック画面に進捗とシークバーが出る)
         ]
+        if let subtitle { info[MPMediaItemPropertyArtist] = subtitle }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
 
     private func updateNowPlayingRate(_ rate: Double) {

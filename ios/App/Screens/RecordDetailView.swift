@@ -60,8 +60,8 @@ struct RecordDetailView: View {
             HStack(spacing: NCSpace.s3) {
                 ArtworkView(show: show)
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
-                    Text(show.title).ncText(NCText.headline).lineLimit(1)
-                    if let ep, !ep.isEmpty { Text(ep).ncText(NCText.footnote, .textSub).lineLimit(1) }
+                    MarqueeText(text: show.title, style: NCText.headline)
+                    if let ep, !ep.isEmpty { MarqueeText(text: ep, style: NCText.footnote, color: .textSub) }
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").ncText(NCText.footnote, .textSub)

@@ -108,8 +108,8 @@ struct LogView: View {
             HStack(alignment: .center, spacing: NCSpace.s3) {
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
                     Text(Self.dateFormat.string(from: log.startedAt)).ncText(NCText.footnote, .textSub)
-                    Text(title).ncText(NCText.headline).lineLimit(1)
-                    if let ep, !ep.isEmpty { Text(ep).ncText(NCText.footnote, .textSub).lineLimit(1) }
+                    MarqueeText(text: title, style: NCText.headline)
+                    if let ep, !ep.isEmpty { MarqueeText(text: ep, style: NCText.footnote, color: .textSub) }
                 }
                 Spacer(minLength: NCSpace.s2)
                 if let m = log.latencyMinutes {

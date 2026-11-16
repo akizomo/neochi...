@@ -73,7 +73,7 @@ struct DetailView: View {
                     .accessibilityElement(children: .combine)
                 }
                 Text(show.title).ncText(NCText.title)
-                if let e = episodes.first { Text(e.title).ncText(NCText.footnote, .textSub).lineLimit(1) }
+                if let e = episodes.first { MarqueeText(text: e.title, style: NCText.footnote, color: .textSub) }
             }
         }
     }
@@ -125,13 +125,19 @@ struct DetailView: View {
 
     private func tonightRow(_ show: Show) -> some View {
         HStack(spacing: NCSpace.s2) {
+            let reserved = model.reservation(night: 0)?.show.id == show.id
             Button {
-                if let c = model.slate(night: 0).first(where: { $0.show.id == show.id }) ?? model.slate(night: 0).first {
-                    model.reserve(night: 0, c); dismiss()
+                if reserved {
+                    model.cancelReservation(night: 0)
+                } else if let c = model.slate(night: 0).first(where: { $0.show.id == show.id })
+                            ?? TonightEngine.listenNow(show: show, ctx: model.context) {
+                    model.reserve(night: 0, c)
                 }
             } label: {
-                Text("今夜聴く").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: 52)
-                    .background(Capsule().fill(Color.nc(.textMain)))
+                Label(reserved ? "今夜聴く予約済み" : "今夜聴く", systemImage: reserved ? "checkmark" : "moon")
+                    .ncText(NCText.headline, reserved ? .textMain : .bgBase).frame(maxWidth: .infinity, minHeight: 52)
+                    .background(Capsule().fill(reserved ? Color.clear : Color.nc(.textMain)))
+                    .overlay(Capsule().strokeBorder(Color.nc(.textMain), lineWidth: reserved ? 1.5 : 0))
             }
             .buttonStyle(.pressable)
             Button {

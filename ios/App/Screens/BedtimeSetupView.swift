@@ -37,8 +37,8 @@ struct BedtimeSetupView: View {
         .frame(maxWidth: .infinity, alignment: .top) }
         .frame(maxHeight: .infinity)
         .background(Color.nc(.bgBase).ignoresSafeArea())
-        // 親指が届くよう、画面の下半分に収める。
-        .presentationDetents([.medium])
+        // 親指が届くよう、ふつうは下半分。小さい画面(SE など)では、スクロールなしで全部見えるよう全面にする。
+        .presentationDetents(UIScreen.main.bounds.height < 700 ? [.large] : [.medium, .large])
         .presentationDragIndicator(editing ? .visible : .hidden)
     }
 }

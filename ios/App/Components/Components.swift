@@ -229,7 +229,7 @@ struct ScoreRow: View {
         HStack(spacing: NCSpace.s3) {
             ArtworkView(show: show, showsRank: true)
             VStack(alignment: .leading, spacing: NCSpace.s1) {
-                Text(show.title).ncText(NCText.headline).lineLimit(1)
+                MarqueeText(text: show.title, style: NCText.headline)
                 if let line = show.oneLiner {
                     Text(line).ncText(NCText.footnote, .textSub).lineLimit(2)
                 }
@@ -269,7 +269,7 @@ struct TonightCard: View {
                     ArtworkView(show: candidate.show, size: NCSize.artworkXl, radius: NCRadius.lg, showsRank: true)
                     Text(candidate.show.title).ncText(NCText.title)
                         .lineLimit(2, reservesSpace: true).multilineTextAlignment(.center)
-                    Text(episodeLine).ncText(NCText.footnote, .textSub).lineLimit(1)
+                    MarqueeText(text: episodeLine, style: NCText.footnote, color: .textSub, centered: true)
                     MetricsRow(show: candidate.show).padding(.top, NCSpace.s2)
                 }
                 .allowsHitTesting(false)
@@ -383,5 +383,57 @@ struct DeltaPill: View {
         .background(Capsule().fill(Color.nc(bg)))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(isFlat ? "\(caption)と同じ" : "\(caption)より \(text) \(delta > 0 ? spoken.up : spoken.down)")
+    }
+}
+
+/// 1行に収まらない題名を、省略せず、ゆっくり横に流す(よくある電光掲示の動き)。
+/// - 収まるときは、ふつうの文字のまま(中央寄せも指定できる)。
+/// - 収まらないときは、2秒止まって → 左へ流れ → 頭から続けて回る。両端は薄く消える。
+/// - 「視差効果を減らす」のときは流さず、末尾を省略する。画面が非アクティブの間は止める。
+struct MarqueeText: View {
+    let text: String
+    var style: NCTextStyle = NCText.body
+    var color: NCColor = .textMain
+    var centered = false
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var textW: CGFloat = 0
+    @State private var boxW: CGFloat = 0
+
+    private let gap: CGFloat = 40, speed: Double = 28, pause: Double = 2
+    private var overflow: Bool { textW > boxW + 0.5 && boxW > 0 }
+    private var scrolling: Bool { overflow && !reduceMotion }
+
+    var body: some View {
+        Text(text).ncText(style, color).lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: centered ? .center : .leading)
+            .opacity(scrolling ? 0 : 1)
+            .background(GeometryReader { g in Color.clear.onAppear { boxW = g.size.width }.onChange(of: g.size.width) { _, w in boxW = w } })
+            .background(
+                Text(text).ncText(style, color).fixedSize().hidden()
+                    .background(GeometryReader { g in Color.clear.onAppear { textW = g.size.width }.onChange(of: g.size.width) { _, w in textW = w } })
+            )
+            .overlay {
+                if scrolling {
+                    TimelineView(.animation(minimumInterval: 1.0 / 30, paused: scenePhase != .active)) { tl in
+                        let span = Double(textW + gap), run = span / speed, cycle = pause + run
+                        let t = tl.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: cycle)
+                        let x = -CGFloat(max(0, t - pause) * speed)
+                        HStack(spacing: gap) {
+                            Text(text).ncText(style, color).fixedSize()
+                            Text(text).ncText(style, color).fixedSize()
+                        }
+                        .offset(x: x)
+                        .frame(width: boxW, alignment: .leading)
+                        .clipped()
+                        .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.04),
+                                                     .init(color: .black, location: 0.96), .init(color: .clear, location: 1)],
+                                             startPoint: .leading, endPoint: .trailing))
+                    }
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(text)
     }
 }

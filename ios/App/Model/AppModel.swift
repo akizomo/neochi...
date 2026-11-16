@@ -98,6 +98,28 @@ final class AppModel {
         self.shows = shows; self.episodes = episodes; self.history = history; self.favorites = favorites
         self.queue = queue; self.currentShowID = currentShowID; self.lastNight = lastNight
         self.genreStreakNights = genreStreakNights; self.pendingMorning = pendingMorning
+        restorePendingNight()
+    }
+
+    /// 再生した晩のこと。夜のうちにアプリが終了されても、朝に振り返りを出せるよう、端末に残す。
+    private struct PendingNight: Codable {
+        var startedAt: Date; var episodeID: String?; var showID: String?
+    }
+    private static let pendingNightKey = "pendingNight"
+
+    private func savePendingNight() {
+        guard pendingMorning, let s = playStartedAt else {
+            UserDefaults.standard.removeObject(forKey: Self.pendingNightKey); return
+        }
+        let v = PendingNight(startedAt: s, episodeID: playEpisodeID, showID: playShowID)
+        UserDefaults.standard.set(try? JSONEncoder().encode(v), forKey: Self.pendingNightKey)
+    }
+
+    private func restorePendingNight() {
+        guard let data = UserDefaults.standard.data(forKey: Self.pendingNightKey),
+              let v = try? JSONDecoder().decode(PendingNight.self, from: data) else { return }
+        playStartedAt = v.startedAt; playEpisodeID = v.episodeID; playShowID = v.showID
+        pendingMorning = true
     }
 
     /// 番組の読み込みの状態。Release で接続先があるときは、見本の番組を出さず、読み込めるまで待つ(取り違えを防ぐ)。
@@ -159,7 +181,9 @@ final class AppModel {
 
     /// 「記録する」で保存。入力は任意。
     func saveLog(interest: InterestAnswer?, calm: Int?, note: String) {
-        guard let s = playStartedAt, let ep = playEpisodeID, let show = playShowID else { pendingMorning = false; return }
+        guard let s = playStartedAt, let ep = playEpisodeID, let show = playShowID else {
+            pendingMorning = false; savePendingNight(); return
+        }
         let listenNo = history.filter { $0.episodeID == ep }.count
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
         let log = SleepLog(id: UUID().uuidString, episodeID: ep, showID: show, startedAt: s, sleepOnsetAt: onsetAt,
@@ -169,6 +193,7 @@ final class AppModel {
         if let m = log.latencyMinutes { lastNight = LastNight(showID: show, episodeID: ep, minutes: m) }
         pendingMorning = false
         playStartedAt = nil; onsetAt = nil
+        savePendingNight()
         LogStore.save(logs)
         Task { try? await SupabaseClient.shared.upload(log) }
     }
@@ -269,6 +294,15 @@ final class AppModel {
         return cal.date(byAdding: .day, value: night, to: base) ?? base
     }
 
+    /// 朝の振り返りを出してよいか。聴いた晩が明けてから(午前4時を過ぎてから)。同じ日のうちは出さない。
+    var morningDue: Bool {
+        guard pendingMorning else { return false }
+        guard let s = playStartedAt else { return true }   // 前回の起動から残った分
+        let cal = Calendar.current
+        let startNight = cal.startOfDay(for: s.addingTimeInterval(-4 * 3600))
+        return nightDay(0) > startNight
+    }
+
     func reservation(night: Int) -> Candidate? { reservations[nightDay(night)] }
 
     func reserve(night: Int, _ candidate: Candidate) {
@@ -298,8 +332,13 @@ final class AppModel {
         playStartedAt = Date(); onsetAt = nil
         playEpisodeID = candidate.episode?.id; playShowID = candidate.show.id
         pendingMorning = true
+        savePendingNight()
         playing = candidate
-        player.start(url: candidate.episode?.audioURL, title: candidate.show.title)
+        if let ep = candidate.episode {
+            player.start(url: ep.audioURL, title: ep.title, subtitle: candidate.show.title)
+        } else {
+            player.start(url: nil, title: candidate.show.title)
+        }
         if nightScreen == nil { nightScreen = .playing }
     }
 }

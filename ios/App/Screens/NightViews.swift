@@ -1,7 +1,8 @@
 import SwiftUI
 import NeochiCore
 
-/// 夜の画面。ダーク固定(bg-night)。出るのは、番組名と再生/一時停止、スリープタイマーの小さなピルだけ。
+/// 夜の画面。ダーク固定(bg-night)。出るのは、番組名・回・時間(経過 / 長さ。文字だけ)と再生/一時停止、スリープタイマーの小さなピルだけ。
+/// 時間は文字だけ。シークバーや進捗のバーは出さない(目を覚まさないように)。
 struct NightView: View {
     @Environment(AppModel.self) private var model
     @State private var timerOpen = false
@@ -17,11 +18,52 @@ struct NightView: View {
         }
     }
 
+    /// 回の見出し。「第12回 タイトル」。番号が無い、またはタイトルにすでに回が入っているときは、タイトルだけ。
+    private func episodeHeading(_ ep: Episode) -> String {
+        guard let n = ep.number, !ep.title.contains("第\(n)回"), !ep.title.contains("#\(n)") else { return ep.title }
+        return "第\(n)回 \(ep.title)"
+    }
+
+    private func isCurrent(_ ep: Episode) -> Bool { model.playing?.episode?.id == ep.id && model.player.state != .idle }
+    private func totalSec(_ ep: Episode) -> Double? {
+        ep.durationSec.map(Double.init) ?? (isCurrent(ep) ? model.player.loadedDurationSec : nil)
+    }
+
+    /// 「12:34 / 42:10」。再生前は長さだけ。長さが分からなければ経過だけ。
+    private func timeLine(_ ep: Episode) -> String? {
+        let isCurrent = isCurrent(ep)
+        let total = totalSec(ep)
+        switch (isCurrent, total) {
+        case (true, let t?): return "\(Self.clock(model.player.elapsedSec)) / \(Self.clock(t))"
+        case (true, nil): return Self.clock(model.player.elapsedSec)
+        case (false, let t?): return Self.clock(t)
+        default: return nil
+        }
+    }
+
+    private static func clock(_ sec: Double) -> String {
+        let s = max(0, Int(sec.rounded(.down)))
+        return s >= 3600 ? String(format: "%d:%02d:%02d", s / 3600, s % 3600 / 60, s % 60)
+                         : String(format: "%d:%02d", s / 60, s % 60)
+    }
+
     var body: some View {
         ZStack {
             Color.nc(.bgNight).ignoresSafeArea()
             VStack(spacing: NCSpace.s8) {
-                Text(shown?.show.title ?? "").ncText(NCText.title).multilineTextAlignment(.center)
+                VStack(spacing: NCSpace.s2) {
+                    MarqueeText(text: shown?.show.title ?? "", style: NCText.title, centered: true)
+                    if let ep = shown?.episode {
+                        MarqueeText(text: episodeHeading(ep), style: NCText.body, color: .textSub, centered: true)
+                        if let t = timeLine(ep) { Text(t).ncText(NCText.body, .textMain).monospacedDigit() }
+                    }
+                }
+                .accessibilityElement(children: .combine)
+                // 進捗。ドラッグで、聴き始める位置を選べる(ロック画面では動かせない)。
+                // 将来、この帯の背後に「寝落ちやすさ」のグラフを重ねる(PlaybackBar の background)。
+                if let ep = shown?.episode, isCurrent(ep), let total = totalSec(ep), total > 0 {
+                    PlaybackBar(elapsed: model.player.elapsedSec, total: total) { model.player.seek(to: $0) }
+                }
                 Button {
                     if model.playing == nil, let c = shown { model.play(c) } else { model.player.toggle() }
                 } label: {
@@ -163,5 +205,54 @@ struct TimerSheet: View {
         .background(Color.nc(.bgBase))
         .presentationDetents([.height(NCSize.sheetH)])
         .environment(\.colorScheme, .dark)
+    }
+}
+
+/// 再生の進捗の帯。ドラッグ(またはタップ)で、その位置から聴ける。VoiceOver では ±30秒。
+/// background に、位置ごとのグラフ(寝落ちやすさ)を差し込める。
+private struct PlaybackBar<Background: View>: View {
+    let elapsed: Double
+    let total: Double
+    let onSeek: (Double) -> Void
+    let background: Background
+    @State private var dragFraction: Double?
+
+    init(elapsed: Double, total: Double, onSeek: @escaping (Double) -> Void, @ViewBuilder background: () -> Background = { EmptyView() }) {
+        self.elapsed = elapsed; self.total = total; self.onSeek = onSeek; self.background = background()
+    }
+
+    private var fraction: Double { dragFraction ?? min(1, max(0, elapsed / total)) }
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            ZStack(alignment: .leading) {
+                background
+                Capsule().fill(Color.nc(.borderControl)).frame(height: 4)
+                Capsule().fill(Color.nc(.accentResult).opacity(0.8)).frame(width: max(4, w * fraction), height: 4)
+                Circle().fill(Color.nc(.textMain)).frame(width: dragFraction == nil ? 10 : 16, height: dragFraction == nil ? 10 : 16)
+                    .offset(x: min(max(0, w * fraction - 5), w - 10))
+            }
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0)
+                .onChanged { dragFraction = min(1, max(0, $0.location.x / w)) }
+                .onEnded { v in
+                    onSeek(min(1, max(0, v.location.x / w)) * total)
+                    dragFraction = nil
+                })
+        }
+        .frame(height: NCSize.tapMin)
+        .animation(.linear(duration: 1), value: elapsed)
+        .accessibilityElement()
+        .accessibilityLabel("再生位置")
+        .accessibilityValue("\(Int(elapsed / 60))分 / \(Int(total / 60))分")
+        .accessibilityAdjustableAction { dir in
+            switch dir {
+            case .increment: onSeek(min(total, elapsed + 30))
+            case .decrement: onSeek(max(0, elapsed - 30))
+            @unknown default: break
+            }
+        }
     }
 }
