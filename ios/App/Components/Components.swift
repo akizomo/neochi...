@@ -186,7 +186,7 @@ struct StarScore: View {
     }
 }
 
-/// 左に評点(★と数字)、右にウォッチの実測の平均。
+/// 左に評点(★と数字)、右にヘルスケアの実測の平均。
 struct MetricsRow: View {
     let show: Show
 

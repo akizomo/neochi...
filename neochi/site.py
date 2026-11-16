@@ -30,14 +30,14 @@ RANK_MEANING = {"ZZZ": "眠りたい夜は、まずこの番組", "ZZ": "寝落�
 # 格付けの線(config/z_rank.yaml と同じ値)
 RANK_MIN = {"Z": 3.6, "ZZ": 4.1, "ZZZ": 4.5}
 
-LEAD = "AI解析とウォッチの実測をもとに、Z・ZZ・ZZZ の3段階で格付けしています。"
+LEAD = "AI解析とヘルスケアの実測をもとに、Z・ZZ・ZZZ の3段階で格付けしています。"
 ENGLISH = "Neochi (n.) — Japanese for drifting off mid-episode. NeochiPickzz picks what to drift off to."
 FOOT_NOTE = "評点は推定です。睡眠の良し悪しは評価していません。"
 FOOT_RIGHTS = "番組名とカバー画像の権利は、各配信元にあります。音声は配信元で聴けます。"
 EMPTY = "まだ掲載していません"
 RANK_CRITERIA = ("寝落ち格付けは、番組の評点で決めます。"
                  + "、".join(f"{r} は{RANK_MIN[r]:.1f}以上" for r in ("Z", "ZZ", "ZZZ"))
-                 + "です。基準に届かない番組は、掲載しません。評点は、AI解析を土台に、ウォッチの実測とみんなの評価が集まるほど、それらを足したものです。")
+                 + "です。基準に届かない番組は、掲載しません。評点は、AI解析を土台に、ヘルスケアの実測とみんなの評価が集まるほど、それらを足したものです。")
 
 INTEREST_LABELS = {"A": "未解決の問い", "B": "驚き・新しい情報", "C": "笑い", "D": "追い続ける必要", "E": "聴き手への働きかけ"}
 CALM_LABELS = {"A": "感情の強さ", "B": "対立・緊張", "C": "頭の負荷", "D": "急な転換"}
@@ -204,7 +204,7 @@ def breakdown(stats: dict | None) -> str:
     """評点の内訳。あるものだけ並べる(Strings.swift の ratingBreakdown と同じ)。"""
     n = int((stats or {}).get("n") or 0)
     if n >= 3:
-        return f"AI解析・寝落ちまで 平均{stats['avg_min']}分(ウォッチの実測 {n}件)"
+        return f"AI解析・寝落ちまで 平均{stats['avg_min']}分(ヘルスケアの実測 {n}件)"
     return "AI解析"
 
 
@@ -559,7 +559,7 @@ def record(s: dict) -> str:
     avg = round(mean(mins)) if mins else (st or {}).get("avg_min")
     if avg is None:
         return ""   # データがない間は、欄ごと出さない
-    head = '<div class="sec-head"><h2>寝落ちの実績</h2><span class="cap">再生を始めてから眠るまで(ウォッチの実測)</span></div>'
+    head = '<div class="sec-head"><h2>寝落ちの実績</h2><span class="cap">再生を始めてから眠るまで(ヘルスケアの実測)</span></div>'
     d = delta([float(m) for m in mins])
     pill = delta_pill(d, False, lambda v: f"{round(v)}分", "前の4件") if d is not None else ""
     body = (f'<div class="row-between"><span><span class="cap">平均</span> <b class="num big res">{avg}</b>'
@@ -697,7 +697,7 @@ def show_html(s: dict, base_url: str, cfg: dict) -> str:
     sub = escape(s.get("genre") or "")
     avg = (st or {}).get("avg_min") if (st or {}).get("n") else None
     duo = (f'<section class="duo"><div><p class="cap">評点</p>{score(s["show_star"], "big")}</div><span class="vr"></span>'
-           f'<div><p class="cap">寝落ちまで(ウォッチの実測の平均)</p>'
+           f'<div><p class="cap">寝落ちまで(ヘルスケアの実測の平均)</p>'
            + (f'<p><b class="num big res">{avg}</b><span class="res">分</span></p>' if avg is not None else '<p class="num big muted">―</p>')
            + f'</div></section><p class="cap">{breakdown(st)}</p>')
     links = []

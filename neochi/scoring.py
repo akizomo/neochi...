@@ -142,7 +142,7 @@ def final_star(total: float | None, cfg: dict,
     """総合評点と final_reason。人の手では上書きしない。
 
     total は、みんなの評価を軸ごとに足したあとの点(`total_star(..., calm_votes, interest_votes)`)。
-    それに、ウォッチの実測を足す: 総合評点 = total×(1−w実測) + 実測点×w実測
+    それに、ヘルスケアの実測を足す: 総合評点 = total×(1−w実測) + 実測点×w実測
     w実測 = min(上限, n / (n + prior_n))。3件(watch_min_n)未満は計算に入れない。
     ai_total(AI解析だけの点)があれば、実測とのずれが大きいときの理由に使う。
     """

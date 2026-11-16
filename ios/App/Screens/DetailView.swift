@@ -96,7 +96,7 @@ struct DetailView: View {
             }
             Rectangle().fill(Color.nc(.line)).frame(width: 1, height: 56)
             VStack(alignment: .leading, spacing: NCSpace.s1) {
-                Text("寝落ちまで(ウォッチの実測の平均)").ncText(NCText.caption, .textSub)
+                Text("寝落ちまで(ヘルスケアの実測の平均)").ncText(NCText.caption, .textSub)
                 HStack(spacing: NCSpace.s2) {
                     if let m = show.avgMinutes {
                         HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
@@ -283,7 +283,7 @@ struct DetailView: View {
             HStack {
                 sectionHead("寝落ちの実績")
                 Spacer()
-                Text("再生を始めてから眠るまで(ウォッチの実測)").ncText(NCText.caption, .textSub)
+                Text("再生を始めてから眠るまで(ヘルスケアの実測)").ncText(NCText.caption, .textSub)
             }.padding(.top, NCSpace.s2)
             card {
                 if let avg {

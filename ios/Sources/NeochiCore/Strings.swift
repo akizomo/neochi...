@@ -63,7 +63,7 @@ public enum NCString {
     public static let notListed = "まだ掲載していません"
     /// 評点の内訳。あるものだけ並べる(`docs/SCORE.md` §1)。
     public static func ratingBreakdown(watchCount: Int, avgMinutes: Int) -> String {
-        watchCount >= 3 ? "AI解析・寝落ちまで 平均\(avgMinutes)分(ウォッチの実測 \(watchCount)件)" : "AI解析"
+        watchCount >= 3 ? "AI解析・寝落ちまで 平均\(avgMinutes)分(ヘルスケアの実測 \(watchCount)件)" : "AI解析"
     }
 
     // 番組詳細の図
@@ -97,7 +97,7 @@ public enum NCString {
     /// 「解析について」に書く、格付けの基準。
     public static var rankCriteriaNote: String {
         let f = { (r: ZRank) in String(format: "%.1f", RankCriteria.minStar(r)) }
-        return "寝落ち格付けは、番組の評点で決めます。Z は\(f(.z))以上、ZZ は\(f(.zz))以上、ZZZ は\(f(.zzz))以上です。基準に届かない番組は、掲載しません。評点は、AI解析を土台に、ウォッチの実測とみんなの評価が集まるほど、それらを足したものです。"
+        return "寝落ち格付けは、番組の評点で決めます。Z は\(f(.z))以上、ZZ は\(f(.zz))以上、ZZZ は\(f(.zzz))以上です。基準に届かない番組は、掲載しません。評点は、AI解析を土台に、ヘルスケアの実測とみんなの評価が集まるほど、それらを足したものです。"
     }
 }
 

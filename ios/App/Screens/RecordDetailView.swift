@@ -77,7 +77,7 @@ struct RecordDetailView: View {
             HStack {
                 Text("睡眠データ").ncText(NCText.headline)
                 Spacer()
-                Text("ウォッチの実測").ncText(NCText.caption, .textSub)
+                Text("ヘルスケアの実測").ncText(NCText.caption, .textSub)
             }
             GeometryReader { g in
                 let x = g.size.width * CGFloat(m) / CGFloat(max(endMin, 1))

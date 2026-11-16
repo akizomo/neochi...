@@ -45,7 +45,7 @@ def test_show_page_has_breakdown_and_ogp(tmp_path):
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     h = (tmp_path / "shows" / "a" / "index.html").read_text(encoding="utf-8")
     assert "評点 4.4" in h and "★ 4.4" not in h and "眠りたい夜は、まずこの番組" in h
-    assert "AI解析・寝落ちまで 平均14分(ウォッチの実測 4件)" in h
+    assert "AI解析・寝落ちまで 平均14分(ヘルスケアの実測 4件)" in h
     assert 'property="og:image" content="https://img/a.jpg"' in h
     assert 'href="https://example.com/shows/a/"' in h
     assert "https://example.com/sitemap.xml" in (tmp_path / "robots.txt").read_text()
