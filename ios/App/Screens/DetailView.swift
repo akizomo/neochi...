@@ -2,22 +2,28 @@ import SwiftUI
 import Charts
 import NeochiCore
 
-/// 番組の詳細。上から: 評点と実測 → AI解析 → 観点ごとの根拠 → 寝落ちの実績 → 最近の回 → 解析について。
+/// 番組の詳細。「どんな番組か。次にどの話を聴くか」に答える。
+/// 上から: 評点と実測 → 次に聴く話(今夜聴く) → この番組の傾向 → 話の一覧 → 寝落ちの実績 → 最近の話 → 解析について。
+/// 観点ごとの根拠(起伏・耳・興味の中身)は、話ごとのものなので、話の詳細で見せる。
 /// 要因(★・琥珀)は左、結果(ランク・分・青灰)は右。合算しない。
 struct DetailView: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
     let showID: String
-    /// 開いている観点(観点名)。
-    @State private var openAxes: Set<String> = []
+    /// 話の一覧を、すべて広げているか。
+    @State private var listExpanded = false
 
     private var show: Show? { model.shows.first { $0.id == showID } }
+    /// 話(新しい順)。
     private var episodes: [Episode] { model.episodes[showID] ?? [] }
-    /// 解析がある回(新しい順)。
+    /// 解析がある話(新しい順)。
     private var analyzed: [(Episode, EpisodeAnalysis)] {
         episodes.compactMap { e in model.analyses[e.id].map { (e, $0) } }
     }
     private var latest: (Episode, EpisodeAnalysis)? { analyzed.first }
+
+    private static let monthDay: DateFormatter = {
+        let f = DateFormatter(); f.calendar = Calendar(identifier: .gregorian); f.dateFormat = "M/d"; return f
+    }()
 
     var body: some View {
         ScrollView {
@@ -25,16 +31,12 @@ struct DetailView: View {
                 VStack(alignment: .leading, spacing: NCSpace.s4) {
                     header(show)
                     duo(show)
-                    actions(show)
-                    if let (e, a) = latest {
-                        if let line = a.reason ?? show.oneLiner { card { sectionHead("AI解析"); Text(line).ncText(NCText.body) } }
-                        if a.hasAnyAspect { evidence(e, a) }   // 説明文だけの解析には、根拠の欄を出さない
-                    } else if let line = show.oneLiner {
-                        card { sectionHead("AI解析"); Text(line).ncText(NCText.body) }
-                    }
+                    nextEpisode(show)
+                    tendency(show)
+                    episodeList
                     record(show)
                     if analyzed.filter({ $0.1.finalStar != nil && $0.1.isJudged }).count >= 2 { recent }
-                    if let (e, a) = latest { about(a, episode: e) } else {
+                    if let (_, a) = latest { AboutAnalysis(analysis: a) } else {
                         Text("この番組の解析は、まだありません。").ncText(NCText.footnote, .textSub)
                     }
                     #if DEBUG
@@ -73,7 +75,7 @@ struct DetailView: View {
                     .accessibilityElement(children: .combine)
                 }
                 Text(show.title).ncText(NCText.title)
-                if let e = episodes.first { Text(e.title).ncText(NCText.footnote, .textSub).lineLimit(1) }
+                if let g = GenreLabel.display(show.genre) { Text(g).ncText(NCText.footnote, .textSub) }
             }
         }
     }
@@ -94,7 +96,7 @@ struct DetailView: View {
             }
             Rectangle().fill(Color.nc(.line)).frame(width: 1, height: 56)
             VStack(alignment: .leading, spacing: NCSpace.s1) {
-                Text("寝落ちまで(ウォッチの実測の平均)").ncText(NCText.caption, .textSub)
+                Text("寝落ちまで(ヘルスケアの実測の平均)").ncText(NCText.caption, .textSub)
                 HStack(spacing: NCSpace.s2) {
                     if let m = show.avgMinutes {
                         HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
@@ -110,11 +112,57 @@ struct DetailView: View {
         }
     }
 
-    /// 主役は「今夜聴く」(昼に決めて夜に聴く)。「いま聴く」は、昼寝などのために控えめに置く。
-    private func actions(_ show: Show) -> some View {
-        VStack(spacing: NCSpace.s2) {
-            tonightRow(show)
-            if let c = TonightEngine.listenNow(show: show, ctx: model.context) {
+    // MARK: 次に聴く話
+
+    /// 主役は、次に聴く話。「今夜聴く」は、この話を予約する(どの話か見える)。
+    @ViewBuilder private func nextEpisode(_ show: Show) -> some View {
+        let candidate = model.nextCandidate(for: show)
+        let reservedC = model.reservation(night: 0).flatMap { $0.show.id == show.id ? $0 : nil }
+        let shown = reservedC ?? candidate
+        let reserved = reservedC != nil
+        VStack(spacing: NCSpace.s3) {
+            if let c = shown, let ep = c.episode {
+                NavigationLink(value: EpisodeRoute(id: ep.id)) {
+                    VStack(alignment: .leading, spacing: NCSpace.s2) {
+                        // 見出しは1つだけ。予約済みなら「今夜聴く話」、まだなら、その話を選んだ理由(最新の話、昨夜は18分で寝落ち、など)。
+                        if reserved {
+                            Text("今夜聴く話").ncText(NCText.caption, .textSub)
+                        } else {
+                            ReasonText(reason: c.reason)
+                        }
+                        HStack(alignment: .top, spacing: NCSpace.s2) {
+                            VStack(alignment: .leading, spacing: NCSpace.s1) {
+                                Text(ep.title).ncText(NCText.headline).lineLimit(2).multilineTextAlignment(.leading)
+                                Text(episodeMeta(ep)).ncText(NCText.footnote, .textSub)
+                            }
+                            Spacer(minLength: 0)
+                            if let star = model.analyses[ep.id]?.shownStar { StarScore(star: star, style: NCText.numMd) }
+                            Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.nc(.textSub))
+                                .padding(.top, NCSpace.s1)
+                        }
+                    }
+                    .padding(NCSpace.s4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+                }
+                .buttonStyle(.pressable)
+            }
+            HStack(spacing: NCSpace.s2) {
+                Button { model.toggleTonight(show) } label: {
+                    Label(reserved ? "今夜予約済み" : "今夜聴く", systemImage: reserved ? "checkmark" : "moon")
+                        .ncText(NCText.headline, reserved ? .textMain : .bgBase).frame(maxWidth: .infinity, minHeight: 52)
+                        .background(Capsule().fill(reserved ? Color.clear : Color.nc(.textMain)))
+                        .overlay(Capsule().strokeBorder(Color.nc(.textMain), lineWidth: reserved ? 1.5 : 0))
+                }
+                .buttonStyle(.pressable)
+                Button { model.toggleQueue(show) } label: {
+                    Text(model.queue.contains(show.id) ? "次に聴くから外す" : "次に聴く").ncText(NCText.body)
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
+                }
+                .buttonStyle(.pressable)
+            }
+            if let c = candidate {
                 Button { model.play(c) } label: {
                     Text("いま聴く").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: 44)
                 }
@@ -123,209 +171,106 @@ struct DetailView: View {
         }
     }
 
-    private func tonightRow(_ show: Show) -> some View {
-        HStack(spacing: NCSpace.s2) {
-            Button {
-                if let c = model.slate(night: 0).first(where: { $0.show.id == show.id }) ?? model.slate(night: 0).first {
-                    model.reserve(night: 0, c); dismiss()
+    /// 「11/12 · 42分 · 聴いた」。あるものだけ。
+    private func episodeMeta(_ ep: Episode) -> String {
+        var parts: [String] = []
+        if let d = ep.publishedAt { parts.append(Self.monthDay.string(from: d)) }
+        if let s = ep.durationSec { parts.append("\(max(1, Int((Double(s) / 60).rounded())))分") }
+        if model.listenCount(ep) > 0 { parts.append("聴いた") }
+        if model.isReservedTonight(episode: ep) { parts.append("今夜予約済み") }
+        return parts.joined(separator: " · ")
+    }
+
+    // MARK: この番組の傾向(話の平均)
+
+    @ViewBuilder private func tendency(_ show: Show) -> some View {
+        let a = show.aspects
+        let line = show.oneLiner
+        if line != nil || a?.calmStar != nil || a?.earStar != nil || a?.interest != nil {
+            VStack(alignment: .leading, spacing: NCSpace.s2) {
+                HStack(alignment: .firstTextBaseline) {
+                    sectionHead("この番組の傾向")
+                    Spacer()
+                    Text("AI解析、話の平均").ncText(NCText.caption, .textSub)
+                }.padding(.top, NCSpace.s2)
+                card {
+                    if let line { Text(line).ncText(NCText.body) }
+                    // 3つの観点は、いつも並べる。判定がまだの観点は「判定待ち」(1つだけ出すと、それが番組の評価に見える)。
+                    if let v = a?.calmStar { tendencyRow("起伏の少なさ", star: v) } else { tendencyRow("起伏の少なさ", pending: true) }
+                    if let v = a?.earStar { tendencyRow("耳のゆるさ", star: v) } else { tendencyRow("耳のゆるさ", pending: true) }
+                    if let l = a?.interest { tendencyRow("程よい興味", text: NCString.interestWord(l)) } else { tendencyRow("程よい興味", pending: true) }
                 }
-            } label: {
-                Text("今夜聴く").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: 52)
-                    .background(Capsule().fill(Color.nc(.textMain)))
             }
-            .buttonStyle(.pressable)
-            Button {
-                model.toggleQueue(show)
-            } label: {
-                Text(model.queue.contains(show.id) ? "次に聴くから外す" : "次に聴く").ncText(NCText.body)
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
-            }
-            .buttonStyle(.pressable)
         }
     }
 
-    // MARK: 観点ごとの根拠(最新の解析済みの回だけ)
-
-    private func evidence(_ e: Episode, _ a: EpisodeAnalysis) -> some View {
-        VStack(alignment: .leading, spacing: NCSpace.s2) {
-            HStack(alignment: .firstTextBaseline) {
-                sectionHead("観点ごとの根拠")
-                Spacer()
-                Text(NCString.analyzedEpisode(DetailMath.episodeNumber(e))).ncText(NCText.caption, .textSub)
-            }.padding(.top, NCSpace.s2)
-            // 起伏と興味は、判定が済んでいなくても行を出し「判定待ち」と書く(評点に何が入っているかを見せる)。
-            VStack(spacing: 0) {
-                if let v = a.calmStar {
-                    axis("起伏の少なさ", star: v) { calmDetail(a) }
-                } else {
-                    pendingAxis("起伏の少なさ")
-                }
-                if let v = a.earStar {
-                    Divider().overlay(Color.nc(.line))
-                    axis("耳のゆるさ", star: v) { earDetail(a) }
-                }
-                Divider().overlay(Color.nc(.line))
-                if let l = a.interest {
-                    let total = a.interestScore ?? Explain.interestTotal(a.interestItems)
-                    axis("程よい興味", text: interestWord(l)) { interestDetail(a, total: total) }
-                } else {
-                    pendingAxis("程よい興味")
-                }
-            }
-            .padding(.horizontal, NCSpace.s4)
-            .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
-        }
-    }
-
-    /// 判定がまだの観点の行。開かない。
-    private func pendingAxis(_ title: String) -> some View {
-        HStack(spacing: NCSpace.s2) {
+    private func tendencyRow(_ title: String, star: Double? = nil, text: String? = nil, pending: Bool = false) -> some View {
+        HStack {
             Text(title).ncText(NCText.body)
             Spacer()
-            Text(NCString.judgePending).ncText(NCText.footnote, .textSub)
+            if let star {
+                Text("★").ncText(NCText.numSm, .accentFactor)
+                Text(String(format: "%.1f", star)).ncText(NCText.numMd, .accentFactor)
+            } else if let text {
+                Text(text).ncText(NCText.body, .accentFactor)
+            } else if pending {
+                Text(NCString.judgePending).ncText(NCText.footnote, .textSub)
+            }
         }
-        .frame(minHeight: NCSize.tapMin)
         .accessibilityElement(children: .combine)
     }
 
-    // 起伏の少なさ: 判定の一行 → 1分ごとの起伏の線 → 4項目の行 → 計算式の注記。
-    private func calmDetail(_ a: EpisodeAnalysis) -> some View {
-        VStack(alignment: .leading, spacing: NCSpace.s3) {
-            if !a.calmPerMin.isEmpty {
-                Text(DetailMath.calmCurveVerdict(a.moments, minutes: a.calmPerMin.count)).ncText(NCText.body)
-                VStack(alignment: .leading, spacing: NCSpace.s1) {
-                    Text("起伏の強さ(1分ごと、AIの推定)").ncText(NCText.footnote, .textSub)
-                    CalmCurveChart(values: a.calmPerMin, moments: a.moments.filter { $0.minute < a.calmPerMin.count })
-                }
-            } else if !a.calmItems.isEmpty {
-                Text(Explain.calmVerdict(a.calmItems)).ncText(NCText.body)
-            }
-            if !a.calmItems.isEmpty {
-                itemRows(a.calmItems, labels: Explain.calmLabels)
-                Text("項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.5)").ncText(NCText.caption, .textSub)
-            }
-            if a.calmPerMin.isEmpty {   // 古い解析: 線がないので、目立つ箇所を文字で出す
-                ForEach(a.moments, id: \.self) { m in
-                    (Text("\(m.minute)分").font(.nc(NCText.numSm)).foregroundStyle(Color.nc(.accentFactor))
-                     + Text("  \(m.note)").font(.nc(NCText.footnote)).foregroundStyle(Color.nc(.textSub)))
-                }
-            }
-        }
-    }
+    // MARK: 話の一覧
 
-    // 耳のゆるさ: 話す速さと音量を、同じ横軸で縦に並べる。下に4項目それぞれの理由。
-    private func earDetail(_ a: EpisodeAnalysis) -> some View {
-        VStack(alignment: .leading, spacing: NCSpace.s3) {
-            EarCharts(analysis: a)
-            let parts = Explain.earParts(a)
-            if !parts.isEmpty {
-                VStack(spacing: 0) { ForEach(parts) { partRow($0) } }
-            }
-        }
-    }
-
-    // 程よい興味: 内容の要約 → 5項目の行 → 10段の目盛り(と注記)。
-    private func interestDetail(_ a: EpisodeAnalysis, total: Int) -> some View {
-        VStack(alignment: .leading, spacing: NCSpace.s3) {
-            if let summary = a.contentSummary {
-                VStack(alignment: .leading, spacing: NCSpace.s1) {
-                    Text(NCString.summaryHeader).ncText(NCText.caption, .textSub)
-                    Text(summary).ncText(NCText.footnote).fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(NCSpace.s3)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: NCRadius.sm, style: .continuous).fill(Color.nc(.bgBase)))
-                .accessibilityElement(children: .combine)
-            }
-            if !a.interestItems.isEmpty {
-                itemRows(a.interestItems, labels: Explain.interestLabels)
-            }
-            InterestScale(total: total)
-        }
-    }
-
-    /// 採点項目を1行ずつ。点(●●○)と、根拠になった分。
-    private func itemRows(_ items: [ScoredItem], labels: [String: String]) -> some View {
-        VStack(spacing: 0) {
-            ForEach(items, id: \.key) { it in
-                HStack(spacing: NCSpace.s2) {
-                    Text(labels[it.key] ?? it.key).ncText(NCText.footnote)
+    @ViewBuilder private var episodeList: some View {
+        if !episodes.isEmpty {
+            let visible = listExpanded ? episodes : Array(episodes.prefix(8))
+            VStack(alignment: .leading, spacing: NCSpace.s2) {
+                HStack(alignment: .firstTextBaseline) {
+                    sectionHead("話の一覧")
                     Spacer()
-                    if let m = it.minute, it.score > 0 { Text("\(m)分ごろ").ncText(NCText.caption, .textSub) }
-                    Text(Explain.levelWord(it.score)).ncText(NCText.footnote, it.score > 0 ? .accentFactor : .textSub)
-                    HStack(spacing: 3) {
-                        ForEach(0..<2, id: \.self) { i in
-                            Circle().fill(i < it.score ? Color.nc(.accentFactor) : Color.nc(.line)).frame(width: 8, height: 8)
+                    Text("\(episodes.count)話").ncText(NCText.caption, .textSub)
+                }.padding(.top, NCSpace.s2)
+                VStack(spacing: 0) {
+                    ForEach(Array(visible.enumerated()), id: \.element.id) { i, ep in
+                        if i > 0 { Divider().overlay(Color.nc(.line)) }
+                        episodeRow(ep)
+                    }
+                    if episodes.count > visible.count {
+                        Divider().overlay(Color.nc(.line))
+                        Button { withAnimation { listExpanded = true } } label: {
+                            Text("すべての話を見る").ncText(NCText.footnote, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
                         }
+                        .buttonStyle(.plain)
                     }
-                }.frame(minHeight: 32)
+                }
+                .padding(.horizontal, NCSpace.s4)
+                .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
             }
         }
     }
 
-    /// 🎧 の1項目を1行で: 項目名・測った値・満点から最低の間の位置(ゲージ)・★。
-    /// 結果のひとこと(「音量が安定しています」など)は読み上げに回し、基準は「解析について」にまとめた。
-    private func partRow(_ r: EarPartReport) -> some View {
-        HStack(spacing: NCSpace.s2) {
-            Text(r.title).ncText(NCText.footnote).frame(width: 92, alignment: .leading)
-            Text(r.short).ncText(NCText.numSm).frame(maxWidth: .infinity, alignment: .leading)
-                .minimumScaleFactor(0.8).lineLimit(1)
-            GeometryReader { g in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.nc(.line))
-                    Capsule().fill(Color.nc(.accentFactor)).frame(width: max(4, g.size.width * CGFloat(r.fill)))
+    private func episodeRow(_ ep: Episode) -> some View {
+        let a = model.analyses[ep.id]
+        return NavigationLink(value: EpisodeRoute(id: ep.id)) {
+            HStack(spacing: NCSpace.s3) {
+                VStack(alignment: .leading, spacing: NCSpace.s1) {
+                    Text(ep.title).ncText(NCText.body).lineLimit(1).truncationMode(.tail)
+                    Text(episodeMeta(ep)).ncText(NCText.caption, .textSub)
                 }
+                Spacer(minLength: 0)
+                if let star = a?.shownStar {
+                    StarScore(star: star, style: NCText.headline)
+                } else {
+                    Text(a == nil ? "解析待ち" : NCString.judgePending).ncText(NCText.caption, .textSub)
+                }
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.nc(.textSub))
             }
-            .frame(width: 56, height: 6)
-            Text(r.star.map { String(format: "%.1f", $0) } ?? "―").ncText(NCText.numSm, .accentFactor)
-                .frame(width: 30, alignment: .trailing)
+            .padding(.vertical, NCSpace.s2)
+            .frame(minHeight: NCSize.rowH * 0.8)
+            .contentShape(Rectangle())
         }
-        .frame(minHeight: 32)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(r.title)
-        .accessibilityValue("\(r.short)。\(r.verdict)。評点 \(r.star.map { String(format: "%.1f", $0) } ?? "なし")")
-    }
-
-    private func interestWord(_ l: InterestLevel) -> String {
-        switch l { case .low: "静かめ"; case .mid: "程よい"; case .high: "強め" }
-    }
-
-    /// 開閉できる観点の行。右に★(または言葉)を出し、押すと根拠が開く。
-    private func axis<Content: View>(_ title: String, star: Double? = nil, text: String? = nil,
-                                     @ViewBuilder content: @escaping () -> Content) -> some View {
-        let open = openAxes.contains(title)
-        return VStack(alignment: .leading, spacing: 0) {
-            // 見出しの行だけが開閉する(中の図を押しても閉じない)。
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    if open { openAxes.remove(title) } else { openAxes.insert(title) }
-                }
-            } label: {
-                HStack(spacing: NCSpace.s2) {
-                    Text(title).ncText(NCText.body)
-                    Spacer()
-                    if let star {
-                        Text("★").ncText(NCText.numSm, .accentFactor)
-                        Text(String(format: "%.1f", star)).ncText(NCText.numMd, .accentFactor)
-                    } else if let text {
-                        Text(text).ncText(NCText.body, .accentFactor)
-                    }
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.nc(.textSub))
-                        .rotationEffect(.degrees(open ? 90 : 0))
-                }
-                .frame(minHeight: NCSize.tapMin)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityElement(children: .combine)
-            .accessibilityValue(open ? "開いています" : "閉じています")
-            if open {
-                content().padding(.bottom, NCSpace.s3)
-            }
-        }
+        .buttonStyle(.plain)
     }
 
     // MARK: 実績・最近の回・解析について
@@ -338,7 +283,7 @@ struct DetailView: View {
             HStack {
                 sectionHead("寝落ちの実績")
                 Spacer()
-                Text("再生を始めてから眠るまで(ウォッチの実測)").ncText(NCText.caption, .textSub)
+                Text("再生を始めてから眠るまで(ヘルスケアの実測)").ncText(NCText.caption, .textSub)
             }.padding(.top, NCSpace.s2)
             card {
                 if let avg {
@@ -395,7 +340,7 @@ struct DetailView: View {
         guard let newest = scored.first?.0, let idx = episodes.firstIndex(where: { $0.id == newest.id }) else { return [] }
         let pending = episodes[..<idx].filter { model.analyses[$0.id]?.isJudged != true }.prefix(2)
         func label(_ e: Episode) -> String {
-            if let n = DetailMath.episodeNumber(e) { return "\(n)回" }
+            if let n = DetailMath.episodeNumber(e) { return "\(n)話" }
             return e.publishedAt.map { Self.monthDay.string(from: $0) } ?? ""
         }
         let cols = pending.map { RecentBars.Column(id: $0.id, label: label($0), value: nil, isLatest: false) }
@@ -403,9 +348,6 @@ struct DetailView: View {
         return cols.reversed()
     }
 
-    private static let monthDay: DateFormatter = {
-        let f = DateFormatter(); f.calendar = Calendar(identifier: .gregorian); f.dateFormat = "M/d"; return f
-    }()
 
     private var recent: some View {
         let cols = recentColumns
@@ -413,15 +355,15 @@ struct DetailView: View {
         let avg = DetailMath.mean(values) ?? 0
         return VStack(alignment: .leading, spacing: NCSpace.s2) {
             HStack {
-                sectionHead("最近の回")
+                sectionHead("最近の話")
                 Spacer()
-                Text("回ごとの評点").ncText(NCText.caption, .textSub)
+                Text("話ごとの評点").ncText(NCText.caption, .textSub)
             }.padding(.top, NCSpace.s2)
             card {
                 HStack(alignment: .center, spacing: NCSpace.s2) {
                     HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
                         Text(String(format: "%.1f", avg)).ncText(NCText.numMd, .accentFactor)
-                        Text("\(values.count)回の平均").ncText(NCText.footnote, .textSub)
+                        Text("\(values.count)話の平均").ncText(NCText.footnote, .textSub)
                     }
                     .accessibilityElement(children: .combine)
                     Spacer()
@@ -433,30 +375,6 @@ struct DetailView: View {
                 RecentBars(columns: cols, average: avg)
             }
         }
-    }
-
-    private func about(_ a: EpisodeAnalysis, episode: Episode) -> some View {
-        DisclosureGroup {
-            VStack(alignment: .leading, spacing: NCSpace.s2) {
-                Text(aboutText(a))
-                Text(NCString.rankCriteriaNote)
-            }
-            .ncText(NCText.footnote, .textSub).frame(maxWidth: .infinity, alignment: .leading).padding(.top, NCSpace.s2)
-        } label: {
-            Text("解析について").ncText(NCText.footnote, .textSub)
-        }.tint(Color.nc(.textSub))
-    }
-
-    private func aboutText(_ a: EpisodeAnalysis) -> String {
-        let depth: String
-        switch a.inputDepth {
-        case "audio": depth = "音響の分析だけで判定しています。"
-        case "transcript": depth = "冒頭を文字起こしして判定しています。"
-        default: depth = "番組の説明文だけで判定しています。"
-        }
-        let criteria = Explain.earParts(EpisodeAnalysis(episodeID: "", speechRate: 0, speechRateCV: 0, volumeStdDB: 0, suddenPer10Min: 0))
-            .map { "\($0.title): \($0.criterion)" }.joined(separator: "\n")
-        return "耳のゆるさの基準(★5が満点、★1が最低)\n" + criteria + "\n\n" + "音量の推移と突発音は、冒頭30分を測っています。話す速さと、起伏・興味の判定は、冒頭を文字起こしして行っています。30分以降を聴くのは寝つけなかったときだけなので、内容の評価は冒頭20分までにしています。" + depth
     }
 
     // MARK: 部品

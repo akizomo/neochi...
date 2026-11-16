@@ -46,6 +46,14 @@ final class DetailMathTests: XCTestCase {
         }
     }
 
+    func testExplainerURLMatchesPublishedSite() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../.github/workflows/site.yml").standardized
+        let yaml = try String(contentsOf: url, encoding: .utf8)
+        XCTAssertTrue(yaml.contains("https://\(NCString.explainerURL.host!)"))
+        XCTAssertTrue(NCString.explainerURL.absoluteString.hasSuffix("/about/"))
+    }
+
     func testRankMeaningMatchesZRankYaml() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("../../../config/z_rank.yaml").standardized
@@ -70,7 +78,7 @@ final class DetailMathTests: XCTestCase {
             }
         }
         XCTAssertEqual(NCString.rankMeaning(.zzz), "眠りたい夜は、まずこの番組")
-        XCTAssertTrue(NCString.rankCriteriaNote.contains("3.0") && NCString.rankCriteriaNote.contains("3.6") && NCString.rankCriteriaNote.contains("4.2"))
+        XCTAssertTrue(NCString.rankCriteriaNote.contains("3.6") && NCString.rankCriteriaNote.contains("4.1") && NCString.rankCriteriaNote.contains("4.5"))
     }
 
     func testDeltaTone() {

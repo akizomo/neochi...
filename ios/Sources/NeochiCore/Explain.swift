@@ -69,7 +69,7 @@ public enum Explain {
             let u = unit(s, best: c.suddenBest, worst: c.suddenWorst)
             let (v, good) = pick(u, "急に大きな音は、ほとんどありません", "急な音が、ときどきあります", "急な音が多めです")
             out.append(.init(title: "突発音", star: p?.sudden, measured: "10分に\(String(format: "%.1f", s))回", verdict: v,
-                             criterion: "0回なら満点、\(Int(c.suddenWorst))回で最低(屋外の音や、音の演出が多い回は、多めに数えます)", good: good,
+                             criterion: "0回なら満点、\(Int(c.suddenWorst))回で最低(屋外の音や、音の演出が多い話は、多めに数えます)", good: good,
                              short: "\(String(format: "%.1f", s))回/10分", fill: u))
         }
         return out
@@ -96,7 +96,7 @@ public enum Explain {
         }
     }
 
-    /// 🌊 起伏の少なさ(★)= 5 − 項目の合計 × 0.5。
+    /// 🌊 起伏の少なさ(★)= 5 − 項目の合計 × 0.75(下限 1.0)。
     public static func calmVerdict(_ items: [ScoredItem]) -> String {
         let sum = items.reduce(0) { $0 + $1.score }
         return sum == 0 ? "気持ちや頭を昂らせる要素は、見当たりませんでした"

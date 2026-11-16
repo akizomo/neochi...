@@ -15,7 +15,7 @@ final class HealthService {
     }
 
     /// 再生を始めた時刻 `start` 以降で、最初に「眠っている」と記録された時刻。なければ nil(確認中)。
-    /// ウォッチの推定は数分ずれることがある。分単位までにとどめる。
+    /// 睡眠の推定は数分ずれることがある。分単位までにとどめる。
     func sleepOnset(after start: Date, withinHours hours: Double = 6) async throws -> Date? {
         guard isAvailable else { return nil }
         let type = HKCategoryType(.sleepAnalysis)

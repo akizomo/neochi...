@@ -78,6 +78,9 @@ public struct EpisodeAnalysis: Hashable, Codable, Sendable {
     /// (`neochi/scoring.py` の is_judged と同じ)。
     public var isJudged: Bool { calmStar != nil && (interestScore != nil || interest != nil) }
 
+    /// 画面に出す評点。起伏と興味の判定が済むまでは出さない(耳のゆるさだけの点は高く出やすい。docs/SCORE.md §1)。
+    public var shownStar: Double? { isJudged ? finalStar : nil }
+
     /// 観点ごとの根拠に出せるものがあるか(説明文だけの解析には無い)。
     public var hasAnyAspect: Bool { calmStar != nil || earStar != nil || interest != nil }
 

@@ -13,7 +13,7 @@ struct TonightView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: NCSpace.s5) {
-                    if model.pendingMorning { recap }
+                    if model.morningDue { recap }
                     candidates
                     favorites
                 }
@@ -28,7 +28,7 @@ struct TonightView: View {
                 let next = night + (dx < 0 ? 1 : -1)
                 if labels.indices.contains(next) { withAnimation { night = next } }
             })
-            .navigationDestination(for: String.self) { DetailView(showID: $0) }
+            .appDestinations()
             .navigationTitle(labels[night])
             .toolbarTitleDisplayMode(.inlineLarge)
             .contentMargins(.top, NCSpace.s5, for: .scrollContent)
@@ -75,7 +75,7 @@ struct TonightView: View {
             let cards = Array(model.slate(night: night).enumerated())
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: NCSpace.s3) {
-                    ForEach(cards, id: \.offset) { _, c in
+                    ForEach(cards, id: \.element.stableID) { _, c in
                         TonightCard(candidate: c, primaryTitle: night == 0 ? "今夜聴く" : verbs[night], primaryIcon: "moon") {
                             model.reserve(night: night, c)
                         }
@@ -104,4 +104,9 @@ struct TonightView: View {
             }
         }
     }
+}
+
+private extension Candidate {
+    /// 並びが入れ替わっても、カードが同じ候補を指し続けるための識別子。
+    var stableID: String { "\(show.id)/\(episode?.id ?? "-")" }
 }

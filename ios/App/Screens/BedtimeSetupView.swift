@@ -5,7 +5,7 @@ import NeochiCore
 struct BedtimeSetupView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    /// 記録タブから開いた変更のとき。初回の質問と違い、夜の画面は開かず、「あとで」は「閉じる」。
+    /// 自分タブから開いた変更のとき。初回の質問と違い、夜の画面は開かず、「あとで」は「閉じる」。
     var editing = false
     @State private var time: Date
 
@@ -37,8 +37,8 @@ struct BedtimeSetupView: View {
         .frame(maxWidth: .infinity, alignment: .top) }
         .frame(maxHeight: .infinity)
         .background(Color.nc(.bgBase).ignoresSafeArea())
-        // 親指が届くよう、画面の下半分に収める。
-        .presentationDetents([.medium])
+        // 親指が届くよう、ふつうは下半分。小さい画面(SE など)では、スクロールなしで全部見えるよう全面にする。
+        .presentationDetents(UIScreen.main.bounds.height < 700 ? [.large] : [.medium, .large])
         .presentationDragIndicator(editing ? .visible : .hidden)
     }
 }
