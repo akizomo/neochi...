@@ -198,6 +198,17 @@ final class AppModel {
         return max(0, Int((o.timeIntervalSince(s) / 60).rounded()))
     }
 
+    /// ヘルスケアの許可の状態(自分タブで案内に使う)。
+    var healthAccess: HealthService.Access = .asked
+    func refreshHealthAccess() async { healthAccess = await health.access() }
+
+    /// 「許可する」。まだ聞いていないときだけ、システムの許可画面が出る。聞いたあとは、ヘルスケアの設定でしか変えられない。
+    func requestHealth() async {
+        try? await health.requestAuthorization()
+        await refreshHealthAccess()
+        await loadHealthBedtimes()
+    }
+
     func refreshOnset() async {
         guard let s = playStartedAt else { return }
         do {
