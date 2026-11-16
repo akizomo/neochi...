@@ -96,7 +96,7 @@ struct MorningView: View {
     /// そのコンテンツの評価。2つの質問は、同じ部品(`ChoiceScale`)で出す。
     private var ratingSection: some View {
         Section {
-            InterestScale(selection: $interest)
+            InterestRatingPicker(selection: $interest)
                 .listRowBackground(Color.nc(.surface))
             ChoiceScale(question: NCString.calmQuestion, info: NCString.infoCalm, count: 5, selection: $calm,
                         leading: NCString.calmLow, trailing: NCString.calmHigh)

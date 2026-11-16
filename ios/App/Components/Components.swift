@@ -358,7 +358,7 @@ struct ChoiceScale: View {
 }
 
 /// 🎯 の10段階。選んだ数字が、どのゾーンで何を意味するかを、すぐ下に出す。ゾーンの早見表も常に見える(色だけに頼らず、言葉で書く)。
-struct InterestScale: View {
+struct InterestRatingPicker: View {
     @Binding var selection: Int?
 
     var body: some View {
