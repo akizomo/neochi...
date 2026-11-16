@@ -361,6 +361,36 @@ struct ChoiceScale: View {
 struct InterestRatingPicker: View {
     @Binding var selection: Int?
 
+    /// Slider は Double。未入力の間は左端(1)に置く。
+    private var sliderValue: Binding<Double> {
+        Binding(
+            get: { Double(selection ?? 1) },
+            set: { selection = Int($0.rounded()) }
+        )
+    }
+
+    /// 選んだ数字とゾーン名。未入力の間は案内を出す。答えない に戻すボタンは、場所が動かないよう常に場所を取る。
+    private var valueRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: NCSpace.s2) {
+            if let v = selection {
+                Text("\(v)").ncText(NCText.numLg, .textMain, relativeTo: .largeTitle)
+                Text(NCString.interestZoneName(NCString.interestZone(v))).ncText(NCText.headline, .textSub)
+            } else {
+                Text("スライダーを動かして答えてください").ncText(NCText.footnote, .textSub)
+            }
+            Spacer()
+            Button("答えない") { selection = nil }
+                .ncText(NCText.footnote, .accentResult)
+                .opacity(selection == nil ? 0 : 1)
+                .disabled(selection == nil)
+                .accessibilityHidden(selection == nil)
+        }
+        .frame(minHeight: 44)
+        .onChange(of: selection) { _, new in
+            if new != nil { UISelectionFeedbackGenerator().selectionChanged() }
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: NCSpace.s2) {
             HStack {
@@ -368,16 +398,22 @@ struct InterestRatingPicker: View {
                 Spacer()
                 InfoButton(text: NCString.infoInterest)
             }
-            Picker(NCString.interestQuestion, selection: $selection) {
-                ForEach(1...10, id: \.self) { Text("\($0)").tag(Optional($0)) }
-            }
-            .pickerStyle(.segmented).labelsHidden()
+            valueRow
+            Slider(value: sliderValue, in: 1...10, step: 1, onEditingChanged: { editing in
+                // 触った時点で、はじめて値を入れる(位置は左端の1。中央に置かない)。
+                if editing, selection == nil { selection = 1 }
+            })
+            .tint(Color.nc(.accentResult))
+            .opacity(selection == nil ? 0.4 : 1)
+            .accessibilityLabel(NCString.interestQuestion)
+            .accessibilityValue(selection.map { "10段階の\($0)" } ?? "未入力")
             HStack {
                 Text(NCString.interestLow)
                 Spacer()
                 Text(NCString.interestHigh)
             }
             .ncText(NCText.footnote, .textSub)
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: NCSpace.s1) {
                 ForEach(NCString.InterestZone.allCases, id: \.self) { z in
                     let on = selection.map { NCString.interestZone($0) == z } ?? false
