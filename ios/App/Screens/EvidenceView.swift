@@ -207,6 +207,7 @@ struct AboutAnalysis: View {
             VStack(alignment: .leading, spacing: NCSpace.s2) {
                 Text(aboutText(a))
                 Text(NCString.rankCriteriaNote)
+                Link(NCString.explainerLinkLabel, destination: NCString.explainerURL)
             }
             .ncText(NCText.footnote, .textSub).frame(maxWidth: .infinity, alignment: .leading).padding(.top, NCSpace.s2)
         } label: {

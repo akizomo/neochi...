@@ -46,6 +46,14 @@ final class DetailMathTests: XCTestCase {
         }
     }
 
+    func testExplainerURLMatchesPublishedSite() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../.github/workflows/site.yml").standardized
+        let yaml = try String(contentsOf: url, encoding: .utf8)
+        XCTAssertTrue(yaml.contains("https://\(NCString.explainerURL.host!)"))
+        XCTAssertTrue(NCString.explainerURL.absoluteString.hasSuffix("/about/"))
+    }
+
     func testRankMeaningMatchesZRankYaml() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("../../../config/z_rank.yaml").standardized

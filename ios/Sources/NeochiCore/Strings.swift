@@ -76,6 +76,10 @@ public enum NCString {
         }
     }
 
+    /// 「スコアと根拠」のページ(サイトの about/。出典つき)。公開先は .github/workflows/site.yml と同じ。
+    public static let explainerURL = URL(string: "https://neochipickzz.vercel.app/about/")!
+    public static let explainerLinkLabel = "スコアと根拠を見る(出典つき)"
+
     /// 「解析について」に書く、格付けの基準。
     public static var rankCriteriaNote: String {
         let f = { (r: ZRank) in String(format: "%.1f", RankCriteria.minStar(r)) }

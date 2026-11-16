@@ -117,7 +117,7 @@ def test_index_has_rank_guide_and_no_star_on_total(tmp_path):
 
 
 def test_explainer_page_cites_every_source_and_marks_strength(tmp_path):
-    """スコアと根拠のページ: 本文の [n] がすべて出典に対応し、各項目に根拠の強さ(研究から推論/仮説)が付く。数値は config から出る。"""
+    """スコアと根拠のページ: 本文の [n] がすべて出典に対応し、各項目に根拠の強さ(◯ 関連研究 / △ 仮説)が付く。数値は config から出る。"""
     import re
 
     cfg = cli.load_config()
@@ -128,8 +128,8 @@ def test_explainer_page_cites_every_source_and_marks_strength(tmp_path):
     assert cited and cited <= listed and len(listed) == 8
     items = re.findall(r"<dt>(.*?)</dt>", h)
     scored = [i for i in items if 'class="tag' in i]
-    assert len(scored) >= 10 and all(("研究から推論" in i) or ("仮説" in i) for i in scored)
+    assert len(scored) >= 10 and all(("◯ 関連研究" in i) or ("△ 仮説" in i) for i in scored)
     w = cfg["total"]["weights"]
     assert f"起伏の少なさ {w['calm']:.1f}、程よい興味 {w['interest']:.1f}、耳のゆるさ {w['ear']:.1f}" in h
-    assert "聴けば眠れる、という約束ではありません" in h
+    assert "眠れることの約束ではありません" in h
     assert "スコアと根拠" in (tmp_path / "index.html").read_text(encoding="utf-8")
