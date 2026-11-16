@@ -316,9 +316,13 @@ svg text { font-family: var(--sans); }
 .ep-head h1 { margin: 0 0 4px; font-size: 22px; line-height: 30px; }
 
 /* 作った人・応援 */
-.foot .foot-made { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; }
-.bmc { display: inline-flex; }
-.bmc img { height: 36px; width: auto; border-radius: 6px; }
+/* 応援(Buy Me a Coffee): 画面の右下に固定。ページの縦の並びを増やさない */
+.bmc-fab { position: fixed; z-index: 40; right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom)); display: block; line-height: 0;
+  border-radius: 8px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28); }
+.bmc-fab img { height: 36px; width: auto; border-radius: 8px; }
+@media (max-width: 480px) { .bmc-fab img { height: 32px; } }
+@media print { .bmc-fab { display: none; } }
 
 /* ランキングの対象(番組/話)の切り替え */
 .seg { display: inline-flex; gap: 4px; padding: 4px; margin: 8px 0 12px; background: var(--surface); border-radius: 9999px; }

@@ -173,11 +173,13 @@ def test_episodes_page_and_links_have_arrows(tmp_path):
 
 
 def test_maker_and_support_links(tmp_path):
-    """応援の枠(Buy Me a Coffee)は、全ページのフッターだけ。「解析について」の作った人にも、リンクがある。外へのリンクは noopener。"""
+    """応援(Buy Me a Coffee)は、全ページの右下に固定の公式ボタンだけ。フッターは「made by」の文字。「解析について」の作った人にも、リンクがある。外へのリンクは noopener。"""
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     for path in ("index.html", "about/index.html", "shows/a/index.html", "shows/a/episodes/a1/index.html"):
         h = (tmp_path / path).read_text(encoding="utf-8")
-        assert h.count("buymeacoffee.com/akizomo") == (2 if path == "about/index.html" else 1) and 'class="foot-made"' in h and "made by akihiro uezono" in h and "個人で作っています。</span>" not in h and "img.buymeacoffee.com/button-api" in h and "コーヒーで応援する" in h, path
+        assert h.count("buymeacoffee.com/akizomo") == (2 if path == "about/index.html" else 1), path
+        assert 'class="bmc-fab"' in h and "img.buymeacoffee.com/button-api" in h and "コーヒーで応援する" in h, path
+        assert 'class="foot-made">made by akihiro uezono</p>' in h, path
         assert "作った人" not in h or path == "about/index.html"
     about = (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
     assert "作った人" in about and "akihiro uezono" in about and 'href="https://github.com/akizomo"' in about
