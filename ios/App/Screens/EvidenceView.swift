@@ -36,7 +36,7 @@ struct EvidenceView: View {
                 Divider().overlay(Color.nc(.line))
                 if let l = a.interest {
                     let total = a.interestScore ?? Explain.interestTotal(a.interestItems)
-                    axis("程よい興味", text: interestWord(l), tone: .interest(l)) { interestDetail(a, total: total) }
+                    axis("程よい興味", text: interestWord(l), tone: .interestTotal(total)) { interestDetail(a, total: total) }
                 } else {
                     pendingAxis("程よい興味")
                 }

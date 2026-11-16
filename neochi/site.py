@@ -177,7 +177,14 @@ def tone_star(v: float) -> str:
     return tone_u((float(v) - 1) / 4)
 
 
-INTEREST_TONE = {"low": "mid", "mid": "good", "high": "bad"}   # config/scoring.yaml の interest_star(3.0 / 5.0 / 2.0)と同じ向き
+def tone_interest(total: int) -> str:
+    """引き込み力(1〜10)の色。4〜6 から離れるほど良くない: 4〜6 は緑、1つ外れ(3・7)は琥珀、2つ以上外れ(1・2・8〜10)は赤。"""
+    d = 4 - total if total < 4 else total - 6 if total > 6 else 0
+    return "good" if d == 0 else "mid" if d == 1 else "bad"
+
+
+# 引き込み力の数字がない、古い3段階だけの判定。low(1〜3)と high(7〜10)は、離れ方が分からないので琥珀
+INTEREST_TONE = {"low": "mid", "mid": "good", "high": "mid"}
 CALM_ITEM_TONE = {0: "good", 1: "mid"}                           # 2点以上は bad
 
 
@@ -674,10 +681,10 @@ def part_rows(parts: list[dict]) -> str:
         f'<span class="num tc t-{p["tone"]}">{n1(p["star"])}</span></li>' for p in parts) + "</ul>"
 
 
-def interest_scale(total: int, level: str | None = None) -> str:
+def interest_scale(total: int) -> str:
     cells = "".join(f'<span class="{"zone " if 4 <= i <= 6 else ""}{"on" if i == total else ""}"><i></i><b>{i}</b></span>'
                     for i in range(1, 11))
-    tone = INTEREST_TONE.get(level or ("low" if total <= 3 else "mid" if total <= 6 else "high"), "mid")
+    tone = tone_interest(total)
     return f'<div class="scale t-{tone}" role="img" aria-label="引き込み力 {total}、10段階。4〜6が寝落ち向き">{cells}</div><p class="cap">4〜6が寝落ち向き</p>'
 
 
@@ -723,8 +730,8 @@ def evidence(e: dict, a: dict, cfg: dict, lang: str) -> str:
             body += f'<div class="summary"><p class="cap">この話の内容(AIの要約)</p><p>{escape(a["content_summary"])}</p></div>'
         if int_items:
             body += item_rows(int_items, INTEREST_LABELS)
-        body += interest_scale(int(total), lv)
-        rows.append(axis_row("程よい興味", f'<span class="tc t-{INTEREST_TONE.get(lv, "mid")}">{INTEREST_WORD.get(lv, lv)}</span>', body))
+        body += interest_scale(int(total))
+        rows.append(axis_row("程よい興味", f'<span class="tc t-{tone_interest(int(total))}">{INTEREST_WORD.get(lv, lv)}</span>', body))
     else:
         rows.append(f'<div class="axis pending"><span>程よい興味</span><span class="cap">判定待ち</span></div>')
     n = episode_number(e.get("title") or "")
@@ -838,7 +845,9 @@ def tendency(s: dict) -> str:
     an = [a for _, a in s["analyzed"]]
     calm = [float(a["calm_star"]) for a in an if a.get("calm_star") is not None]
     ear = [float(a["ear_star"]) for a in an if a.get("ear_star") is not None]
-    level = next((a["interest_level"] for a in an if a.get("interest_level")), None)
+    la = next((a for a in an if a.get("interest_level")), None)
+    level = la["interest_level"] if la else None
+    level_tone = (tone_interest(int(la["interest_score"])) if la and la.get("interest_score") else INTEREST_TONE.get(level, "mid"))
     line = next(((a.get("reasons") or {}).get("llm") for a in an if (a.get("reasons") or {}).get("llm")), None)
     if not (line or calm or ear or level):
         return ""
@@ -848,7 +857,7 @@ def tendency(s: dict) -> str:
     if ear:
         rows.append(f'<div class="row-between"><span>耳のゆるさ</span>{star(mean(ear), f"star t-{tone_star(mean(ear))}")}</div>')
     if level:
-        rows.append(f'<div class="row-between"><span>程よい興味</span><span class="tc t-{INTEREST_TONE.get(level, "mid")}">{INTEREST_WORD.get(level, level)}</span></div>')
+        rows.append(f'<div class="row-between"><span>程よい興味</span><span class="tc t-{level_tone}">{INTEREST_WORD.get(level, level)}</span></div>')
     body = (f"<p>{escape(line)}</p>" if line else "") + "".join(rows)
     return (f'<section class="sec"><div class="sec-head"><h2>この番組の傾向</h2><span class="cap">AI解析、話の平均</span></div>'
             f'<div class="card">{body}</div></section>')

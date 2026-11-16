@@ -35,11 +35,15 @@ public enum EvidenceTone: Sendable, Equatable {
 
     public static func unit(_ u: Double) -> EvidenceTone { u >= 0.7 ? .good : u >= 0.3 ? .mid : .bad }
     public static func star(_ v: Double) -> EvidenceTone { unit((v - 1) / 4) }
-    /// `config/scoring.yaml` の interest_star(low 3.0 / mid 5.0 / high 2.0)と同じ向き。
+    /// 引き込み力の数字がない、古い3段階だけの判定。low(1〜3)と high(7〜10)は、離れ方が分からないので琥珀。
     public static func interest(_ l: InterestLevel) -> EvidenceTone {
-        switch l { case .low: .mid; case .mid: .good; case .high: .bad }
+        switch l { case .low: .mid; case .mid: .good; case .high: .mid }
     }
-    public static func interestTotal(_ t: Int) -> EvidenceTone { t <= 3 ? .mid : t <= 6 ? .good : .bad }
+    /// 引き込み力(1〜10)。4〜6 から離れるほど良くない: 4〜6 は緑、1つ外れ(3・7)は琥珀、2つ以上外れ(1・2・8〜10)は赤。
+    public static func interestTotal(_ t: Int) -> EvidenceTone {
+        let d = t < 4 ? 4 - t : t > 6 ? t - 6 : 0
+        return d == 0 ? .good : d == 1 ? .mid : .bad
+    }
     /// 起伏の項目(0〜2点)。興味の項目は、1つずつでは良し悪しが決まらないので使わない。
     public static func calmItem(_ score: Int) -> EvidenceTone { score <= 0 ? .good : score == 1 ? .mid : .bad }
 
