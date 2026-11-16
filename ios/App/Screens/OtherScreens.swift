@@ -82,15 +82,24 @@ struct DiscoverView: View {
     @ViewBuilder private func chip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         let label = Text(title).ncText(NCText.body, selected ? .bgBase : .textMain)
             .padding(.horizontal, NCSpace.s4).frame(minHeight: NCSize.tapMin)
+        // iOS 26 の SDK(Swift 6.2 以降)でビルドするときだけ、ガラスのチップを使う。古い SDK(CI)では下の通常の見た目になる
+        #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             Button(action: action) { label }
                 .glassEffect(selected ? .regular.tint(Color.nc(.textMain)).interactive() : .regular.interactive(), in: Capsule())
         } else {
-            Button(action: action) {
-                label
-                    .background(Capsule().fill(selected ? Color.nc(.textMain) : Color.nc(.bgBase)))
-                    .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: selected ? 0 : NCSize.borderW))
-            }
+            plainChip(label, selected: selected, action: action)
+        }
+        #else
+        plainChip(label, selected: selected, action: action)
+        #endif
+    }
+
+    private func plainChip(_ label: some View, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            label
+                .background(Capsule().fill(selected ? Color.nc(.textMain) : Color.nc(.bgBase)))
+                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: selected ? 0 : NCSize.borderW))
         }
     }
 }
@@ -251,6 +260,10 @@ struct LogRoute: Hashable { let id: String }
 /// iOS 26: スクロールの上端を、標準のぼかし(固定したチップの下で、一覧がやわらかく消える)にする。
 private struct SoftTopEdge: ViewModifier {
     func body(content: Content) -> some View {
+        #if compiler(>=6.2)
         if #available(iOS 26.0, *) { content.scrollEdgeEffectStyle(.soft, for: .top) } else { content }
+        #else
+        content
+        #endif
     }
 }
