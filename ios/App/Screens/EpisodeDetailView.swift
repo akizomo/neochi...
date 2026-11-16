@@ -56,7 +56,9 @@ struct EpisodeDetailView: View {
                 ArtworkView(show: show, size: NCSize.artworkS, showsRank: true)
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
                     Text(show.title).ncText(NCText.headline).lineLimit(1)
-                    Text("番組を見る").ncText(NCText.footnote, .textSub)
+                    // 番組の評点は、ここに小さく出す。主役は下の「この話の評点」
+                    Text(show.star.map { "番組の評点 ★\(String(format: "%.1f", $0))" } ?? "番組を見る")
+                        .ncText(NCText.footnote, .textSub)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.nc(.textSub))
@@ -87,31 +89,17 @@ struct EpisodeDetailView: View {
     // MARK: 評点
 
     @ViewBuilder private func scoreCard(_ show: Show, _ a: EpisodeAnalysis?) -> some View {
+        // 番組の評点は、上の番組の行に小さく出している。ここは、この話の評点だけ(同じ大きさで並べない)。
         if let star = a?.shownStar {
             VStack(alignment: .leading, spacing: NCSpace.s2) {
-                HStack(alignment: .top, spacing: NCSpace.s4) {
-                    VStack(alignment: .leading, spacing: NCSpace.s1) {
-                        Text("この話の評点").ncText(NCText.caption, .textSub)
-                        StarScore(star: star)
-                    }
-                    if let s = show.star {
-                        Rectangle().fill(Color.nc(.line)).frame(width: 1, height: 56)
-                        VStack(alignment: .leading, spacing: NCSpace.s1) {
-                            Text("番組の評点").ncText(NCText.caption, .textSub)
-                            StarScore(star: s, style: NCText.numMd)
-                        }
-                    }
-                    Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: NCSpace.s1) {
+                    Text("この話の評点").ncText(NCText.caption, .textSub)
+                    StarScore(star: star)
                 }
                 if let s = show.star, abs(star - s) >= 0.1 {
                     DeltaPill(delta: star - s, polarity: .higherIsBetter, format: { String(format: "%.1f", $0) },
                               caption: "番組の評点より", spoken: ("高い", "低い"))
                 }
-            }
-        } else if let s = show.star {
-            VStack(alignment: .leading, spacing: NCSpace.s1) {
-                Text("番組の評点(この話は、解析待ち)").ncText(NCText.caption, .textSub)
-                StarScore(star: s)
             }
         }
     }

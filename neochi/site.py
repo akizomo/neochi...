@@ -950,18 +950,20 @@ def episode_html(s: dict, e: dict, a: dict | None, base_url: str, cfg: dict) -> 
         diff = ""
         if abs(d) >= 0.1:
             diff = delta_pill(d, True, lambda x: f"{x:.1f}", "番組の評点より")
-        score_html = (f'<section class="duo"><div><p class="cap">この話の評点</p>{score(v, "big")}</div><span class="vr"></span>'
-                      f'<div><p class="cap">番組の評点</p>{score(s["show_star"], "big")}</div></section>'
+        # 主役はこの話の評点。番組の評点は、上の番組の行に小さく出す(同じ大きさで並べると、どちらの話か迷う)
+        score_html = (f'<section class="sec ep-score"><p class="cap">この話の評点</p>{score(v, "big")}</section>'
                       + (f'<p>{diff}</p>' if diff else ""))
     else:
-        score_html = (f'<section class="sec"><p class="cap">番組の評点(この話は、解析待ち)</p>{score(s["show_star"], "big")}</section>'
-                      '<p class="cap">この話は、まだ解析していません。</p>')
+        score_html = '<p class="cap">この話は、まだ解析していません。</p>'
     links = []
     if e.get("link_url"):
         links.append(f'<a class="btn" href="{escape(e["link_url"])}" rel="noopener" target="_blank">配信元で聴く</a>')
     elif s.get("apple_url"):
         links.append(f'<a class="btn" href="{escape(s["apple_url"])}" rel="noopener" target="_blank">Apple Podcasts で聴く</a>')
-    parts = [f"""<p class="back"><a href="../../">{escape(s['title'])}</a></p>
+    show_row = (f'<a class="show-row" href="../../">{artwork(s.get("artwork_url"), "art-xs")}'
+                f'<span class="show-row-text"><b>{escape(s["title"])}</b><span class="cap">番組の評点 {n1(s["show_star"])}</span></span>'
+                f'<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2l4 4-4 4"/></svg></a>')
+    parts = [f"""{show_row}
 <section class="detail-title ep-head">
 <h1>{ep_title(e)}</h1>
 <p class="cap">{meta}</p>
