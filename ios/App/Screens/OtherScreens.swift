@@ -15,19 +15,32 @@ struct DiscoverView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: NCSpace.s6) {
-                    if let best = Discover.best(model.shows) { BestCard(show: best) }
-                    shelf("寝落ち用の、上位", note: "寝落ち用・朗読・環境音の中から", Discover.sleepMade(model.shows))
-                    shelf("寝落ち用ではないのに、寝落ちできる番組", note: "コメディ・雑談・教養の中から", Discover.notSleepMade(model.shows))
-                    browser
+                // 系統のチップは、一覧まで来たら画面の上に固定する(絞り込みを、どこからでも変えられる)。
+                LazyVStack(alignment: .leading, spacing: NCSpace.s6, pinnedViews: [.sectionHeaders]) {
+                    VStack(alignment: .leading, spacing: NCSpace.s6) {
+                        if let best = Discover.best(model.shows) { BestCard(show: best) }
+                        shelf("寝落ち用の、上位", note: "寝落ち用・朗読・環境音の中から", Discover.sleepMade(model.shows))
+                        shelf("寝落ち用ではないのに、寝落ちできる番組", note: "コメディ・雑談・教養の中から", Discover.notSleepMade(model.shows))
+                        Text("系統で探す").ncText(NCText.headline)
+                    }
+                    .padding(.horizontal, NCSpace.s5).padding(.top, NCSpace.s5)   // 固定するチップの位置に響かないよう、余白は中身に付ける
+                    Section {
+                        VStack(alignment: .leading, spacing: NCSpace.s3) {
+                            ForEach(list) { show in
+                                NavigationLink(value: show.id) {
+                                    ScoreRow(show: show, isFavorite: model.favorites.contains(show.id)) { model.toggleFavorite(show) }
+                                }.buttonStyle(.pressable)
+                            }
+                        }
+                        .padding(.horizontal, NCSpace.s5).padding(.bottom, NCSpace.s8)
+                    } header: { genreChips }
                 }
-                .padding(.horizontal, NCSpace.s5).padding(.bottom, NCSpace.s8)
             }
             .background(Color.nc(.bgBase))
+            .modifier(SoftTopEdge())
             .navigationDestination(for: String.self) { DetailView(showID: $0) }
             .navigationTitle("見つける")
             .toolbarTitleDisplayMode(.inlineLarge)
-            .contentMargins(.top, NCSpace.s5, for: .scrollContent)
         }
     }
 
@@ -52,30 +65,32 @@ struct DiscoverView: View {
         }
     }
 
-    /// 系統で絞れる一覧。評点の高い順。
-    private var browser: some View {
-        VStack(alignment: .leading, spacing: NCSpace.s3) {
-            Text("系統で探す").ncText(NCText.headline)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: NCSpace.s2) {
-                    chip("すべて", selected: genre == nil) { genre = nil }
-                    ForEach(genres, id: \.self) { g in chip(g, selected: genre == g) { genre = g } }
-                }
+    /// 系統のチップ。固定しても帯は敷かない(iOS 26 では、チップ自体がガラスで、上端は標準のぼかし)。
+    private var genreChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: NCSpace.s2) {
+                chip("すべて", selected: genre == nil) { genre = nil }
+                ForEach(genres, id: \.self) { g in chip(g, selected: genre == g) { genre = g } }
             }
-            ForEach(list) { show in
-                NavigationLink(value: show.id) {
-                    ScoreRow(show: show, isFavorite: model.favorites.contains(show.id)) { model.toggleFavorite(show) }
-                }.buttonStyle(.pressable)
-            }
+            .padding(.horizontal, NCSpace.s5)
         }
+        .padding(.vertical, NCSpace.s2)
+        .frame(maxWidth: .infinity)
+        .scrollClipDisabled()
     }
 
-    private func chip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).ncText(NCText.body, selected ? .bgBase : .textMain)
-                .padding(.horizontal, NCSpace.s4).frame(minHeight: NCSize.tapMin)
-                .background(Capsule().fill(selected ? Color.nc(.textMain) : Color.clear))
-                .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: selected ? 0 : NCSize.borderW))
+    @ViewBuilder private func chip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        let label = Text(title).ncText(NCText.body, selected ? .bgBase : .textMain)
+            .padding(.horizontal, NCSpace.s4).frame(minHeight: NCSize.tapMin)
+        if #available(iOS 26.0, *) {
+            Button(action: action) { label }
+                .glassEffect(selected ? .regular.tint(Color.nc(.textMain)).interactive() : .regular.interactive(), in: Capsule())
+        } else {
+            Button(action: action) {
+                label
+                    .background(Capsule().fill(selected ? Color.nc(.textMain) : Color.nc(.bgBase)))
+                    .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: selected ? 0 : NCSize.borderW))
+            }
         }
     }
 }
@@ -217,3 +232,10 @@ struct LogView: View {
 }
 
 struct LogRoute: Hashable { let id: String }
+
+/// iOS 26: スクロールの上端を、標準のぼかし(固定したチップの下で、一覧がやわらかく消える)にする。
+private struct SoftTopEdge: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) { content.scrollEdgeEffectStyle(.soft, for: .top) } else { content }
+    }
+}
