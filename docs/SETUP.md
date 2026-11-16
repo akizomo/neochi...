@@ -150,3 +150,28 @@ App Store の審査と、ヘルスケアのデータを扱うアプリに必要�
    - 確認: 使えるハンドルを、1つ決めた。
 4. 商標: J-PlatPat(特許情報プラットフォーム)の商標検索で、「neochi」と「ネオチ」を検索する。区分は、アプリ(9類)を中心に、近い区分(41類、42類など)も見る。
    - 確認: 同一や似た商標が、ないことを確かめた。あれば、結果を私に教えてほしい。
+
+## G. Apple でログイン(Sign in with Apple)
+
+アプリは匿名ログインで使い始め、アカウント画面(記録タブの右上)で Apple に連携する。連携すると、機種変更や入れ直しのあとも記録を引き継げる。実装は `ios/App/Screens/AccountView.swift` と `SupabaseClient.linkApple`。
+
+1. App ID: developer.apple.com → Identifiers → 該当の App ID → Capabilities で、Sign in with Apple を有効にする(済み)。
+   - 確認: 一覧で、Sign in with Apple と HealthKit の両方が有効になっている。
+2. Supabase: Authentication → Sign In / Providers。
+   - Apple をオンにし、Client IDs に **bundle ID**(`ios/project.yml` の `PRODUCT_BUNDLE_IDENTIFIER`)を入れる。アプリだけなら、Services ID と秘密鍵は要らない。
+   - 「Allow manual linking」をオンにする(匿名ユーザーに Apple を連携するために必要)。
+   - 確認: 両方が保存され、緑の表示になっている。
+3. アカウント削除の関数を載せる(App Store の審査で、アプリ内からの削除が求められる)。
+   ```bash
+   supabase functions deploy delete-account --project-ref <プロジェクトの ref>
+   ```
+   - 確認: Functions の一覧に delete-account が出る。
+4. 実機で確かめる(シミュレーターでは Apple ID のログインが不安定なので、実機):
+   - 記録タブ → 右上のアカウント → 「Apple でサインイン」。完了後、「ログイン中 Apple」と出る。
+   - Supabase の Authentication → Users で、同じユーザーに Apple の identity が付き、**匿名のときの user_id が変わっていない**(これまでの `sleep_log` が残る)。
+   - 「ログアウト」→ もう一度 Apple でサインイン → 前の記録が見える。
+   - 未確認の点: 連携済みの Apple ID でサインインしたときの動き(別ユーザーとして入り直す)。Supabase の公式の文書には、このときのエラーが書かれていない。実機で一度試して、結果を教えてほしい。
+
+## bundle ID の決め直し(公開前に一度だけ)
+
+bundle ID は App Store Connect でアプリを作ったあとは変えられない。変えるなら、TestFlight のテスターとビルド履歴を引き継げず、Apple ログインの連携も切れる。自分のドメインがなくても、逆ドメイン形式は Apple が所有を確かめない(例: `com.<自分の名前>.neochi`)。変えるなら、App ID の再登録(Sign in with Apple と HealthKit)、`project.yml` の `PRODUCT_BUNDLE_IDENTIFIER` と `bundleIdPrefix`、Supabase の Apple の Client IDs、App Store Connect のアプリ作成を、やり直す。
