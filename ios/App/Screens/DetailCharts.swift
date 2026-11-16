@@ -239,14 +239,15 @@ struct InterestScale: View {
     let total: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: NCSpace.s1) {
+        let on = EvidenceTone.interestTotal(total).color   // 4〜6 は緑、1〜3 は琥珀、7〜10 は赤
+        return VStack(alignment: .leading, spacing: NCSpace.s1) {
             HStack(spacing: 3) {
                 ForEach(1...10, id: \.self) { i in
                     VStack(spacing: NCSpace.s1) {
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(i == total ? Color.nc(.accentFactor) : Color.nc(.line))
+                            .fill(i == total ? Color.nc(on) : Color.nc(.line))
                             .frame(height: 8)
-                        Text("\(i)").font(.nc(NCText.numXs)).foregroundStyle(Color.nc(i == total ? .accentFactor : .textSub))
+                        Text("\(i)").font(.nc(NCText.numXs)).foregroundStyle(Color.nc(i == total ? on : .textSub))
                     }
                     .padding(.vertical, NCSpace.s1)
                     .background((4...6).contains(i) ? Color.nc(.surfacePressed) : Color.clear)

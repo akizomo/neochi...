@@ -259,3 +259,15 @@ def test_brand_matches_tokens_and_exports():
         assert (root / "design/brand" / f).exists(), f
     # 同じページにワードマークを2つ置いても、clipPath の名前が重ならない
     assert brand.wordmark("#fff", uid="a") .count('id="a0"') == 1 and 'id="b0"' in brand.wordmark("#fff", uid="b")
+
+
+def test_evidence_tones_show_good_mid_bad(tmp_path):
+    """観点ごとの根拠は、緑(向く)・琥珀(ふつう)・赤(向かない)で色を分ける。区切りは Explain.swift の EvidenceTone と同じ。"""
+    assert [site.tone_star(v) for v in (4.5, 3.8, 3.5, 2.2, 2.0)] == ["good", "good", "mid", "mid", "bad"]
+    assert site.INTEREST_TONE == {"low": "mid", "mid": "good", "high": "bad"}
+    site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
+    h = (tmp_path / "shows" / "a" / "episodes" / "a1" / "index.html").read_text(encoding="utf-8")
+    assert 'class="star t-good"' in h                               # 起伏 ★4.5
+    assert '<li class="t-good"><span>感情の強さ' in h and '<li class="t-mid"><span>対立・緊張' in h
+    assert '<span class="tc t-good">ちょうどよい</span>' in h
+    assert '<div class="scale t-good"' in h

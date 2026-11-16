@@ -196,23 +196,24 @@ struct DetailView: View {
                 card {
                     if let line { Text(line).ncText(NCText.body) }
                     // 3つの観点は、いつも並べる。判定がまだの観点は「判定待ち」(1つだけ出すと、それが番組の評価に見える)。
-                    if let v = a?.calmStar { tendencyRow("起伏の少なさ", star: v) } else { tendencyRow("起伏の少なさ", pending: true) }
-                    if let v = a?.earStar { tendencyRow("耳のゆるさ", star: v) } else { tendencyRow("耳のゆるさ", pending: true) }
-                    if let l = a?.interest { tendencyRow("程よい興味", text: NCString.interestWord(l)) } else { tendencyRow("程よい興味", pending: true) }
+                    if let v = a?.calmStar { tendencyRow("起伏の少なさ", star: v, tone: .star(v)) } else { tendencyRow("起伏の少なさ", pending: true) }
+                    if let v = a?.earStar { tendencyRow("耳のゆるさ", star: v, tone: .star(v)) } else { tendencyRow("耳のゆるさ", pending: true) }
+                    if let l = a?.interest { tendencyRow("程よい興味", text: NCString.interestWord(l), tone: .interest(l)) } else { tendencyRow("程よい興味", pending: true) }
                 }
             }
         }
     }
 
-    private func tendencyRow(_ title: String, star: Double? = nil, text: String? = nil, pending: Bool = false) -> some View {
+    private func tendencyRow(_ title: String, star: Double? = nil, text: String? = nil, tone: EvidenceTone = .mid,
+                             pending: Bool = false) -> some View {
         HStack {
             Text(title).ncText(NCText.body)
             Spacer()
             if let star {
-                Text("★").ncText(NCText.numSm, .accentFactor)
-                Text(String(format: "%.1f", star)).ncText(NCText.numMd, .accentFactor)
+                Text("★").ncText(NCText.numSm, tone.color)
+                Text(String(format: "%.1f", star)).ncText(NCText.numMd, tone.color)
             } else if let text {
-                Text(text).ncText(NCText.body, .accentFactor)
+                Text(text).ncText(NCText.body, tone.color)
             } else if pending {
                 Text(NCString.judgePending).ncText(NCText.footnote, .textSub)
             }

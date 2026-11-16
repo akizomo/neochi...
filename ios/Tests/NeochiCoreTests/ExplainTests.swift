@@ -49,4 +49,18 @@ final class ExplainTests: XCTestCase {
     func testPartsOmittedWhenNoData() {
         XCTAssertTrue(Explain.earParts(analysis()).isEmpty)
     }
+
+    /// 根拠の色の区切り。サイト(neochi/site.py の tone_star など)と同じ。
+    func testEvidenceTone() {
+        XCTAssertEqual(EvidenceTone.star(4.5), .good); XCTAssertEqual(EvidenceTone.star(3.8), .good)
+        XCTAssertEqual(EvidenceTone.star(3.5), .mid); XCTAssertEqual(EvidenceTone.star(2.2), .mid)
+        XCTAssertEqual(EvidenceTone.star(2.0), .bad)
+        XCTAssertEqual(EvidenceTone.interest(.mid), .good); XCTAssertEqual(EvidenceTone.interest(.low), .mid)
+        XCTAssertEqual(EvidenceTone.interest(.high), .bad)
+        XCTAssertEqual(EvidenceTone.interestTotal(5), .good); XCTAssertEqual(EvidenceTone.interestTotal(2), .mid)
+        XCTAssertEqual(EvidenceTone.interestTotal(8), .bad)
+        XCTAssertEqual(EvidenceTone.calmItem(0), .good); XCTAssertEqual(EvidenceTone.calmItem(1), .mid)
+        XCTAssertEqual(EvidenceTone.calmItem(2), .bad)
+        XCTAssertEqual(EvidenceTone.bad.color, .negative)
+    }
 }

@@ -27,6 +27,27 @@ public struct EarPartReport: Hashable, Identifiable, Sendable {
     public let fill: Double
 }
 
+/// 根拠の色。good = 寝落ちに向く(緑)、mid = ふつう(琥珀)、bad = 向かない(赤)。
+/// 区切りは `Explain.pick` と同じ(位置 0.7 / 0.3、★なら 3.8 / 2.2)。サイトの `neochi/site.py` の tone_u / tone_star と揃える。
+/// 色だけに頼らず、言葉か数字を必ず並べる。
+public enum EvidenceTone: Sendable, Equatable {
+    case good, mid, bad
+
+    public static func unit(_ u: Double) -> EvidenceTone { u >= 0.7 ? .good : u >= 0.3 ? .mid : .bad }
+    public static func star(_ v: Double) -> EvidenceTone { unit((v - 1) / 4) }
+    /// `config/scoring.yaml` の interest_star(low 3.0 / mid 5.0 / high 2.0)と同じ向き。
+    public static func interest(_ l: InterestLevel) -> EvidenceTone {
+        switch l { case .low: .mid; case .mid: .good; case .high: .bad }
+    }
+    public static func interestTotal(_ t: Int) -> EvidenceTone { t <= 3 ? .mid : t <= 6 ? .good : .bad }
+    /// 起伏の項目(0〜2点)。興味の項目は、1つずつでは良し悪しが決まらないので使わない。
+    public static func calmItem(_ score: Int) -> EvidenceTone { score <= 0 ? .good : score == 1 ? .mid : .bad }
+
+    public var color: NCColor {
+        switch self { case .good: .positive; case .mid: .accentFactor; case .bad: .negative }
+    }
+}
+
 /// ★の理由を、言葉にする(画面に出す文言)。
 public enum Explain {
     /// best で 1、worst で 0 の位置(★と同じ線形)。範囲外は丸める。

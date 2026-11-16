@@ -25,18 +25,18 @@ struct EvidenceView: View {
             // 起伏と興味は、判定が済んでいなくても行を出し「判定待ち」と書く(評点に何が入っているかを見せる)。
             VStack(spacing: 0) {
                 if let v = a.calmStar {
-                    axis("起伏の少なさ", star: v) { calmDetail(a) }
+                    axis("起伏の少なさ", star: v, tone: .star(v)) { calmDetail(a) }
                 } else {
                     pendingAxis("起伏の少なさ")
                 }
                 if let v = a.earStar {
                     Divider().overlay(Color.nc(.line))
-                    axis("耳のゆるさ", star: v) { earDetail(a) }
+                    axis("耳のゆるさ", star: v, tone: .star(v)) { earDetail(a) }
                 }
                 Divider().overlay(Color.nc(.line))
                 if let l = a.interest {
                     let total = a.interestScore ?? Explain.interestTotal(a.interestItems)
-                    axis("程よい興味", text: interestWord(l)) { interestDetail(a, total: total) }
+                    axis("程よい興味", text: interestWord(l), tone: .interest(l)) { interestDetail(a, total: total) }
                 } else {
                     pendingAxis("程よい興味")
                 }
@@ -70,7 +70,7 @@ struct EvidenceView: View {
                 Text(Explain.calmVerdict(a.calmItems)).ncText(NCText.body)
             }
             if !a.calmItems.isEmpty {
-                itemRows(a.calmItems, labels: Explain.calmLabels)
+                itemRows(a.calmItems, labels: Explain.calmLabels, toned: true)
                 Text("項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.75)").ncText(NCText.caption, .textSub)
             }
             if a.calmPerMin.isEmpty {   // 古い解析: 線がないので、目立つ箇所を文字で出す
@@ -114,17 +114,19 @@ struct EvidenceView: View {
     }
 
     /// 採点項目を1行ずつ。点(●●○)と、根拠になった分。
-    private func itemRows(_ items: [ScoredItem], labels: [String: String]) -> some View {
+    /// toned: 起伏の項目。0点は緑、1点は琥珀、2点は赤。興味の項目は、1つずつでは良し悪しが決まらないので琥珀のまま。
+    private func itemRows(_ items: [ScoredItem], labels: [String: String], toned: Bool = false) -> some View {
         VStack(spacing: 0) {
             ForEach(items, id: \.key) { it in
+                let on: NCColor = toned ? EvidenceTone.calmItem(it.score).color : .accentFactor
                 HStack(spacing: NCSpace.s2) {
                     Text(labels[it.key] ?? it.key).ncText(NCText.footnote)
                     Spacer()
                     if let m = it.minute, it.score > 0 { Text("\(m)分ごろ").ncText(NCText.caption, .textSub) }
-                    Text(Explain.levelWord(it.score)).ncText(NCText.footnote, it.score > 0 ? .accentFactor : .textSub)
+                    Text(Explain.levelWord(it.score)).ncText(NCText.footnote, toned || it.score > 0 ? on : .textSub)
                     HStack(spacing: 3) {
                         ForEach(0..<2, id: \.self) { i in
-                            Circle().fill(i < it.score ? Color.nc(.accentFactor) : Color.nc(.line)).frame(width: 8, height: 8)
+                            Circle().fill(i < it.score ? Color.nc(on) : Color.nc(.line)).frame(width: 8, height: 8)
                         }
                     }
                 }.frame(minHeight: 32)
@@ -135,18 +137,19 @@ struct EvidenceView: View {
     /// 🎧 の1項目を1行で: 項目名・測った値・満点から最低の間の位置(ゲージ)・★。
     /// 結果のひとこと(「音量が安定しています」など)は読み上げに回し、基準は「解析について」にまとめた。
     private func partRow(_ r: EarPartReport) -> some View {
-        HStack(spacing: NCSpace.s2) {
+        let tone = EvidenceTone.unit(r.fill).color
+        return HStack(spacing: NCSpace.s2) {
             Text(r.title).ncText(NCText.footnote).frame(width: 92, alignment: .leading)
             Text(r.short).ncText(NCText.numSm).frame(maxWidth: .infinity, alignment: .leading)
                 .minimumScaleFactor(0.8).lineLimit(1)
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.nc(.line))
-                    Capsule().fill(Color.nc(.accentFactor)).frame(width: max(4, g.size.width * CGFloat(r.fill)))
+                    Capsule().fill(Color.nc(tone)).frame(width: max(4, g.size.width * CGFloat(r.fill)))
                 }
             }
             .frame(width: 56, height: 6)
-            Text(r.star.map { String(format: "%.1f", $0) } ?? "―").ncText(NCText.numSm, .accentFactor)
+            Text(r.star.map { String(format: "%.1f", $0) } ?? "―").ncText(NCText.numSm, tone)
                 .frame(width: 30, alignment: .trailing)
         }
         .frame(minHeight: 32)
@@ -158,7 +161,7 @@ struct EvidenceView: View {
     private func interestWord(_ l: InterestLevel) -> String { NCString.interestWord(l) }
 
     /// 開閉できる観点の行。右に★(または言葉)を出し、押すと根拠が開く。
-    private func axis<Content: View>(_ title: String, star: Double? = nil, text: String? = nil,
+    private func axis<Content: View>(_ title: String, star: Double? = nil, text: String? = nil, tone: EvidenceTone = .mid,
                                      @ViewBuilder content: @escaping () -> Content) -> some View {
         let open = openAxes.contains(title)
         return VStack(alignment: .leading, spacing: 0) {
@@ -172,10 +175,10 @@ struct EvidenceView: View {
                     Text(title).ncText(NCText.body)
                     Spacer()
                     if let star {
-                        Text("★").ncText(NCText.numSm, .accentFactor)
-                        Text(String(format: "%.1f", star)).ncText(NCText.numMd, .accentFactor)
+                        Text("★").ncText(NCText.numSm, tone.color)
+                        Text(String(format: "%.1f", star)).ncText(NCText.numMd, tone.color)
                     } else if let text {
-                        Text(text).ncText(NCText.body, .accentFactor)
+                        Text(text).ncText(NCText.body, tone.color)
                     }
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))

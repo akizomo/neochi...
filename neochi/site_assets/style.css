@@ -146,13 +146,18 @@ nav a:hover { color: var(--text); }
 .items li { display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: 13px; }
 .items li > span:first-child { flex: 1; }
 .lv { color: var(--sub); } .lv.on { color: var(--factor); }
+/* 根拠の色: 緑 = 寝落ちに向く、琥珀 = ふつう、赤 = 向かない。言葉と数字を必ず並べ、色だけで伝えない */
+.t-good { --tone: var(--positive); } .t-mid { --tone: var(--factor); } .t-bad { --tone: var(--negative); }
+.tc, .star.t-good, .star.t-mid, .star.t-bad { color: var(--tone); }
+.items li[class^="t-"] .lv { color: var(--tone); }
+.items li[class^="t-"] .dots i.on { background: var(--tone); }
 .dots { display: inline-flex; gap: 3px; }
 .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
 .dots i.on { background: var(--factor); }
 .parts li { display: grid; grid-template-columns: 7em 1fr 56px 2.4em; align-items: center; gap: 8px; min-height: 32px; font-size: 13px; }
-.parts .num.fac { text-align: right; }
+.parts .num.tc { text-align: right; }
 .gauge { height: 6px; border-radius: 9999px; background: var(--line); overflow: hidden; }
-.gauge span { display: block; height: 100%; background: var(--factor); border-radius: inherit; }
+.gauge span { display: block; height: 100%; background: var(--tone, var(--factor)); border-radius: inherit; }
 .moments li { font-size: 13px; color: var(--sub); }
 .summary { background: var(--bg); border-radius: 8px; padding: 12px; font-size: 13px; line-height: 21px; display: grid; gap: 4px; }
 .scale { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
@@ -160,7 +165,7 @@ nav a:hover { color: var(--text); }
 .scale span.zone { background: var(--surface-pressed); }
 .scale i { width: 100%; height: 8px; border-radius: 2px; background: var(--line); }
 .scale b { font: 400 11px/1 var(--mono); color: var(--sub); }
-.scale .on i { background: var(--factor); } .scale .on b { color: var(--factor); }
+.scale .on i { background: var(--tone, var(--factor)); } .scale .on b { color: var(--tone, var(--factor)); }
 
 /* 図 */
 svg text { font-family: var(--sans); }

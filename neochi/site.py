@@ -167,6 +167,20 @@ def _pick(u: float, good: str, mid: str, bad: str) -> str:
     return good if u >= 0.7 else mid if u >= 0.3 else bad
 
 
+# 根拠の色。good = 寝落ちに向く(緑)、mid = ふつう(琥珀)、bad = 向かない(赤)。区切りは _pick と同じ(★なら 3.8 と 2.2)。
+# 色だけに頼らず、言葉・数字を必ず並べる。Strings.swift / Explain.swift の EvidenceTone と同じ区切り。
+def tone_u(u: float) -> str:
+    return _pick(u, "good", "mid", "bad")
+
+
+def tone_star(v: float) -> str:
+    return tone_u((float(v) - 1) / 4)
+
+
+INTEREST_TONE = {"low": "mid", "mid": "good", "high": "bad"}   # config/scoring.yaml の interest_star(3.0 / 5.0 / 2.0)と同じ向き
+CALM_ITEM_TONE = {0: "good", 1: "mid"}                           # 2点以上は bad
+
+
 def ear_criteria(cfg: dict, lang: str = "ja") -> dict:
     e = cfg["ear"]
     r = e["rate"].get(lang) or e["rate"]["ja"]
@@ -182,25 +196,25 @@ def ear_parts(f: dict, c: dict) -> list[dict]:
     if f.get("speech_rate") is not None:
         r = f["speech_rate"]
         u = 1.0 if r <= c["rate_best"] else _unit(r, c["rate_best"], c["rate_worst"])
-        out.append({"title": "話す速さ", "star": p.get("rate"), "short": f"{round(r)}字/分", "fill": u,
+        out.append({"title": "話す速さ", "star": p.get("rate"), "short": f"{round(r)}字/分", "fill": u, "tone": tone_u(u),
                     "verdict": _pick(u, "寝落ちに向く速さです", "やや速めです", "かなり速いです"),
                     "criterion": f"{c['rate_best']}字/分までは満点、{c['rate_worst']}字で最低"})
     if f.get("speech_rate_cv") is not None:
         cv = f["speech_rate_cv"]
         u = _unit(cv, c["cv_best"], c["cv_worst"])
-        out.append({"title": "速さのばらつき", "star": p.get("rate_cv"), "short": f"{round(cv * 100)}%", "fill": u,
+        out.append({"title": "速さのばらつき", "star": p.get("rate_cv"), "short": f"{round(cv * 100)}%", "fill": u, "tone": tone_u(u),
                     "verdict": _pick(u, "速さがほぼ一定です", "速さが、ところどころ変わります", "速さが大きく揺れます"),
                     "criterion": f"揺れが{round(c['cv_best'] * 100)}%以下なら満点、{round(c['cv_worst'] * 100)}%で最低"})
     if f.get("volume_std_db") is not None:
         d = f["volume_std_db"]
         u = _unit(d, c["vol_best"], c["vol_worst"])
-        out.append({"title": "音量の変化", "star": p.get("volume"), "short": f"{d:.1f}dB", "fill": u,
+        out.append({"title": "音量の変化", "star": p.get("volume"), "short": f"{d:.1f}dB", "fill": u, "tone": tone_u(u),
                     "verdict": _pick(u, "音量が安定しています", "音量に、ところどころ大小があります", "音量が大きく上下します"),
                     "criterion": f"{c['vol_best']}dB以下なら満点、{c['vol_worst']}dBで最低"})
     if f.get("sudden_per_10min") is not None:
         s = f["sudden_per_10min"]
         u = _unit(s, c["sud_best"], c["sud_worst"])
-        out.append({"title": "突発音", "star": p.get("sudden"), "short": f"{s:.1f}回/10分", "fill": u,
+        out.append({"title": "突発音", "star": p.get("sudden"), "short": f"{s:.1f}回/10分", "fill": u, "tone": tone_u(u),
                     "verdict": _pick(u, "急に大きな音は、ほとんどありません", "急な音が、ときどきあります", "急な音が多めです"),
                     "criterion": f"0回なら満点、{c['sud_worst']}回で最低(屋外の音や、音の演出が多い話は、多めに数えます)"})
     return out
@@ -641,12 +655,14 @@ def ear_charts(f: dict, c: dict) -> str:
     return "".join(out) + legend
 
 
-def item_rows(its: list[dict], labels: dict) -> str:
+def item_rows(its: list[dict], labels: dict, toned: bool = False) -> str:
+    """toned: 起伏の項目。0点は緑、1点は琥珀、2点は赤。興味の項目は、1つずつでは良し悪しが決まらないので琥珀のまま。"""
     rows = []
     for it in its:
+        cls = f' class="t-{CALM_ITEM_TONE.get(it["score"], "bad")}"' if toned else ""
         mins = f'<span class="cap">{it["min"]}分ごろ</span>' if it["min"] is not None and it["score"] > 0 else ""
         dots = "".join(f'<i class="{"on" if i < it["score"] else ""}"></i>' for i in range(2))
-        rows.append(f'<li><span>{labels.get(it["key"], it["key"])}</span>{mins}'
+        rows.append(f'<li{cls}><span>{labels.get(it["key"], it["key"])}</span>{mins}'
                     f'<span class="lv{" on" if it["score"] > 0 else ""}">{level_word(it["score"])}</span><span class="dots">{dots}</span></li>')
     return f'<ul class="items">{"".join(rows)}</ul>'
 
@@ -654,14 +670,15 @@ def item_rows(its: list[dict], labels: dict) -> str:
 def part_rows(parts: list[dict]) -> str:
     return '<ul class="parts">' + "".join(
         f'<li aria-label="{p["title"]}。{p["short"]}。{p["verdict"]}。評点 {n1(p["star"])}"><span>{p["title"]}</span>'
-        f'<span class="num">{p["short"]}</span><span class="gauge"><span style="width:{max(4, p["fill"] * 100):.0f}%"></span></span>'
-        f'<span class="num fac">{n1(p["star"])}</span></li>' for p in parts) + "</ul>"
+        f'<span class="num">{p["short"]}</span><span class="gauge t-{p["tone"]}"><span style="width:{max(4, p["fill"] * 100):.0f}%"></span></span>'
+        f'<span class="num tc t-{p["tone"]}">{n1(p["star"])}</span></li>' for p in parts) + "</ul>"
 
 
-def interest_scale(total: int) -> str:
+def interest_scale(total: int, level: str | None = None) -> str:
     cells = "".join(f'<span class="{"zone " if 4 <= i <= 6 else ""}{"on" if i == total else ""}"><i></i><b>{i}</b></span>'
                     for i in range(1, 11))
-    return f'<div class="scale" role="img" aria-label="引き込み力 {total}、10段階。4〜6が寝落ち向き">{cells}</div><p class="cap">4〜6が寝落ち向き</p>'
+    tone = INTEREST_TONE.get(level or ("low" if total <= 3 else "mid" if total <= 6 else "high"), "mid")
+    return f'<div class="scale t-{tone}" role="img" aria-label="引き込み力 {total}、10段階。4〜6が寝落ち向き">{cells}</div><p class="cap">4〜6が寝落ち向き</p>'
 
 
 def axis_row(title: str, value_html: str, body: str, open_: bool = False) -> str:
@@ -687,16 +704,16 @@ def evidence(e: dict, a: dict, cfg: dict, lang: str) -> str:
         elif calm_items:
             body += f"<p>{calm_verdict(calm_items)}</p>"
         if calm_items:
-            body += item_rows(calm_items, CALM_LABELS) + '<p class="cap">項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.75)</p>'
+            body += item_rows(calm_items, CALM_LABELS, toned=True) + '<p class="cap">項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.75)</p>'
         if not per and moments:
             body += '<ul class="moments">' + "".join(f'<li><b class="num fac">{m["min"]}分</b> {escape(m["note"])}</li>' for m in moments) + "</ul>"
-        rows.append(axis_row("起伏の少なさ", star(a["calm_star"], "star"), body, open_=True))
+        rows.append(axis_row("起伏の少なさ", star(a["calm_star"], f"star t-{tone_star(a['calm_star'])}"), body, open_=True))
     else:
         rows.append(f'<div class="axis pending"><span>起伏の少なさ</span><span class="cap">判定待ち</span></div>')
     # 耳のゆるさ: 話す速さと音量の図 → 4項目
     if a.get("ear_star") is not None:
         c = ear_criteria(cfg, lang)
-        rows.append(axis_row("耳のゆるさ", star(a["ear_star"], "star"), ear_charts(f, c) + part_rows(ear_parts(f, c))))
+        rows.append(axis_row("耳のゆるさ", star(a["ear_star"], f"star t-{tone_star(a['ear_star'])}"), ear_charts(f, c) + part_rows(ear_parts(f, c))))
     # 程よい興味: 内容の要約 → 5項目 → 10段の目盛り
     lv = a.get("interest_level")
     if lv:
@@ -706,8 +723,8 @@ def evidence(e: dict, a: dict, cfg: dict, lang: str) -> str:
             body += f'<div class="summary"><p class="cap">この話の内容(AIの要約)</p><p>{escape(a["content_summary"])}</p></div>'
         if int_items:
             body += item_rows(int_items, INTEREST_LABELS)
-        body += interest_scale(int(total))
-        rows.append(axis_row("程よい興味", f'<span class="fac">{INTEREST_WORD.get(lv, lv)}</span>', body))
+        body += interest_scale(int(total), lv)
+        rows.append(axis_row("程よい興味", f'<span class="tc t-{INTEREST_TONE.get(lv, "mid")}">{INTEREST_WORD.get(lv, lv)}</span>', body))
     else:
         rows.append(f'<div class="axis pending"><span>程よい興味</span><span class="cap">判定待ち</span></div>')
     n = episode_number(e.get("title") or "")
@@ -827,11 +844,11 @@ def tendency(s: dict) -> str:
         return ""
     rows = []
     if calm:
-        rows.append(f'<div class="row-between"><span>起伏の少なさ</span>{star(mean(calm), "star")}</div>')
+        rows.append(f'<div class="row-between"><span>起伏の少なさ</span>{star(mean(calm), f"star t-{tone_star(mean(calm))}")}</div>')
     if ear:
-        rows.append(f'<div class="row-between"><span>耳のゆるさ</span>{star(mean(ear), "star")}</div>')
+        rows.append(f'<div class="row-between"><span>耳のゆるさ</span>{star(mean(ear), f"star t-{tone_star(mean(ear))}")}</div>')
     if level:
-        rows.append(f'<div class="row-between"><span>程よい興味</span><span class="fac">{INTEREST_WORD.get(level, level)}</span></div>')
+        rows.append(f'<div class="row-between"><span>程よい興味</span><span class="tc t-{INTEREST_TONE.get(level, "mid")}">{INTEREST_WORD.get(level, level)}</span></div>')
     body = (f"<p>{escape(line)}</p>" if line else "") + "".join(rows)
     return (f'<section class="sec"><div class="sec-head"><h2>この番組の傾向</h2><span class="cap">AI解析、話の平均</span></div>'
             f'<div class="card">{body}</div></section>')
