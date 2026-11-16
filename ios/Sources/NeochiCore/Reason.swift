@@ -12,6 +12,7 @@ public enum Reason: Hashable, Sendable {
     case continuation                       // いまの番組の続き(明日以降)
     case queued                             // 次に聴くに入れた番組
     case favorite(genre: String)            // お気に入りの朗読
+    case preferredGenre(genre: String)      // 好みの朗読(最初に聞いた好みのジャンル)
     case sameGenreOther(genre: String)      // 同じ朗読の、別の番組
     case genreStreak(from: String, to: String, nights: Int)  // 朗読が3晩続いたので、解説の番組
     case genreContinues(from: String, to: String)            // 朗読が続いているので、解説の番組
@@ -55,6 +56,8 @@ public extension Reason {
         case .queued: return [.init("「次に聴く」に入れた番組")]
         case .favorite(let g):
             return [.init(GenreLabel.display(g).map { "お気に入りの\($0)" } ?? "お気に入りの番組")]
+        case .preferredGenre(let g):
+            return [.init(GenreLabel.display(g).map { "好みの\($0)" } ?? "好みの系統の番組")]
         case .sameGenreOther(let g):
             return [.init(GenreLabel.display(g).map { "同じ\($0)の、別の番組" } ?? "同じ系統の、別の番組")]
         case .genreStreak(let from, let to, let n):

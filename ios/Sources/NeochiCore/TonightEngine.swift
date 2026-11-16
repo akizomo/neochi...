@@ -23,13 +23,15 @@ public struct TonightContext: Sendable {
     public var lastNight: LastNight?
     /// いまの番組のジャンルが、何晩続いているか。
     public var genreStreakNights: Int
+    /// 最初に聞いた、好みのジャンル。記録がないうちの、最初の番組と並びに使う。
+    public var preferredGenres: Set<String>
 
     public init(shows: [Show], episodes: [String: [Episode]], history: [PlayRecord] = [],
                 favorites: Set<String> = [], queue: [String] = [], currentShowID: String? = nil,
-                lastNight: LastNight? = nil, genreStreakNights: Int = 0) {
+                lastNight: LastNight? = nil, genreStreakNights: Int = 0, preferredGenres: Set<String> = []) {
         self.shows = shows; self.episodes = episodes; self.history = history; self.favorites = favorites
         self.queue = queue; self.currentShowID = currentShowID; self.lastNight = lastNight
-        self.genreStreakNights = genreStreakNights
+        self.genreStreakNights = genreStreakNights; self.preferredGenres = preferredGenres
     }
 }
 
@@ -101,8 +103,11 @@ public enum TonightEngine {
         return Candidate(show: show, episode: episode, playCount: plays + 1, reason: plays > 0 ? .heardBefore : .unlistened)
     }
 
+    /// いまの番組。まだ聴いていないときは、好みのジャンルの中で評点がいちばん高い番組(好みがなければ全体で)。
     private static func current(_ ctx: TonightContext) -> Show? {
-        ctx.shows.first(where: { $0.id == ctx.currentShowID }) ?? ctx.shows.first
+        if let s = ctx.shows.first(where: { $0.id == ctx.currentShowID }) { return s }
+        let preferred = ctx.shows.filter { ctx.preferredGenres.contains($0.genre) }
+        return (preferred.isEmpty ? ctx.shows : preferred).max(by: { ($0.star ?? 0) < ($1.star ?? 0) })
     }
 
     private static func others(excluding ids: Set<String>, cur: Show, ctx: TonightContext, differentGenre: Bool?) -> [Show] {
@@ -112,6 +117,8 @@ public enum TonightEngine {
             .sorted { a, b in
                 let fa = ctx.favorites.contains(a.id), fb = ctx.favorites.contains(b.id)
                 if fa != fb { return fa }
+                let pa = ctx.preferredGenres.contains(a.genre), pb = ctx.preferredGenres.contains(b.genre)
+                if pa != pb { return pa }
                 if differentGenre == nil, (a.genre != cur.genre) != (b.genre != cur.genre) { return a.genre != cur.genre }
                 return (a.star ?? 0) > (b.star ?? 0)
             }
@@ -145,7 +152,10 @@ public enum TonightEngine {
         let second = repeatFirst ? next : (rep ?? rest.first(where: { $0 != first }))
 
         var items: [Candidate] = []
-        if let first { items.append(make(cur, first, repeatFirst ? whyRep : whyNext)) }
+        // 記録がないうちは、好みのジャンルから選んだことを理由にする。
+        let firstWhy: Reason = ctx.history.isEmpty && ctx.preferredGenres.contains(cur.genre) ? .preferredGenre(genre: cur.genre)
+            : (repeatFirst ? whyRep : whyNext)
+        if let first { items.append(make(cur, first, firstWhy)) }
         if let second, second != first {
             let why: Reason = repeatFirst ? .unlistened : (second == rep ? (cur.id == ctx.lastNight?.showID ? .sameAsLastNight : .heardBefore) : .previous)
             items.append(make(cur, second, why))
@@ -160,6 +170,7 @@ public enum TonightEngine {
             guard let p = pick(show: o, ctx: ctx) else { continue }
             // お気に入りを先に選んでいるので、お気に入りなら、それを理由にする(選んだ基準と理由を揃える)。
             let why: Reason = ctx.favorites.contains(o.id) ? .favorite(genre: o.genre)
+                : ctx.preferredGenres.contains(o.genre) ? .preferredGenre(genre: o.genre)
                 : o.genre != cur.genre
                 ? .genreStreak(from: cur.genre, to: o.genre, nights: max(ctx.genreStreakNights, 1))
                 : .sameGenreOther(genre: cur.genre)

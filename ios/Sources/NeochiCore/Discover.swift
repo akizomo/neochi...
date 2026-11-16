@@ -11,6 +11,19 @@ public enum Discover {
     /// 画面に出す系統の並び(絞り込みのチップの順)。
     public static let genreOrder = ["寝落ち用", "朗読", "環境音", "コメディ", "雑談", "教養"]
 
+    /// 好みのジャンルを聞くときの、ひとこと(系統ごと)。決まりにない系統は空。
+    public static func genreHint(_ genre: String) -> String {
+        switch genre {
+        case "寝落ち用": return "眠るために作られた番組"
+        case "朗読": return "物語や本の読み聞かせ"
+        case "環境音": return "雨や波などの、音だけの番組"
+        case "コメディ": return "芸人ラジオ、バラエティ"
+        case "雑談": return "ゆるいおしゃべり"
+        case "教養": return "歴史・科学・解説"
+        default: return ""
+        }
+    }
+
     /// 評点の高い順。同点は、実測の件数が多い番組、平均が短い番組、番組名の順(いつも同じ並びになる)。
     public static func ranked(_ shows: [Show]) -> [Show] {
         shows.filter { $0.star != nil }.sorted { a, b in

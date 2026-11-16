@@ -91,13 +91,30 @@ struct TonightView: View {
         }
     }
 
+    /// お気に入りが空のとき。見つけるへ案内する。
+    private var emptyFavorites: some View {
+        VStack(spacing: NCSpace.s3) {
+            Text("お気に入りは、まだありません。").ncText(NCText.body)
+            Text("気になる番組のしおりを押すと、ここに並びます。").ncText(NCText.footnote, .textSub).multilineTextAlignment(.center)
+            Button { model.selectedTab = .discover } label: {
+                Text("見つけるで探す").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                    .background(Capsule().fill(Color.nc(.textMain)))
+            }
+            .buttonStyle(.pressable)
+        }
+        .padding(NCSpace.s5)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+    }
+
     private var favorites: some View {
         VStack(alignment: .leading, spacing: NCSpace.s3) {
             HStack {
                 Text("お気に入り").ncText(NCText.headline)
                 Spacer()
-                Text("\(model.favorites.count)番組").ncText(NCText.footnote, .textSub)
+                if !model.favorites.isEmpty { Text("\(model.favorites.count)番組").ncText(NCText.footnote, .textSub) }
             }.padding(.top, NCSpace.s3)
+            if model.favorites.isEmpty { emptyFavorites }
             ForEach(model.shows.filter { model.favorites.contains($0.id) }) { show in
                 NavigationLink(value: show.id) {
                     ScoreRow(show: show, isFavorite: true) { model.toggleFavorite(show) }
