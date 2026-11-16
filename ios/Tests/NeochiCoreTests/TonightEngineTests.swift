@@ -11,7 +11,7 @@ final class TonightEngineTests: XCTestCase {
     func eps(_ show: String, top: Int) -> [Episode] {
         (0..<5).compactMap { i in
             let n = top - i
-            return n >= 1 ? Episode(id: "\(show)-\(n)", showID: show, title: "第\(n)回", number: n) : nil
+            return n >= 1 ? Episode(id: "\(show)-\(n)", showID: show, title: "第\(n)話", number: n) : nil
         }
     }
 
@@ -100,7 +100,7 @@ final class TonightEngineTests: XCTestCase {
         XCTAssertEqual(Reason.sameGenreOther(genre: "教養（比較用含む）").text, "同じ教養の、別の番組")
         XCTAssertEqual(Reason.sameGenreOther(genre: "とても長い分類の名前です").text, "同じ系統の、別の番組")
         XCTAssertEqual(Reason.favorite(genre: "とても長い分類の名前です").text, "お気に入りの番組")
-        XCTAssertEqual(Reason.tookLong(minutes: 40).text, "昨夜は40分。次の回へ")
+        XCTAssertEqual(Reason.tookLong(minutes: 40).text, "昨夜は40分。次の話へ")
         XCTAssertEqual(GenreLabel.display("寝落ち・睡眠導入（海外基準）"), "寝落ち用")
         XCTAssertNil(GenreLabel.display("とても長い分類の名前です"))
         // どの理由も20字まで(カードの1行に収める)

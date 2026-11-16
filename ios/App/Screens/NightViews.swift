@@ -20,8 +20,8 @@ struct NightView: View {
 
     /// 回の見出し。「第12回 タイトル」。番号が無い、またはタイトルにすでに回が入っているときは、タイトルだけ。
     private func episodeHeading(_ ep: Episode) -> String {
-        guard let n = ep.number, !ep.title.contains("第\(n)回"), !ep.title.contains("#\(n)") else { return ep.title }
-        return "第\(n)回 \(ep.title)"
+        guard let n = ep.number, !ep.title.contains("第\(n)回"), !ep.title.contains("第\(n)話"), !ep.title.contains("#\(n)") else { return ep.title }
+        return "第\(n)話 \(ep.title)"
     }
 
     private func isCurrent(_ ep: Episode) -> Bool { model.playing?.episode?.id == ep.id && model.player.state != .idle }

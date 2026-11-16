@@ -17,9 +17,9 @@ public enum NCString {
     public static let resultFrom = "寝落ちまで"
     public static let startedLabel = "再生開始"
     public static let onsetLabel = "入眠"
-    public static let ratingHeader = "この回の評価"
+    public static let ratingHeader = "この話の評価"
     public static let ratingFooter = "番組の評価に使います。答えなくても記録できます。"
-    public static let interestQuestion = "この回の話は、どうでしたか"
+    public static let interestQuestion = "この話は、どうでしたか"
     public static func interestLabel(_ a: InterestAnswer) -> String {
         switch a {
         case .bored: return "退屈だった"
@@ -49,14 +49,14 @@ public enum NCString {
 
     // 番組詳細の図
     public static func momentLabel(minute: Int) -> String { "\(minute)分の山" }
-    public static func analyzedEpisode(_ number: Int?) -> String { number.map { "\($0)回の解析" } ?? "最新の回の解析" }
-    public static let summaryHeader = "この回の内容(AIの要約)"
+    public static func analyzedEpisode(_ number: Int?) -> String { number.map { "\($0)話の解析" } ?? "最新の話の解析" }
+    public static let summaryHeader = "この話の内容(AIの要約)"
     public static let interestZoneNote = "4〜6が寝落ち向き"
     public static let analyzing = "解析中"
     /// 起伏・興味の AI の判定が、まだ済んでいない観点。
     public static let judgePending = "判定待ち"
     public static let deltaCaptionRecords = "前の4件"
-    public static let deltaCaptionEpisodes = "前の4回"
+    public static let deltaCaptionEpisodes = "前の4話"
 
     /// 寝落ちの実績の軸の下の説明。軸の帯(`DetailMath.sleepZones`)に合わせる。
     public static let sleepZoneNote = "再生を始めてから、30分未満で眠れた記録は、寝落ちしたとみなします。"

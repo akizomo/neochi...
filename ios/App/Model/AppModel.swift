@@ -226,7 +226,7 @@ final class AppModel {
         guard !fetched.isEmpty else { loadFailed("番組が0件(show が空、または読み取りの権限がない)"); return }
         let e: [String: [Episode]]
         do { e = try await SupabaseClient.shared.fetchEpisodes() }
-        catch { loadFailed("回の読み込みに失敗: \(error)"); return }
+        catch { loadFailed("話の読み込みに失敗: \(error)"); return }
         var s = fetched
         var notes: [String] = []
         var list: [EpisodeAnalysis] = []
@@ -244,7 +244,7 @@ final class AppModel {
         analyses = Dictionary(list.map { ($0.episodeID, $0) }, uniquingKeysWith: { a, _ in a })
         shows = s; episodes = e; sleepPoints = points
         loadState = .ready
-        remoteStatus = "番組\(s.count)・回\(e.values.reduce(0) { $0 + $1.count })・解析\(list.count)・実績\(stats.count)" + (notes.isEmpty ? "" : "\n" + notes.joined(separator: "\n"))
+        remoteStatus = "番組\(s.count)・話\(e.values.reduce(0) { $0 + $1.count })・解析\(list.count)・実績\(stats.count)" + (notes.isEmpty ? "" : "\n" + notes.joined(separator: "\n"))
         // 見本の状態は、実データには存在しない番組を指すので外す。
         let r = SessionState(history: history, favorites: favorites, queue: queue, currentShowID: currentShowID,
                              lastNight: lastNight, genreStreakNights: genreStreakNights, pendingMorning: pendingMorning,

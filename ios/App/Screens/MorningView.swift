@@ -85,7 +85,7 @@ struct MorningView: View {
                     ArtworkView(show: show)
                     VStack(alignment: .leading, spacing: NCSpace.s1) {
                         Text(show.title).ncText(NCText.headline).lineLimit(2)
-                        if let e = episode { Text(e.number.map { "第\($0)回" } ?? e.title).ncText(NCText.footnote, .textSub) }
+                        if let e = episode { Text(e.number.map { "第\($0)話" } ?? e.title).ncText(NCText.footnote, .textSub) }
                     }
                 }
             }

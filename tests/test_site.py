@@ -61,7 +61,7 @@ def test_show_page_matches_app_detail(tmp_path):
     assert pos == sorted(pos)
     assert "冒頭4分に、小さな山が1つだけです。" in h and "珍しい花の話" in h
     assert "260字/分" in h and "15%" in h and "5.0dB" in h and "1.0回/10分" in h
-    assert "この回の内容(AIの要約)" in h and "程よい" in h
+    assert "この話の内容(AIの要約)" in h and "程よい" in h
     assert 'aria-label="寝落ちの実績 4件"' in h and "30分未満 3件" in h
     assert "290字/分までは満点、450字で最低" in h
 

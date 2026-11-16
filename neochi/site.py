@@ -168,7 +168,7 @@ def ear_parts(f: dict, c: dict) -> list[dict]:
         u = _unit(s, c["sud_best"], c["sud_worst"])
         out.append({"title": "突発音", "star": p.get("sudden"), "short": f"{s:.1f}回/10分", "fill": u,
                     "verdict": _pick(u, "急に大きな音は、ほとんどありません", "急な音が、ときどきあります", "急な音が多めです"),
-                    "criterion": f"0回なら満点、{c['sud_worst']}回で最低(屋外の音や、音の演出が多い回は、多めに数えます)"})
+                    "criterion": f"0回なら満点、{c['sud_worst']}回で最低(屋外の音や、音の演出が多い話は、多めに数えます)"})
     return out
 
 
@@ -524,7 +524,7 @@ def evidence(e: dict, a: dict, cfg: dict, lang: str) -> str:
         total = a.get("interest_score") or max(1, sum(i["score"] for i in int_items))
         body = ""
         if a.get("content_summary"):
-            body += f'<div class="summary"><p class="cap">この回の内容(AIの要約)</p><p>{escape(a["content_summary"])}</p></div>'
+            body += f'<div class="summary"><p class="cap">この話の内容(AIの要約)</p><p>{escape(a["content_summary"])}</p></div>'
         if int_items:
             body += item_rows(int_items, INTEREST_LABELS)
         body += interest_scale(int(total))
@@ -532,7 +532,7 @@ def evidence(e: dict, a: dict, cfg: dict, lang: str) -> str:
     else:
         rows.append(f'<div class="axis pending"><span>程よい興味</span><span class="cap">判定待ち</span></div>')
     n = episode_number(e.get("title") or "")
-    head = f"{n}回の解析" if n else "最新の回の解析"
+    head = f"{n}話の解析" if n else "最新の話の解析"
     return (f'<section class="sec"><div class="sec-head"><h2>観点ごとの根拠</h2><span class="cap">{head}</span></div>'
             f'<div class="axes-card">{"".join(rows)}</div></section>')
 
@@ -585,13 +585,13 @@ def recent(s: dict) -> str:
 
     def label(e):
         n = episode_number(e.get("title") or "")
-        return f"{n}回" if n else fmt_md(e.get("published_at"))
+        return f"{n}話" if n else fmt_md(e.get("published_at"))
     cols = [(label(e), None, False, e) for e in pending] + [(label(e), float(a["final_star"]), e["id"] == newest["id"], e) for e, a in scored[:8]]
     cols.reverse()
     vals = [v for _, v, _, _ in cols if v is not None]
     avg = mean(vals)
     d = delta(vals)
-    pill = delta_pill(d, True, lambda v: f"{v:.1f}", "前の4回") if d is not None else ""
+    pill = delta_pill(d, True, lambda v: f"{v:.1f}", "前の4話") if d is not None else ""
     bars = []
     for lab, v, latest, e in cols:
         t = escape(e.get("title") or "")
@@ -600,8 +600,8 @@ def recent(s: dict) -> str:
         else:
             bars.append(f'<div class="bar{" latest" if latest else ""}" title="{t}"><span class="num v">{v:.1f}</span>'
                         f'<i style="height:{v / 5 * 88:.0f}px"></i><span class="num cap">{lab}</span></div>')
-    return (f'<section class="sec"><div class="sec-head"><h2>最近の回</h2><span class="cap">回ごとの評点</span></div>'
-            f'<div class="card"><div class="row-between"><span><b class="num big fac">{avg:.1f}</b> <span class="cap">{len(vals)}回の平均</span></span>{pill}</div>'
+    return (f'<section class="sec"><div class="sec-head"><h2>最近の話</h2><span class="cap">話ごとの評点</span></div>'
+            f'<div class="card"><div class="row-between"><span><b class="num big fac">{avg:.1f}</b> <span class="cap">{len(vals)}話の平均</span></span>{pill}</div>'
             f'<div class="bars" style="--avg:{avg / 5 * 88:.0f}px">{"".join(bars)}</div></div></section>')
 
 

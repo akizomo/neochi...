@@ -4,11 +4,11 @@ import Foundation
 public enum Reason: Hashable, Sendable {
     case sleptFast(minutes: Int)            // 昨夜は18分で寝落ち
     case tookLong(minutes: Int)             // 昨夜は40分かかったので、次の回へ
-    case sameAsLastNight                    // 昨夜と同じ回(昨夜の記録がないとき)
-    case heardBefore                        // 前に聴いた回
-    case unlistened                         // まだ聴いていない回
+    case sameAsLastNight                    // 昨夜と同じ話(昨夜の記録がないとき)
+    case heardBefore                        // 前に聴いた話
+    case unlistened                         // まだ聴いていない話
     case latest                             // 最新の回
-    case previous                           // ひとつ前の回
+    case previous                           // ひとつ前の話
     case continuation                       // いまの番組の続き(明日以降)
     case queued                             // 次に聴くに入れた番組
     case favorite(genre: String)            // お気に入りの朗読
@@ -45,12 +45,12 @@ public extension Reason {
     var segments: [ReasonSegment] {
         switch self {
         case .sleptFast(let m): return [.init("昨夜は"), .init("\(m)分", emphasized: true), .init("で寝落ち")]
-        case .tookLong(let m): return [.init("昨夜は"), .init("\(m)分", emphasized: true), .init("。次の回へ")]
-        case .sameAsLastNight: return [.init("昨夜と同じ回")]
-        case .heardBefore: return [.init("前に聴いた回")]
-        case .unlistened: return [.init("まだ聴いていない回")]
-        case .latest: return [.init("最新の回")]
-        case .previous: return [.init("ひとつ前の回")]
+        case .tookLong(let m): return [.init("昨夜は"), .init("\(m)分", emphasized: true), .init("。次の話へ")]
+        case .sameAsLastNight: return [.init("昨夜と同じ話")]
+        case .heardBefore: return [.init("前に聴いた話")]
+        case .unlistened: return [.init("まだ聴いていない話")]
+        case .latest: return [.init("最新の話")]
+        case .previous: return [.init("ひとつ前の話")]
         case .continuation: return [.init("いまの番組の続き")]
         case .queued: return [.init("「次に聴く」に入れた番組")]
         case .favorite(let g):

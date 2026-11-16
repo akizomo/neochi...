@@ -396,7 +396,7 @@ struct DetailView: View {
         guard let newest = scored.first?.0, let idx = episodes.firstIndex(where: { $0.id == newest.id }) else { return [] }
         let pending = episodes[..<idx].filter { model.analyses[$0.id]?.isJudged != true }.prefix(2)
         func label(_ e: Episode) -> String {
-            if let n = DetailMath.episodeNumber(e) { return "\(n)回" }
+            if let n = DetailMath.episodeNumber(e) { return "\(n)話" }
             return e.publishedAt.map { Self.monthDay.string(from: $0) } ?? ""
         }
         let cols = pending.map { RecentBars.Column(id: $0.id, label: label($0), value: nil, isLatest: false) }
@@ -414,15 +414,15 @@ struct DetailView: View {
         let avg = DetailMath.mean(values) ?? 0
         return VStack(alignment: .leading, spacing: NCSpace.s2) {
             HStack {
-                sectionHead("最近の回")
+                sectionHead("最近の話")
                 Spacer()
-                Text("回ごとの評点").ncText(NCText.caption, .textSub)
+                Text("話ごとの評点").ncText(NCText.caption, .textSub)
             }.padding(.top, NCSpace.s2)
             card {
                 HStack(alignment: .center, spacing: NCSpace.s2) {
                     HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
                         Text(String(format: "%.1f", avg)).ncText(NCText.numMd, .accentFactor)
-                        Text("\(values.count)回の平均").ncText(NCText.footnote, .textSub)
+                        Text("\(values.count)話の平均").ncText(NCText.footnote, .textSub)
                     }
                     .accessibilityElement(children: .combine)
                     Spacer()

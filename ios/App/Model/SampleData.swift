@@ -19,13 +19,13 @@ enum SampleData {
     static func episodes(_ show: String, top: Int) -> [Episode] {
         (0..<5).compactMap { i in
             let n = top - i
-            return n >= 1 ? Episode(id: "\(show)-\(n)", showID: show, title: i == 0 ? "第\(n)回" : "第\(n)回", number: n) : nil
+            return n >= 1 ? Episode(id: "\(show)-\(n)", showID: show, title: "第\(n)話", number: n) : nil
         }
     }
 
     static let episodeMap: [String: [Episode]] = [
         "phonebook": episodes("phonebook", top: 7), "plant": (0..<10).map { i in
-            Episode(id: "plant-\(82 - i)", showID: "plant", title: "第\(82 - i)回", number: 82 - i)
+            Episode(id: "plant-\(82 - i)", showID: "plant", title: "第\(82 - i)話", number: 82 - i)
         },
         "train": episodes("train", top: 31), "weather": episodes("weather", top: 88), "port": episodes("port", top: 204),
     ]

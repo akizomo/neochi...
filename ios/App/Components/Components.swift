@@ -288,7 +288,7 @@ struct TonightCard: View {
     }
 
     private var episodeLine: String {
-        let title = candidate.episode?.title ?? "続きの回"
+        let title = candidate.episode?.title ?? "続きの話"
         return candidate.playCount >= 2 ? "\(title) ・ \(candidate.playCount)回目" : title
     }
 }
