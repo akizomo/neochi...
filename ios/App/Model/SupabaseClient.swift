@@ -302,6 +302,11 @@ actor SupabaseClient {
         let note: String?; let listen_no: Int
     }
 
+    /// 自分の記録をすべて削除する(RLS により、本人の行だけが消える。migration 0010)。
+    func deleteMyRecords() async throws {
+        _ = try await request("sleep_log", query: [URLQueryItem(name: "id", value: "not.is.null")], method: "DELETE")
+    }
+
     /// 記録の送信。同じ id は上書き(再送しても重ならない)。
     func upload(_ log: SleepLog) async throws {
         let e = JSONEncoder(); e.dateEncodingStrategy = .iso8601

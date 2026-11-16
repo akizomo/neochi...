@@ -198,6 +198,14 @@ final class AppModel {
         Task { try? await SupabaseClient.shared.upload(log) }
     }
 
+    /// 記録をすべて削除する。サーバーの記録を先に消し、消せたら端末の記録も消す(サーバーで失敗したときは、何も消さない)。
+    func deleteAllRecords() async throws {
+        if SupabaseClient.shared.isConfigured { try await SupabaseClient.shared.deleteMyRecords() }
+        logs = []
+        LogStore.save(logs)
+        lastNight = nil
+    }
+
     /// 記録のメモをあとから直す(空にすると消す)。
     func updateNote(logID: String, note: String) {
         guard let i = logs.firstIndex(where: { $0.id == logID }) else { return }

@@ -2,6 +2,10 @@ import SwiftUI
 import AuthenticationServices
 import NeochiCore
 
+/// 1.0 はログインなしで出す(2026-11-16 の決定)。ログインを出すとき(1.1 以降)は true にし、
+/// App/Neochi.entitlements に com.apple.developer.applesignin(Default)を戻す。docs/SETUP.md の G。
+enum AccountFeature { static let enabled = false }
+
 /// アカウント。匿名のまま使い始め、Apple に連携すると、機種変更でも記録を引き継げる。
 struct AccountView: View {
     @Environment(\.dismiss) private var dismiss
@@ -124,7 +128,7 @@ struct AccountRow: View {
     private var linked: Bool { info?.providers.contains("apple") == true }
 
     var body: some View {
-        if SupabaseClient.shared.isConfigured {
+        if AccountFeature.enabled, SupabaseClient.shared.isConfigured {
             Button(action: action) {
                 HStack {
                     VStack(alignment: .leading, spacing: NCSpace.s1) {

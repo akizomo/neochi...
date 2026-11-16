@@ -157,6 +157,8 @@ struct LogView: View {
     @State private var editingBedtime = false
     @State private var showingAccount = false
     @State private var accountTick = 0
+    @State private var confirmDeleteAll = false
+    @State private var deleteError = false
     private static let dateFormat: DateFormatter = {
         let f = DateFormatter(); f.locale = Locale(identifier: "ja_JP"); f.setLocalizedDateFormatFromTemplate("M/d E"); return f
     }()
@@ -191,6 +193,9 @@ struct LogView: View {
                         Text("まだ記録がありません。").ncText(NCText.footnote, .textSub)
                     } else {
                         ForEach(model.logs.sorted { $0.startedAt > $1.startedAt }) { log in row(log) }
+                        Button("記録をすべて削除", role: .destructive) { confirmDeleteAll = true }
+                            .ncText(NCText.footnote).padding(.top, NCSpace.s4)
+                        if deleteError { Text("削除できませんでした。通信を確かめて、もう一度お試しください。").ncText(NCText.footnote, .textSub) }
                     }
                 }
                 .padding(.horizontal, NCSpace.s5)
@@ -201,6 +206,11 @@ struct LogView: View {
             .toolbarTitleDisplayMode(.inlineLarge)
             .contentMargins(.top, NCSpace.s5, for: .scrollContent)
             .appDestinations()
+            .confirmationDialog("記録をすべて削除しますか", isPresented: $confirmDeleteAll, titleVisibility: .visible) {
+                Button("削除する", role: .destructive) {
+                    Task { do { try await model.deleteAllRecords(); deleteError = false } catch { deleteError = true } }
+                }
+            } message: { Text("この端末とサーバーの、寝落ちの記録がすべて消えます。元に戻せません。") }
             .sheet(isPresented: $showingAccount, onDismiss: { accountTick += 1 }) { AccountView() }
             .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         }
