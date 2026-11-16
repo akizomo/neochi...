@@ -156,6 +156,7 @@ struct LogView: View {
 
     @State private var editingBedtime = false
     @State private var showingAccount = false
+    @State private var accountTick = 0
     private static let dateFormat: DateFormatter = {
         let f = DateFormatter(); f.locale = Locale(identifier: "ja_JP"); f.setLocalizedDateFormatFromTemplate("M/d E"); return f
     }()
@@ -184,6 +185,7 @@ struct LogView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: NCSpace.s3) {
+                    AccountRow(tick: accountTick) { showingAccount = true }
                     bedtimeRow
                     if model.logs.isEmpty {
                         Text("まだ記録がありません。").ncText(NCText.footnote, .textSub)
@@ -199,13 +201,7 @@ struct LogView: View {
             .toolbarTitleDisplayMode(.inlineLarge)
             .contentMargins(.top, NCSpace.s5, for: .scrollContent)
             .appDestinations()
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingAccount = true } label: { Image(systemName: "person.crop.circle") }
-                        .accessibilityLabel("アカウント")
-                }
-            }
-            .sheet(isPresented: $showingAccount) { AccountView() }
+            .sheet(isPresented: $showingAccount, onDismiss: { accountTick += 1 }) { AccountView() }
             .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         }
     }

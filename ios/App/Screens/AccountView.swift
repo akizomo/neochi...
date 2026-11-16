@@ -114,3 +114,34 @@ struct AccountView: View {
         catch { message = "削除できませんでした。しばらくしてから、もう一度お試しください。" }
     }
 }
+
+/// 記録タブの先頭に置くアカウントのカード。匿名のあいだは、連携をすすめる言葉を出す。
+struct AccountRow: View {
+    var tick = 0   // 画面を閉じたあとに増やすと、状態を読み直す
+    let action: () -> Void
+    @State private var info: SupabaseClient.AccountInfo?
+
+    private var linked: Bool { info?.providers.contains("apple") == true }
+
+    var body: some View {
+        if SupabaseClient.shared.isConfigured {
+            Button(action: action) {
+                HStack {
+                    VStack(alignment: .leading, spacing: NCSpace.s1) {
+                        Text("アカウント").ncText(NCText.footnote, .textSub)
+                        Text(linked ? "Apple でログイン中" : "記録を引き継ぐ").ncText(NCText.headline)
+                        if !linked && info != nil {
+                            Text("Apple でログインすると、機種変更のあとも記録が残ります。").ncText(NCText.footnote, .textSub)
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right").ncText(NCText.footnote, .textSub)
+                }
+                .padding(NCSpace.s4)
+                .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+            }
+            .buttonStyle(.pressable)
+            .task(id: tick) { info = try? await SupabaseClient.shared.account() }
+        }
+    }
+}
