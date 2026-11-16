@@ -1,5 +1,5 @@
 # Xcode プロジェクトの定義(XcodeGen)。`xcodegen generate` で Neochi.xcodeproj を作る。
-# Bundle ID は、あなたが決めたものに差し替える(docs/SETUP.md の A-2)。
+# Bundle ID: com.example.neochi のまま(2026-11-16 に、変えずに使うと決めた。TestFlight にアップロード済みで、作り直しの手間を避けるため)
 name: Neochi
 options:
   bundleIdPrefix: com.example
