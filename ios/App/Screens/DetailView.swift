@@ -124,9 +124,10 @@ struct DetailView: View {
             if let c = shown, let ep = c.episode {
                 NavigationLink(value: EpisodeRoute(id: ep.id)) {
                     VStack(alignment: .leading, spacing: NCSpace.s2) {
-                        HStack {
-                            Text(reserved ? "今夜聴く話" : "次に聴く話").ncText(NCText.caption, .textSub)
-                            Spacer()
+                        // 見出しは1つだけ。予約済みなら「今夜聴く話」、まだなら、その話を選んだ理由(最新の話、昨夜は18分で寝落ち、など)。
+                        if reserved {
+                            Text("今夜聴く話").ncText(NCText.caption, .textSub)
+                        } else {
                             ReasonText(reason: c.reason)
                         }
                         HStack(alignment: .top, spacing: NCSpace.s2) {

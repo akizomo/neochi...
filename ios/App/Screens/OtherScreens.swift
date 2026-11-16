@@ -155,6 +155,7 @@ struct LogView: View {
     @Environment(AppModel.self) private var model
 
     @State private var editingBedtime = false
+    @State private var showingAccount = false
     private static let dateFormat: DateFormatter = {
         let f = DateFormatter(); f.locale = Locale(identifier: "ja_JP"); f.setLocalizedDateFormatFromTemplate("M/d E"); return f
     }()
@@ -198,6 +199,13 @@ struct LogView: View {
             .toolbarTitleDisplayMode(.inlineLarge)
             .contentMargins(.top, NCSpace.s5, for: .scrollContent)
             .appDestinations()
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingAccount = true } label: { Image(systemName: "person.crop.circle") }
+                        .accessibilityLabel("アカウント")
+                }
+            }
+            .sheet(isPresented: $showingAccount) { AccountView() }
             .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         }
     }
