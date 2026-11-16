@@ -173,14 +173,24 @@ def test_episodes_page_and_links_have_arrows(tmp_path):
 
 
 def test_maker_and_support_links(tmp_path):
-    """応援(Buy Me a Coffee)は、全ページのフッターだけ。作った人は「解析について」にだけ。外へのリンクは noopener。"""
+    """応援の枠(Buy Me a Coffee)は、全ページのフッターだけ。「解析について」の作った人にも、リンクがある。外へのリンクは noopener。"""
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     for path in ("index.html", "about/index.html", "shows/a/index.html", "shows/a/episodes/a1/index.html"):
         h = (tmp_path / path).read_text(encoding="utf-8")
-        assert h.count("buymeacoffee.com/akizomo") == 1 and 'class="foot-made"' in h and "コーヒーで応援する" in h, path
+        assert h.count("buymeacoffee.com/akizomo") == (2 if path == "about/index.html" else 1) and 'class="foot-made"' in h and "img.buymeacoffee.com/button-api" in h and "コーヒーで応援する" in h, path
         assert "作った人" not in h or path == "about/index.html"
     about = (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
     assert "作った人" in about and "akihiro uezono" in about and 'href="https://github.com/akizomo"' in about
     for path in ("index.html", "about/index.html", "shows/a/index.html"):
         for m in re.finditer(r'<a [^>]*href="https://(?:www\.buymeacoffee\.com|github\.com)[^>]*>', (tmp_path / path).read_text(encoding="utf-8")):
             assert 'rel="noopener"' in m.group(0), m.group(0)
+
+
+def test_ranking_pages_switch_between_shows_and_episodes(tmp_path):
+    """ランキングは、番組と話を切り替えられる。今いる方が current で、もう一方へのリンクがある。"""
+    site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
+    shows = (tmp_path / "ranking" / "index.html").read_text(encoding="utf-8")
+    eps = (tmp_path / "episodes" / "index.html").read_text(encoding="utf-8")
+    assert re.search(r'<a href="\.\./ranking/" aria-current="page">番組', shows) and 'href="../episodes/">話' in shows
+    assert re.search(r'<a href="\.\./episodes/" aria-current="page">話', eps) and 'href="../ranking/">番組' in eps
+    assert "<h1>ランキング</h1>" in eps and "その話のページへ移ります" in eps

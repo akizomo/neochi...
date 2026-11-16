@@ -316,4 +316,13 @@ svg text { font-family: var(--sans); }
 .ep-head h1 { margin: 0 0 4px; font-size: 22px; line-height: 30px; }
 
 /* 作った人・応援 */
-.foot-made a { text-decoration: underline; text-underline-offset: 2px; }
+.foot .foot-made { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; }
+.bmc { display: inline-flex; }
+.bmc img { height: 36px; width: auto; border-radius: 6px; }
+
+/* ランキングの対象(番組/話)の切り替え */
+.seg { display: inline-flex; gap: 4px; padding: 4px; margin: 8px 0 12px; background: var(--surface); border-radius: 9999px; }
+.seg a { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 18px; border-radius: 9999px;
+  color: var(--sub); font: 600 14px/1 var(--sans); text-decoration: none; }
+.seg a[aria-current="page"] { background: var(--text); color: var(--bg); }
+.seg a:not([aria-current]):hover { color: var(--text); }
