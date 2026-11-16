@@ -27,7 +27,7 @@ struct RecordDetailView: View {
                     result(log)
                     showRow(show, log)
                     if log.source == .watch, let m = log.latencyMinutes { sleepCard(log, minutes: m) }
-                    if log.interestVote != nil || log.calmVote != nil { ratings(log) }
+                    if log.interestRating != nil || log.calmVote != nil { ratings(log) }
                     memo(log)
                 }
                 .padding(NCSpace.s4)
@@ -108,15 +108,21 @@ struct RecordDetailView: View {
     private func ratings(_ log: SleepLog) -> some View {
         VStack(alignment: .leading, spacing: NCSpace.s3) {
             Text("つけた評価").ncText(NCText.headline)
-            if let v = log.interestVote {
+            if let v = log.interestRating {
+                let z = NCString.interestZone(v)
                 VStack(alignment: .leading, spacing: NCSpace.s2) {
-                    Text("興味").ncText(NCText.footnote, .textSub)
+                    HStack {
+                        Text("引き込み力").ncText(NCText.footnote, .textSub)
+                        Spacer()
+                        Text("\(v) / 10 ・ \(NCString.interestZoneName(z))").ncText(NCText.footnote)
+                    }
                     HStack(spacing: 3) {
-                        ForEach(0...10, id: \.self) { i in
+                        ForEach(1...10, id: \.self) { i in
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(i * 10 == v ? Color.nc(.accentFactor) : Color.nc(.line)).frame(height: 8)
+                                .fill(i == v ? Color.nc(.accentFactor) : Color.nc(.line)).frame(height: 8)
                         }
                     }
+                    Text(NCString.interestZoneNote(z)).ncText(NCText.caption, .textSub)
                 }
             }
             if let c = log.calmVote {
