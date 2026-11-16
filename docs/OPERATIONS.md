@@ -65,3 +65,15 @@
 ## 6. 基準を変えるとき
 
 採点基準は `config/rubric.md` だけを直す（プロンプトは「rubric.md を読んで採点」なので変更不要）。スコアの式やゾーンは `config/scoring.yaml`、定義の説明は `docs/SCORE.md`。変更後は `python -m pytest -q` を通す。
+
+### 採点ルールや格付けの線を変えたあと(本番に反映する)
+
+1. 環境変数 `SUPABASE_URL` と `SUPABASE_SERVICE_KEY` を入れる(値は表示しない。`set -a; source .env.local; set +a`)。
+2. 先にドライラン。何も保存せず、格付けの割合(変更前 → 変更後)と、変わる番組の件数だけが出る。
+   `python -m neochi z-rank --rules-changed --dry-run`
+3. 割合が方針(ZZZ 約15%、ZZ 約30%、Z 約35%、載せない 約2割。`docs/SCORE.md` §3c)から大きく外れていたら、本番に書かずに、線を直す。
+4. 反映する。🌊(項目の点から)と🎧(特徴から)も計算し直し、格付けを引き継がずに付け直す。
+   `python -m neochi z-rank --rules-changed`
+5. サイトは毎朝つくり直される(`.github/workflows/site.yml`)。すぐ見るときは Vercel で再デプロイする。
+
+戻すときは、設定を元に戻して、4 をもう一度流す(評点の元は保存済みの項目と特徴なので、計算し直せる)。項目の点を持たない古い解析は、🌊の幅が旧式のまま。

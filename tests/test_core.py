@@ -221,3 +221,23 @@ def test_show_star_uses_judged_episodes_only(cfg, tmp_path):
 def yaml_z():
     from neochi import cli
     return cli.load_z_config()
+
+
+def test_z_rank_dry_run_saves_nothing(tmp_path, capsys, cfg):
+    """z-rank --dry-run: 割合を表示するだけで、保存先は変えない。"""
+    import argparse
+
+    from neochi import cli
+    from neochi.store import JsonStore
+    p = tmp_path / "s.json"
+    s = JsonStore(p)
+    s.upsert("show", {"id": "sh", "title": "t", "show_star": 4.8, "z_rank": "ZZZ", "listing_status": "listed"})
+    s.upsert("episode", {"id": "e1", "show_id": "sh"})
+    s.upsert("analysis", {"episode_id": "e1", "calm_star": 3.0, "interest_level": "mid", "interest_score": 5, "ear_star": 3.0,
+                          "final_star": 4.8})
+    s.save()
+    before = p.read_text(encoding="utf-8")
+    assert cli.cmd_z_rank(argparse.Namespace(store=str(p), rules_changed=True, dry_run=True)) == 0
+    out = capsys.readouterr().out
+    assert "ドライラン" in out and "ZZZ" in out and "格付けが変わる番組 1 件" in out
+    assert p.read_text(encoding="utf-8") == before

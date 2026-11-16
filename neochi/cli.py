@@ -10,7 +10,7 @@ from pathlib import Path
 import yaml
 
 from . import feeds, genre, pipeline, z_rank
-from .store import open_store
+from .store import JsonStore, open_store
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -140,21 +140,46 @@ def cmd_remeasure(a) -> int:
 def cmd_z_rank(a) -> int:
     """実測・みんなの評価が増えたあとに、総合評点・番組の評点・格付けを計算し直す。"""
     cfg, zcfg, store = load_config(), load_z_config(), open_store(a.store)
+    before = {s["id"]: s.get("z_rank") for s in store.rows("show")}
+    if a.dry_run:  # 本番の行を手元のメモリに写して計算する。何も書き込まない
+        mem = JsonStore("/nonexistent/dry-run.json")
+        for t in JsonStore.TABLES:
+            for r in store.rows(t):
+                mem.data[t][mem._key(t, r)] = r
+        store = mem
     episodes = {e["id"]: e for e in store.rows("episode")}
     shows = {s["id"]: s for s in store.rows("show")}
     for row in store.rows("analysis"):
         if a.rules_changed:  # 採点ルールが変わったときは、🌊(項目の点)と🎧(特徴)も、保存済みの値から計算し直す
             lang = (shows.get((episodes.get(row["episode_id"]) or {}).get("show_id")) or {}).get("lang") or "ja"
             row = pipeline.recalm(pipeline.reear(row, lang, cfg), cfg)
-            store.update("analysis", row["episode_id"], {"features": row["features"], "ear_star": row["ear_star"],
-                                                         "calm_star": row["calm_star"], "total_star": pipeline.restar_ai(row, cfg)})
+            fields = {k: row.get(k) for k in ("features", "ear_star", "calm_star")}
+            store.update("analysis", row["episode_id"], {**fields, "total_star": pipeline.restar_ai(row, cfg)})
         final, reason = pipeline.restar(row, cfg, store)
         store.update("analysis", row["episode_id"], {"final_star": final, "final_reason": reason})
     ids = [s["id"] for s in store.rows("show")]
     _update_show_stars(store, ids)
     update_ratings(store, ids, zcfg, reset=a.rules_changed)
+    if a.dry_run:
+        _print_rank_shares(before, store.rows("show"))
+        print("ドライランです。何も保存していません。")
+        return 0
     store.save()
     return 0
+
+
+def _print_rank_shares(before: dict, shows: list[dict]) -> None:
+    """格付けの割合(変更前 → 変更後)。"""
+    from collections import Counter
+
+    after = {s["id"]: s.get("z_rank") for s in shows}
+    n = len(after) or 1
+    cb, ca = Counter(before.values()), Counter(after.values())
+    print(f"番組 {len(after)} 件")
+    for r in ("ZZZ", "ZZ", "Z", None):
+        print(f"  {r or '載せない':6s} {cb[r]:3d} ({cb[r] * 100 // n:2d}%) → {ca[r]:3d} ({ca[r] * 100 // n:2d}%)")
+    moved = sum(1 for k, v in after.items() if before.get(k) != v)
+    print(f"  格付けが変わる番組 {moved} 件")
 
 
 def cmd_sync_shows(a) -> int:
@@ -232,6 +257,7 @@ def main(argv=None) -> int:
     z = sub.add_parser("z-rank", help="実測・みんなの評価から、総合評点と寝落ち格付けを計算し直す")
     z.add_argument("--rules-changed", action="store_true",
                    help="採点ルールや格付けの線を変えたとき。付いている格付けを引き継がず、全番組を計算し直す")
+    z.add_argument("--dry-run", action="store_true", help="何も保存せず、格付けの割合(変更前 → 変更後)だけを表示する")
     z.set_defaults(fn=cmd_z_rank)
     ss = sub.add_parser("sync-shows", help="CSV の系統・集めた目的・言語を、登録済みの番組に書き写す(解析はしない)")
     ss.add_argument("--csv", default="data/shows.csv")
