@@ -178,9 +178,9 @@ def tone_star(v: float) -> str:
 
 
 def tone_interest(total: int) -> str:
-    """引き込み力(1〜10)の色。4〜6 から離れるほど良くない: 4〜6 は緑、1つ外れ(3・7)は琥珀、2つ以上外れ(1・2・8〜10)は赤。"""
+    """引き込み力(1〜10)の色。4〜6 から離れるほど良くない: 4〜6 は緑、2つ外れまで(2・3・7・8)は琥珀、3つ以上外れ(1・9・10)は赤。"""
     d = 4 - total if total < 4 else total - 6 if total > 6 else 0
-    return "good" if d == 0 else "mid" if d == 1 else "bad"
+    return "good" if d == 0 else "mid" if d <= 2 else "bad"
 
 
 # 引き込み力の数字がない、古い3段階だけの判定。low(1〜3)と high(7〜10)は、離れ方が分からないので琥珀

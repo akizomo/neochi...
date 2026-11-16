@@ -39,10 +39,10 @@ public enum EvidenceTone: Sendable, Equatable {
     public static func interest(_ l: InterestLevel) -> EvidenceTone {
         switch l { case .low: .mid; case .mid: .good; case .high: .mid }
     }
-    /// 引き込み力(1〜10)。4〜6 から離れるほど良くない: 4〜6 は緑、1つ外れ(3・7)は琥珀、2つ以上外れ(1・2・8〜10)は赤。
+    /// 引き込み力(1〜10)。4〜6 から離れるほど良くない: 4〜6 は緑、2つ外れまで(2・3・7・8)は琥珀、3つ以上外れ(1・9・10)は赤。
     public static func interestTotal(_ t: Int) -> EvidenceTone {
         let d = t < 4 ? 4 - t : t > 6 ? t - 6 : 0
-        return d == 0 ? .good : d == 1 ? .mid : .bad
+        return d == 0 ? .good : d <= 2 ? .mid : .bad
     }
     /// 起伏の項目(0〜2点)。興味の項目は、1つずつでは良し悪しが決まらないので使わない。
     public static func calmItem(_ score: Int) -> EvidenceTone { score <= 0 ? .good : score == 1 ? .mid : .bad }

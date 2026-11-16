@@ -59,7 +59,7 @@ final class ExplainTests: XCTestCase {
         XCTAssertEqual(EvidenceTone.interest(.high), .mid)
         // 4〜6 から離れるほど良くない
         XCTAssertEqual((1...10).map(EvidenceTone.interestTotal),
-                       [.bad, .bad, .mid, .good, .good, .good, .mid, .bad, .bad, .bad])
+                       [.bad, .mid, .mid, .good, .good, .good, .mid, .mid, .bad, .bad])
         XCTAssertEqual(EvidenceTone.calmItem(0), .good); XCTAssertEqual(EvidenceTone.calmItem(1), .mid)
         XCTAssertEqual(EvidenceTone.calmItem(2), .bad)
         XCTAssertEqual(EvidenceTone.bad.color, .negative)

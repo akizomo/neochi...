@@ -265,7 +265,7 @@ def test_evidence_tones_show_good_mid_bad(tmp_path):
     """観点ごとの根拠は、緑(向く)・琥珀(ふつう)・赤(向かない)で色を分ける。区切りは Explain.swift の EvidenceTone と同じ。"""
     assert [site.tone_star(v) for v in (4.5, 3.8, 3.5, 2.2, 2.0)] == ["good", "good", "mid", "mid", "bad"]
     # 程よい興味は 4〜6 から離れるほど良くない
-    assert [site.tone_interest(t) for t in range(1, 11)] == ["bad", "bad", "mid", "good", "good", "good", "mid", "bad", "bad", "bad"]
+    assert [site.tone_interest(t) for t in range(1, 11)] == ["bad", "mid", "mid", "good", "good", "good", "mid", "mid", "bad", "bad"]
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     h = (tmp_path / "shows" / "a" / "episodes" / "a1" / "index.html").read_text(encoding="utf-8")
     assert 'class="star t-good"' in h                               # 起伏 ★4.5

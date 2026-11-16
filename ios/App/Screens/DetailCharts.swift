@@ -239,7 +239,7 @@ struct InterestScale: View {
     let total: Int
 
     var body: some View {
-        let on = EvidenceTone.interestTotal(total).color   // 4〜6 は緑、3・7 は琥珀、それより外は赤
+        let on = EvidenceTone.interestTotal(total).color   // 4〜6 は緑、2・3・7・8 は琥珀、1・9・10 は赤
         return VStack(alignment: .leading, spacing: NCSpace.s1) {
             HStack(spacing: 3) {
                 ForEach(1...10, id: \.self) { i in
