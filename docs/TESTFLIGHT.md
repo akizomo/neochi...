@@ -25,7 +25,7 @@
 3. App Store Connect でアプリを作る(名前 NeochiPickzz。使用済みと言われたら教える)。
 4. **Supabase の「Allow anonymous sign-ins」をオンにする**(Authentication → Providers)。いまはオフ(登録の応答が 422)。オフのままだと、朝の振り返りの記録がサーバーに送れない。
 5. プライバシーポリシーを公開して、URL を App Store Connect の App Privacy に入れる(SETUP.md E の下書き)。App Privacy の回答は、`PrivacyInfo.xcprivacy` と同じ内容(睡眠データ・デバイスID、ユーザーに紐づく、追跡なし、アプリの機能)。
-6. 正式なロゴ(1024×1024、角丸なし)を渡す。`App/Assets.xcassets/AppIcon.appiconset/icon-1024.png` を差し替える。
+6. ~~正式なロゴを渡す~~ 済み(2026-11-16)。正式なアプリアイコン(1024×1024、角丸なし)を `App/Assets.xcassets/AppIcon.appiconset/icon-1024.png` に入れた。元は `design/brand/`。
 7. Xcode で Apple ID を登録する(Settings → Accounts)。
 
 ## ターミナルだけで出す(登録済みの実機なしで可。Bitdone リポジトリの手法)

@@ -83,7 +83,7 @@ def test_episode_page_has_evidence(tmp_path):
 def test_logo_and_icons(tmp_path):
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     h = (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert 'class="logo-n"' in h and 'og:image" content="https://example.com/og.png"' in h
+    assert 'class="logo-w"' in h and 'og:image" content="https://example.com/og.png"' in h
     for f in ("og.png", "apple-touch-icon.png", "favicon.svg", "style.css"):
         assert (tmp_path / f).exists()
 
@@ -240,3 +240,22 @@ def test_explainer_page_cites_every_source_and_marks_strength(tmp_path):
     assert f"起伏の少なさ {w['calm']:.1f}、程よい興味 {w['interest']:.1f}、耳のゆるさ {w['ear']:.1f}" in h
     assert "眠れることの約束ではありません" in h
     assert "スコアと根拠" in (tmp_path / "index.html").read_text(encoding="utf-8")
+
+
+def test_brand_matches_tokens_and_exports():
+    """ロゴの色と濃さは design/tokens.json と同じ。書き出したアセットが揃っている。"""
+    import json
+    from pathlib import Path
+
+    from neochi import brand
+    root = Path(__file__).resolve().parent.parent
+    tk = json.loads((root / "design/tokens.json").read_text(encoding="utf-8"))
+    logo = {t["name"]: t["value"] for t in tk["logo"]["tokens"]}
+    op = {t["name"]: float(t["value"]) for t in tk["opacity"]["tokens"] if t["name"].startswith("opacity-logo")}
+    assert (brand.BG, brand.FG) == (logo["logo-bg"], logo["logo-fg"])
+    assert (brand.O1, brand.O2, brand.O3) == (op["opacity-logo-1"], op["opacity-logo-2"], op["opacity-logo-3"])
+    for f in ("svg/wordmark-on-dark.svg", "svg/wordmark-on-light.svg", "svg/symbol-on-dark.svg", "svg/app-icon.svg", "svg/favicon.svg",
+              "png/app-icon-1024.png", "png/og-1200x630.png", "png/x-profile-400.png"):
+        assert (root / "design/brand" / f).exists(), f
+    # 同じページにワードマークを2つ置いても、clipPath の名前が重ならない
+    assert brand.wordmark("#fff", uid="a") .count('id="a0"') == 1 and 'id="b0"' in brand.wordmark("#fff", uid="b")

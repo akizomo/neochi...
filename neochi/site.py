@@ -19,7 +19,7 @@ from html import escape
 from pathlib import Path
 from statistics import mean
 
-from . import strings
+from . import brand, strings
 from .scoring import is_judged
 
 ASSETS = Path(__file__).resolve().parent / "site_assets"
@@ -257,16 +257,14 @@ def n1(v: float | None) -> str:
 
 
 def mark_svg(cls: str = "mark") -> str:
-    """ロゴの記号 N。3本の線の濃さは design/tokens.json の opacity-logo-1〜3(アプリアイコンと同じ形)。"""
-    return (f'<svg class="{cls}" viewBox="300 270 425 485" aria-hidden="true" fill="none" stroke="currentColor" '
-            'stroke-width="71" stroke-linecap="round">'
-            '<path d="M689.5 305.5V719" opacity=".28"/><path d="M335.5 305.5L689.5 719" opacity=".6"/>'
-            '<path d="M335.5 305.5V719"/></svg>')
+    """ロゴの記号 N(3本の線が右へ薄れる)。形は neochi/brand.py。色は文字の色(currentColor)。"""
+    return brand.symbol("currentColor", cls=cls, uid=f"n-{cls}", decorative=True).strip()
 
 
-def wordmark(root: str) -> str:
-    return (f'<a class="logo" href="{root}" aria-label="NeochiPickzz トップ">{mark_svg("logo-n")}'
-            '<span aria-hidden="true">eochiPick<span class="z1">z</span><span class="z2">z</span></span></a>')
+def wordmark(root: str, uid: str = "w") -> str:
+    """ロゴ NeochiPickzz(横組み)。同じページに2つ置くので、uid で clipPath の名前を分ける。"""
+    return (f'<a class="logo" href="{root}" aria-label="NeochiPickzz トップ">'
+            f'{brand.wordmark("currentColor", uid=uid, cls="logo-w", title="NeochiPickzz").strip()}</a>')
 
 
 def badge(rank: str, small: bool = False) -> str:
@@ -340,7 +338,7 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 {body}
 </main>
 <footer class="foot"><div class="wrap">
-<div class="foot-brand">{wordmark(root)}<span class="foot-made">made by {MAKER}</span></div>
+<div class="foot-brand">{wordmark(root, "wf")}<span class="foot-made">made by {MAKER}</span></div>
 <nav class="foot-nav"><a href="{root}">トップ</a><a href="{root}ranking/">ランキング</a><a href="{root}episodes/">寝落ち向きの話</a><a href="{root}about/">スコアと根拠</a></nav>
 <p>{FOOT_NOTE}</p>
 <p>{FOOT_RIGHTS}</p>
@@ -1023,9 +1021,7 @@ out.innerHTML='';const m=document.createElement('b');m.textContent=p.dataset.min
 out.append(m,' '+p.dataset.note+' ',s);};p.addEventListener('click',pick);p.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick();}});});});})();
 """
 
-FAVICON = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="224" fill="#171C33"/>'
-           '<g fill="none" stroke="#D9DCEA" stroke-width="71" stroke-linecap="round">'
-           '<path d="M689.5 305.5V719" opacity=".28"/><path d="M335.5 305.5L689.5 719" opacity=".6"/><path d="M335.5 305.5V719"/></g></svg>')
+FAVICON = brand.icon("square", 1024, 0.62, 0.22)   # design/brand/svg/favicon.svg と同じ
 
 
 def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> list[dict]:

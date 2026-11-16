@@ -57,8 +57,8 @@ main:focus { outline: none; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
 .logo { display: inline-flex; align-items: baseline; color: var(--logo); text-decoration: none;
   font: 600 20px/1 var(--sans); letter-spacing: 0.01em; }
-.logo-n { width: 0.62em; height: 0.72em; margin-right: 0.05em; overflow: visible; }
-.logo .z2 { opacity: 0.28; }
+.logo-w { display: block; height: 20px; width: auto; }   /* ワードマーク(輪郭の svg)。高さは最小 16px */
+.foot .logo-w { height: 16px; }
 .mark { width: 40%; height: 40%; color: var(--sub); }
 nav a { color: var(--sub); text-decoration: none; font-size: 13px; padding: 12px 0; display: inline-block; }
 nav a:hover { color: var(--text); }
