@@ -9,6 +9,7 @@ struct MorningView: View {
     @State private var interest: Int?
     @State private var calm: Int?
     @State private var note = ""
+    @State private var selfReport: SelfReportLatency?
 
     private var minutes: Int? { model.pendingLatency }
 
@@ -24,6 +25,7 @@ struct MorningView: View {
         NavigationStack {
             Form {
                 resultSection
+                if minutes == nil { selfReportSection }
                 if let l = listened { listenedSection(l.show, l.episode) }
                 ratingSection
                 Section {
@@ -69,6 +71,28 @@ struct MorningView: View {
         }
     }
 
+    /// ヘルスケアに睡眠の記録がない朝。分数ではなく、選択肢で答える(答えなくても記録できる)。
+    private var selfReportSection: some View {
+        Section {
+            ForEach(SelfReportLatency.allCases, id: \.self) { opt in
+                Button { selfReport = selfReport == opt ? nil : opt } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: NCSpace.s1) {
+                            Text(opt.label).ncText(NCText.body)
+                            Text(opt.hint).ncText(NCText.footnote, .textSub)
+                        }
+                        Spacer()
+                        if selfReport == opt { Image(systemName: "circle.fill").font(.system(size: NCSize.iconSm)).foregroundStyle(Color.nc(.accentResult)) }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selfReport == opt ? .isSelected : [])
+                .listRowBackground(Color.nc(.surface))
+            }
+        } header: { Text(NCString.selfReportQuestion) } footer: { Text(NCString.selfReportFooter) }
+    }
+
     /// 数字の元になった時刻(データ)。ヘルスケアで入眠が確認できたときだけ出す。
     private func timeColumn(_ label: String, _ date: Date) -> some View {
         VStack(alignment: .leading, spacing: NCSpace.s1) {
@@ -108,7 +132,7 @@ struct MorningView: View {
     private var actions: some View {
         VStack(spacing: NCSpace.s1) {
             Button {
-                model.saveLog(interest: interest, calm: calm, note: note)
+                model.saveLog(interest: interest, calm: calm, note: note, selfReport: selfReport)
                 dismiss()
             } label: {
                 Text(NCString.save).ncText(NCText.headline, .bgBase)

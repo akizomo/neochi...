@@ -56,6 +56,9 @@ public enum NCString {
     public static let save = "記録する"
     public static let later = "あとで"
 
+    public static let selfReportQuestion = "どのくらいで寝ましたか"
+    public static let selfReportFooter = "ヘルスケアに睡眠の記録がなかったので、覚えている範囲で選んでください。番組の評点には入れません。"
+
     public static let noResult = "寝落ちまで ―"
     public static let noResultNote = "寝落ちの記録を確認中です"
     public static let researching = "調査中"

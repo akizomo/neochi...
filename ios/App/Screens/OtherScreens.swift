@@ -232,6 +232,8 @@ struct LogView: View {
                         Text("\(m)").ncText(NCText.numMd, .accentResult)
                         Text("分").ncText(NCText.footnote, .accentResult)
                     }
+                } else if let r = log.selfReport {
+                    Text(r.label).ncText(NCText.footnote, .accentResult).lineLimit(1)
                 } else {
                     Text("―").ncText(NCText.numMd, .textSub)
                 }

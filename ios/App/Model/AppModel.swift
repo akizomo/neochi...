@@ -180,7 +180,7 @@ final class AppModel {
     }
 
     /// 「記録する」で保存。入力は任意。
-    func saveLog(interest: Int?, calm: Int?, note: String) {
+    func saveLog(interest: Int?, calm: Int?, note: String, selfReport: SelfReportLatency? = nil) {
         guard let s = playStartedAt, let ep = playEpisodeID, let show = playShowID else {
             pendingMorning = false; savePendingNight(); return
         }
@@ -188,7 +188,8 @@ final class AppModel {
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
         let log = SleepLog(id: UUID().uuidString, episodeID: ep, showID: show, startedAt: s, sleepOnsetAt: onsetAt,
                            source: onsetAt == nil ? .selfReport : .watch, interestRating: interest, calmVote: calm,
-                           note: trimmed.isEmpty ? nil : trimmed, listenNo: max(1, listenNo))
+                           note: trimmed.isEmpty ? nil : trimmed, listenNo: max(1, listenNo),
+                           selfReport: onsetAt == nil ? selfReport : nil)
         logs.append(log)
         if let m = log.latencyMinutes { lastNight = LastNight(showID: show, episodeID: ep, minutes: m) }
         pendingMorning = false

@@ -311,7 +311,7 @@ actor SupabaseClient {
     func upload(_ log: SleepLog) async throws {
         let e = JSONEncoder(); e.dateEncodingStrategy = .iso8601
         let row = LogUpload(id: log.id, episode_id: log.episodeID, started_at: log.startedAt, sleep_onset_at: log.sleepOnsetAt,
-                            latency_min: log.latencyMinutes, source: log.source.rawValue, interest_rating: log.interestRating,
+                            latency_min: log.uploadLatencyMinutes, source: log.source.rawValue, interest_rating: log.interestRating,
                             calm_vote: log.calmVote, note: log.note, listen_no: log.listenNo)
         _ = try await request("sleep_log", query: [URLQueryItem(name: "on_conflict", value: "id")], method: "POST",
                               body: try e.encode(row))

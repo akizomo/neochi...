@@ -47,6 +47,9 @@ struct RecordDetailView: View {
                     Text("分").ncText(NCText.title, .accentResult)
                 }
                 Text(NCString.comment(minutes: m)).ncText(NCText.body)
+            } else if let r = log.selfReport {
+                Text(r.label).ncText(NCText.title, .accentResult)
+                Text(r.hint).ncText(NCText.body, .textSub)
             } else {
                 Text("―").ncText(NCText.numHero, .textSub)
                 Text("寝落ちの記録を確認中です").ncText(NCText.title)
