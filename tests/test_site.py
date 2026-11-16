@@ -173,11 +173,13 @@ def test_episodes_page_and_links_have_arrows(tmp_path):
 
 
 def test_maker_and_support_links(tmp_path):
-    """応援の枠(Buy Me a Coffee)は、全ページのフッターだけ。「解析について」の作った人にも、リンクがある。外へのリンクは noopener。"""
+    """応援(Buy Me a Coffee)は、全ページの右下に固定の公式ボタンだけ。フッターは「made by」の文字。「解析について」の作った人にも、リンクがある。外へのリンクは noopener。"""
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     for path in ("index.html", "about/index.html", "shows/a/index.html", "shows/a/episodes/a1/index.html"):
         h = (tmp_path / path).read_text(encoding="utf-8")
-        assert h.count("buymeacoffee.com/akizomo") == (2 if path == "about/index.html" else 1) and 'class="foot-made"' in h and "made by akihiro uezono" in h and "個人で作っています。</span>" not in h and "img.buymeacoffee.com/button-api" in h and "コーヒーで応援する" in h, path
+        assert h.count("buymeacoffee.com/akizomo") == (2 if path == "about/index.html" else 1), path
+        assert 'class="bmc-fab"' in h and "img.buymeacoffee.com/button-api" in h and "コーヒーで応援する" in h, path
+        assert 'class="foot-made">made by akihiro uezono</p>' in h, path
         assert "作った人" not in h or path == "about/index.html"
     about = (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
     assert "作った人" in about and "akihiro uezono" in about and 'href="https://github.com/akizomo"' in about
@@ -194,3 +196,28 @@ def test_ranking_pages_switch_between_shows_and_episodes(tmp_path):
     assert re.search(r'<a href="\.\./ranking/" aria-current="page">番組', shows) and 'href="../episodes/">話' in shows
     assert re.search(r'<a href="\.\./episodes/" aria-current="page">話', eps) and 'href="../ranking/">番組' in eps
     assert "<h1>ランキング</h1>" in eps and "その話のページへ移ります" in eps
+
+
+def test_short_urls_and_old_urls_redirect(tmp_path):
+    """URL には、UUID の先頭8文字を使う。公開済みの長い URL は、短い URL へ移す。"""
+    uid, eid = "023d5b4d-8991-57ec-8f1e-5399e6b0e822", "93a7a6c6-0f6d-5d52-b356-8a0fc482d7e1"
+    data = {**DATA, "show": [{**DATA["show"][0], "id": uid}, *DATA["show"][1:]],
+            "episode": [{**DATA["episode"][0], "id": eid, "show_id": uid}, *DATA["episode"][1:]],
+            "analysis": [{**DATA["analysis"][0], "episode_id": eid}, *DATA["analysis"][1:]],
+            "show_stats": [{**DATA["show_stats"][0], "show_id": uid}],
+            "show_sleep_points": [{**p, "show_id": uid} for p in DATA["show_sleep_points"]]}
+    site.build(data, tmp_path, cli.load_config(), "https://example.com/")
+    new = tmp_path / "shows" / "023d5b4d" / "episodes" / "93a7a6c6" / "index.html"
+    assert new.exists() and (tmp_path / "shows" / "023d5b4d" / "index.html").exists()
+    top = (tmp_path / "ranking" / "index.html").read_text(encoding="utf-8")
+    assert 'href="../shows/023d5b4d/"' in top and uid not in top
+    assert uid not in (tmp_path / "sitemap.xml").read_text() and "shows/023d5b4d/episodes/93a7a6c6/" in (tmp_path / "sitemap.xml").read_text()
+    old = (tmp_path / "shows" / uid / "episodes" / eid / "index.html").read_text(encoding="utf-8")
+    assert 'url=../../../023d5b4d/episodes/93a7a6c6/' in old
+    assert 'url=../023d5b4d/' in (tmp_path / "shows" / uid / "index.html").read_text(encoding="utf-8")
+
+
+def test_short_slugs_stay_unique():
+    ids = ["aaaaaaaa-1111-0000-0000-000000000001", "aaaaaaaa-2222-0000-0000-000000000002", "bbbbbbbb-0000-0000-0000-000000000003"]
+    sl = site.short_slugs(ids)
+    assert len(set(sl.values())) == 3 and sl[ids[2]] == "bbbbbbbb" and len(sl[ids[0]]) > 8

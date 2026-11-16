@@ -87,6 +87,27 @@ def load_json_store(path: str | Path) -> dict:
     return {t: list(v.values()) if isinstance(v, dict) else v for t, v in raw.items()}
 
 
+def short_slugs(ids: list[str]) -> dict[str, str]:
+    """URL に使う短い名前。UUID の先頭8文字。重なる ID だけ、重ならなくなるまで長くする(UUID でないテスト用の短い ID は、そのまま)。"""
+    flat = {i: i.replace("-", "") for i in ids}
+    length = {i: 8 for i in ids}
+    while True:
+        slugs = {i: flat[i][:length[i]] for i in ids}
+        counts: dict[str, int] = {}
+        for v in slugs.values():
+            counts[v] = counts.get(v, 0) + 1
+        dup = [i for i, v in slugs.items() if counts[v] > 1 and length[i] < len(flat[i])]
+        if not dup:
+            return slugs
+        for i in dup:
+            length[i] += 4
+
+
+def slug(x: dict) -> str:
+    """番組・話のページの URL に使う名前(build_model が付ける)。"""
+    return x.get("slug") or x["id"][:8]
+
+
 def build_model(data: dict, cfg: dict) -> list[dict]:
     """掲載中で格付けがあり、判定済みの回がある番組だけを、評点の高い順に返す(docs/SCORE.md §1)。"""
     eps_by_show: dict[str, list[dict]] = {}
@@ -111,6 +132,11 @@ def build_model(data: dict, cfg: dict) -> list[dict]:
         shows.append({**s, "show_star": float(s["show_star"]), "episodes": eps, "analyzed": analyzed,
                       "scored": scored, "stats": stats.get(s["id"]), "points": points.get(s["id"], [])})
     shows.sort(key=lambda s: (-s["show_star"], -RANK_ORDER[s["z_rank"]], s["title"]))
+    for sid, sl in short_slugs([x["id"] for x in shows]).items():
+        next(x for x in shows if x["id"] == sid)["slug"] = sl
+    for x in shows:
+        for eid, sl in short_slugs([e["id"] for e in x["episodes"]]).items():
+            next(e for e in x["episodes"] if e["id"] == eid)["slug"] = sl
     return shows
 
 
@@ -311,8 +337,9 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 <nav class="foot-nav"><a href="{root}">トップ</a><a href="{root}ranking/">ランキング</a><a href="{root}episodes/">寝落ち向きの話</a><a href="{root}about/">解析について</a></nav>
 <p>{FOOT_NOTE}</p>
 <p>{FOOT_RIGHTS}</p>
-<p class="foot-made"><span>made by {MAKER}</span><a class="bmc" href="{SUPPORT_URL}" rel="noopener" target="_blank"><img src="{BMC_BUTTON}" alt="{SUPPORT_LABEL}(Buy Me a Coffee)" width="169" height="36" loading="lazy"></a></p>
+<p class="foot-made">made by {MAKER}</p>
 </div></footer>
+<a class="bmc-fab" href="{SUPPORT_URL}" rel="noopener" target="_blank"><img src="{BMC_BUTTON}" alt="{SUPPORT_LABEL}(Buy Me a Coffee)" width="169" height="36" loading="lazy"></a>
 </body>
 </html>
 """
@@ -361,7 +388,7 @@ def rank_guide() -> str:
 
 def cover_card(s: dict, no: int | None = None, root: str = "", extra: str = "") -> str:
     n = f'<span class="no num" aria-label="{no}位">{no}</span>' if no else ""
-    return (f'<li class="pcard"{extra}><a href="{root}shows/{s["id"]}/"><span class="cv">{artwork(s.get("artwork_url"), "art-c")}{n}'
+    return (f'<li class="pcard"{extra}><a href="{root}shows/{slug(s)}/"><span class="cv">{artwork(s.get("artwork_url"), "art-c")}{n}'
             f'<span class="bd">{badge(s["z_rank"], True)}</span></span>'
             f'<span class="pt-title">{escape(s["title"])}</span>{score(s["show_star"], "score-s")}</a></li>')
 
@@ -369,19 +396,19 @@ def cover_card(s: dict, no: int | None = None, root: str = "", extra: str = "") 
 def tonight(pick: tuple) -> str:
     s, e, a, _ = pick
     line = (a.get("reasons") or {}).get("llm")
-    links = [f'<a class="btn" href="shows/{s["id"]}/episodes/{e["id"]}/">この話のページへ</a>',
-             f'<a class="btn btn-ghost" href="shows/{s["id"]}/">番組のページへ</a>']
+    links = [f'<a class="btn" href="shows/{slug(s)}/episodes/{slug(e)}/">この話のページへ</a>',
+             f'<a class="btn btn-ghost" href="shows/{slug(s)}/">番組のページへ</a>']
     if s.get("apple_url"):
         links.append(f'<a class="btn btn-ghost" href="{escape(s["apple_url"])}" rel="noopener" target="_blank">Apple Podcasts で聴く</a>')
     elif s.get("link_url"):
         links.append(f'<a class="btn btn-ghost" href="{escape(s["link_url"])}" rel="noopener" target="_blank">配信元で聴く</a>')
     return f"""<section class="tonight" id="tonight" aria-label="今夜の1本">
-<a class="tn-cover" href="shows/{s['id']}/" aria-label="{escape(s['title'])}のページへ">{artwork(s.get('artwork_url'), 'art-xl')}</a>
+<a class="tn-cover" href="shows/{slug(s)}/" aria-label="{escape(s['title'])}のページへ">{artwork(s.get('artwork_url'), 'art-xl')}</a>
 <div class="tn-text">
 <p class="cap">今夜の1本</p>
 <p class="rank-line">{badge(s['z_rank'])}<span class="cap">{RANK_MEANING[s['z_rank']]}</span></p>
-<h2 class="tn-title"><a href="shows/{s['id']}/">{escape(s['title'])}</a></h2>
-<p class="cap one-line"><a href="shows/{s['id']}/episodes/{e['id']}/">{escape(e.get('title') or '')}</a></p>
+<h2 class="tn-title"><a href="shows/{slug(s)}/">{escape(s['title'])}</a></h2>
+<p class="cap one-line"><a href="shows/{slug(s)}/episodes/{slug(e)}/">{escape(e.get('title') or '')}</a></p>
 <p class="tn-score">{score(float(a['final_star']), 'big')}<span class="cap">この話の評点。番組の評点は {n1(s['show_star'])}</span></p>
 <p class="cap">{breakdown(s['stats'])}</p>
 {f'<p class="tn-line">{escape(line)}</p>' if line else ''}
@@ -406,7 +433,7 @@ def shelf(kind: str, shows: list[dict]) -> str:
 
 
 def episode_row(s: dict, e: dict, a: dict, root: str = "", extra: str = "") -> str:
-    return (f'<li class="ep"{extra}><a href="{root}shows/{s["id"]}/episodes/{e["id"]}/">{artwork(s.get("artwork_url"), "art-s")}'
+    return (f'<li class="ep"{extra}><a href="{root}shows/{slug(s)}/episodes/{slug(e)}/">{artwork(s.get("artwork_url"), "art-s")}'
             f'<span class="row-text"><span class="row-title">{escape(e.get("title") or "")}</span>'
             f'<span class="row-sub">{escape(s["title"])}</span></span>{score(float(a["final_star"]))}</a></li>')
 
@@ -768,7 +795,7 @@ def ep_title(e: dict) -> str:
 
 def ep_url(s: dict, e: dict) -> str:
     """番組のページから見た、話のページ。"""
-    return f"episodes/{e['id']}/"
+    return f"episodes/{slug(e)}/"
 
 
 def latest_episode(s: dict) -> str:
@@ -858,7 +885,7 @@ def show_html(s: dict, base_url: str, cfg: dict, related: list[dict] | None = No
         links.append(f'<a class="btn" href="{escape(s["apple_url"])}" rel="noopener" target="_blank">Apple Podcasts で聴く</a>')
     if s.get("link_url"):
         links.append(f'<a class="btn{" btn-ghost" if links else ""}" href="{escape(s["link_url"])}" rel="noopener" target="_blank">配信元で聴く</a>')
-    url = f"{base_url}shows/{s['id']}/" if base_url else ""
+    url = f"{base_url}shows/{slug(s)}/" if base_url else ""
     g = s.get("genre")
     crumb = f'<span aria-hidden="true">/</span><a href="../../ranking/?genre={urllib.parse.quote(g)}">{escape(g)}</a>' if g else ""
     share_text = f"{s['title']}。評点 {s['show_star']:.1f}、寝落ち格付け {s['z_rank']}。"
@@ -939,6 +966,14 @@ def related_block(s: dict, related: list[dict]) -> str:
     return (f'<section class="sec"><div class="sec-head"><h2>{head}</h2>{more}</div>{body}'
             f'<p class="actions"><a class="btn btn-ghost" href="../../ranking/">ランキングをすべて見る</a>'
             f'<a class="btn btn-ghost" href="../../#tonight">今夜の1本へ</a></p></section>')
+
+
+def redirect_page(rel: str, canonical: str = "") -> str:
+    """古い URL(UUID)から、新しい短い URL へ。公開してすぐに URL を変えたので、共有済みのリンクを切らないために残す。"""
+    c = f'<link rel="canonical" href="{escape(canonical)}">' if canonical else ""
+    return (f'<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>移動しました</title>{c}'
+            f'<meta http-equiv="refresh" content="0;url={rel}"><meta name="robots" content="noindex"></head>'
+            f'<body><a href="{rel}">移動しました</a></body></html>')
 
 
 def about_html() -> str:
@@ -1022,16 +1057,25 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
                                                    body=about_html(), canonical=base_url and base_url + "about/",
                                                    og_image=og, large_card=True), encoding="utf-8")
     for s in shows:
-        d = out / "shows" / s["id"]
+        d = out / "shows" / slug(s)
         d.mkdir(parents=True)
+        if slug(s) != s["id"]:
+            old_d = out / "shows" / s["id"]
+            old_d.mkdir(parents=True, exist_ok=True)
+            old_d.joinpath("index.html").write_text(redirect_page(f"../{slug(s)}/", base_url and f"{base_url}shows/{slug(s)}/"), encoding="utf-8")
         desc = f"評点 {s['show_star']:.1f}、寝落ち格付け {s['z_rank']}。{RANK_MEANING[s['z_rank']]}です。"
         d.joinpath("index.html").write_text(page(
             title=f"{s['title']} | {strings.PRODUCT}", desc=desc, root="../../", body=show_html(s, base_url, cfg, [r for r in shows if r["id"] != s["id"] and r.get("genre") and r.get("genre") == s.get("genre")]),
-            canonical=base_url and f"{base_url}shows/{s['id']}/", og_image=s.get("artwork_url") or og, og_type="article"),
+            canonical=base_url and f"{base_url}shows/{slug(s)}/", og_image=s.get("artwork_url") or og, og_type="article"),
             encoding="utf-8")
         an = dict((x["id"], y) for x, y in s["analyzed"])
         for e in s["episodes"]:
-            ed = d / "episodes" / e["id"]
+            if slug(e) != e["id"]:
+                old_e = out / "shows" / s["id"] / "episodes" / e["id"]
+                old_e.mkdir(parents=True, exist_ok=True)
+                old_e.joinpath("index.html").write_text(redirect_page(
+                    f"../../../{slug(s)}/episodes/{slug(e)}/", base_url and f"{base_url}shows/{slug(s)}/episodes/{slug(e)}/"), encoding="utf-8")
+            ed = d / "episodes" / slug(e)
             ed.mkdir(parents=True)
             title = (e.get("title") or "").strip() or "(題名なし)"
             a = an.get(e["id"])
@@ -1039,15 +1083,15 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
             ed.joinpath("index.html").write_text(page(
                 title=f"{title} | {s['title']} | {strings.PRODUCT}", desc=edesc, root="../../../../",
                 body=episode_html(s, e, a, base_url, cfg),
-                canonical=base_url and f"{base_url}shows/{s['id']}/episodes/{e['id']}/", og_image=s.get("artwork_url") or og,
+                canonical=base_url and f"{base_url}shows/{slug(s)}/episodes/{slug(e)}/", og_image=s.get("artwork_url") or og,
                 og_type="article"), encoding="utf-8")
 
     (out / "404.html").write_text(page(title=f"{EMPTY} | {strings.PRODUCT}", desc=LEAD, root="/",
                                        body=f'<section class="hero"><h1>{EMPTY}</h1><p><a href="/">トップへ</a></p></section>'),
                                   encoding="utf-8")
     if base_url:
-        urls = [base_url, base_url + "ranking/", base_url + "episodes/", base_url + "about/"] + [f"{base_url}shows/{s['id']}/" for s in shows] \
-            + [f"{base_url}shows/{s['id']}/episodes/{e['id']}/" for s in shows for e in s["episodes"]]
+        urls = [base_url, base_url + "ranking/", base_url + "episodes/", base_url + "about/"] + [f"{base_url}shows/{slug(s)}/" for s in shows] \
+            + [f"{base_url}shows/{slug(s)}/episodes/{slug(e)}/" for s in shows for e in s["episodes"]]
         (out / "sitemap.xml").write_text(
             '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
             + "".join(f"<url><loc>{escape(u)}</loc></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")
