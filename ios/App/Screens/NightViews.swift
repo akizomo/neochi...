@@ -2,8 +2,8 @@ import SwiftUI
 import NeochiCore
 
 /// 夜の画面。ダーク固定(bg-night)。上から、番組の画像(小さく、少し暗く)・番組名・話・時間、進捗の帯、
-/// 15秒戻る/再生・一時停止/15秒進む、スリープタイマーのピル。声の存在は、画像のまわりの輪で示す
-/// (下に水平の波形を置くと、進捗の帯が2本あるように見えた。TestFlight のフィードバック)。
+/// 15秒戻る/再生・一時停止/15秒進む、スリープタイマーのピル。
+/// 波形などの動く飾りは置かない(下の水平の波形は、進捗の帯が2本あるように見えた。画像を囲む輪も試して、やめた。2026-11-16)。
 /// 進捗の帯は大きく動かすとき、15秒のボタンは聞き逃した一言に戻るとき、と役割を分ける。
 /// 「寝落ちしやすいあたりへ移動」(プレミアム、docs/PREMIUM.md)は、進捗の帯の上の印と、タイマーの横のピルに置く予定。
 struct NightView: View {
@@ -58,12 +58,8 @@ struct NightView: View {
                     // 何を流しているかが、ひと目で分かるように。夜なので小さく、少し暗くする。
                     if let show = shown?.show {
                         let art = UIScreen.main.bounds.height < 700 ? NCSize.artworkS : NCSize.artworkL  // 小さい画面(SE)では、操作が収まるように小さく
-                        ZStack {
-                            // 声の存在を、画像のまわりの細い輪で静かに示す。再生中だけ、ごくゆっくり揺れる。
-                            SoftRing(playing: model.player.state == .playing, inner: art)
-                            ArtworkView(show: show, size: art).opacity(0.8)
-                        }
-                        .padding(.bottom, NCSpace.s2)
+                        ArtworkView(show: show, size: art).opacity(0.8)
+                            .padding(.bottom, NCSpace.s3)
                         .accessibilityHidden(true)
                     }
                     MarqueeText(text: shown?.show.title ?? "", style: NCText.title, centered: true)
@@ -146,74 +142,6 @@ extension NightView {
         }
         .disabled(!active).opacity(active ? 1 : 0.35)
         .accessibilityLabel(label)
-    }
-}
-
-/// 番組の画像を囲む、細く柔らかな輪。夜の画面に足す表現は、これだけ(オーブや背景の光は、必要になってから)。
-///
-/// - 動きはごくゆっくり・ごく小さく。振幅は最大でも十数pt。
-/// - 揺れの大きさは、再生中かどうかだけで決める(音量は読まない。再生の安定性に触れない)。
-/// - 再生が始まると約3秒かけて現れ、止まると約8秒かけて、ほぼ静止に戻る(音のフェードと同じ長さ)。
-/// - 周期の違う3つの正弦波を重ねるので、繰り返しの継ぎ目が出ない。
-/// - 「視差効果を減らす」では動かさず、画面が非アクティブの間は描画を止める。
-private struct SoftRing: View {
-    let playing: Bool
-    /// 囲む画像の一辺。輪は、その外側に描く。
-    let inner: Double
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.scenePhase) private var scenePhase
-    @State private var envelope = WaveEnvelope()
-
-    /// 輪の半径(画像の角が収まる大きさ)と、揺れの最大の幅。
-    private var radius: Double { inner * 0.76 }
-    private static let maxAmp = 5.0
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion || scenePhase != .active)) { timeline in
-            Canvas { ctx, size in
-                envelope.advance(to: timeline.date, target: playing ? 1 : 0)
-                draw(&ctx, size, envelope.value, reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate)
-            }
-        }
-        .frame(width: (radius + Self.maxAmp + 2) * 2, height: (radius + Self.maxAmp + 2) * 2)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-
-    private func draw(_ ctx: inout GraphicsContext, _ size: CGSize, _ m: Double, _ t: Double) {
-        // ゆるい音量の揺らぎ(模擬)。数秒かけて行き来する。
-        let n = sin(t * 0.9) * 0.5 + sin(t * 0.9 * 2.31 + 1.7) * 0.3 + sin(t * 0.9 * 4.97 + 0.4) * 0.2
-        let level = 0.45 * (0.65 + 0.35 * (n + 0.5))
-        let amp = (reduceMotion ? 0.0 : min(Self.maxAmp, 0.5 + level * 8)) * (0.2 + 0.8 * m)
-        let c = CGPoint(x: size.width / 2, y: size.height / 2), steps = 120
-        for (width, alpha, phase) in [(1.2, 0.5, 0.0), (2.6, 0.16, 0.9)] {
-            var path = Path()
-            for i in 0...steps {
-                let a = Double(i) / Double(steps) * 2 * .pi
-                // 角度について周期が閉じるよう、整数倍の波だけを重ねる(継ぎ目が出ない)。
-                let w = sin(a * 3 + t * 0.55 + phase) * 0.55 + sin(a * 5 - t * 0.8 + phase * 1.3) * 0.3 + sin(a * 8 + t * 1.1 + phase * 0.7) * 0.15
-                let r = radius + w * amp
-                let pt = CGPoint(x: c.x + cos(a) * r, y: c.y + sin(a) * r)
-                i == 0 ? path.move(to: pt) : path.addLine(to: pt)
-            }
-            path.closeSubpath()
-            ctx.stroke(path, with: .color(Color.nc(.accentResult).opacity(alpha * (0.3 + 0.7 * m))),
-                       style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
-        }
-    }
-}
-
-/// 揺れの大きさ(0〜1)。急に変えず、なだらかに追いかける。上がるのは約3秒、下がるのは約8秒。
-private final class WaveEnvelope {
-    private(set) var value = 0.0
-    private var last: Date?
-
-    func advance(to now: Date, target: Double) {
-        defer { last = now }
-        guard let last else { return }
-        let dt = min(now.timeIntervalSince(last), 0.1)   // 長く止まったあとも、飛ばさない
-        let tau = target > value ? 3.0 : 8.0
-        value += (target - value) * (1 - exp(-dt / tau))
     }
 }
 
