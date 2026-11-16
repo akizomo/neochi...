@@ -173,13 +173,14 @@ def test_episodes_page_and_links_have_arrows(tmp_path):
 
 
 def test_maker_and_support_links(tmp_path):
-    """フッターと、番組・話・解析についてのページに、作った人と応援(Buy Me a Coffee)がある。外へのリンクは noopener。"""
+    """応援(Buy Me a Coffee)は、全ページのフッターだけ。作った人は「解析について」にだけ。外へのリンクは noopener。"""
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     for path in ("index.html", "about/index.html", "shows/a/index.html", "shows/a/episodes/a1/index.html"):
         h = (tmp_path / path).read_text(encoding="utf-8")
-        assert 'href="https://www.buymeacoffee.com/akizomo"' in h and "コーヒーで応援する" in h, path
+        assert h.count("buymeacoffee.com/akizomo") == 1 and 'class="foot-made"' in h and "コーヒーで応援する" in h, path
+        assert "作った人" not in h or path == "about/index.html"
     about = (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
-    assert "作った人" in about and 'href="https://github.com/akizomo"' in about
+    assert "作った人" in about and "akihiro uezono" in about and 'href="https://github.com/akizomo"' in about
     for path in ("index.html", "about/index.html", "shows/a/index.html"):
         for m in re.finditer(r'<a [^>]*href="https://(?:www\.buymeacoffee\.com|github\.com)[^>]*>', (tmp_path / path).read_text(encoding="utf-8")):
             assert 'rel="noopener"' in m.group(0), m.group(0)

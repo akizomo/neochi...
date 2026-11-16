@@ -317,5 +317,3 @@ svg text { font-family: var(--sans); }
 
 /* 作った人・応援 */
 .foot-made a { text-decoration: underline; text-underline-offset: 2px; }
-.support { justify-items: start; }
-.support p { margin: 0; }

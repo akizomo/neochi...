@@ -34,11 +34,10 @@ LEAD = "AI解析とウォッチの実測をもとに、Z・ZZ・ZZZ の3段階�
 ENGLISH = "Neochi (n.) — Japanese for drifting off mid-episode. NeochiPickzz picks what to drift off to."
 FOOT_NOTE = "評点は推定です。睡眠の良し悪しは評価していません。"
 FOOT_RIGHTS = "番組名とカバー画像の権利は、各配信元にあります。音声は配信元で聴けます。"
-# 作った人と、応援(Buy Me a Coffee)。AlterLens と同じアカウント。絵文字は使わない(docs/VOICE.md)。
+# 作った人と、応援(Buy Me a Coffee。リンクは AlterLens と同じアカウント)。応援はフッターだけに置く。絵文字は使わない(docs/VOICE.md)。
 SUPPORT_URL = "https://www.buymeacoffee.com/akizomo"
 GITHUB_URL = "https://github.com/akizomo"
-MAKER = "akizomo"
-SUPPORT_TEXT = "NeochiPickzz は、個人で作っています。次の番組の解析を続けるために、コーヒーで応援できます。"
+MAKER = "akihiro uezono"
 SUPPORT_LABEL = "コーヒーで応援する"
 EMPTY = "まだ掲載していません"
 RANK_CRITERIA = ("寝落ち格付けは、番組の評点で決めます。"
@@ -809,18 +808,10 @@ def episode_list(s: dict) -> str:
             f'<ul class="show-eps">{"".join(rows[:8])}</ul>{more}</section>')
 
 
-def support_card() -> str:
-    """応援の枠(Buy Me a Coffee)。番組と話のページの末尾と、解析についてに置く。"""
-    return (f'<section class="sec"><div class="card support"><p>{SUPPORT_TEXT}</p>'
-            f'<p><a class="btn" href="{SUPPORT_URL}" rel="noopener" target="_blank">{SUPPORT_LABEL}</a></p>'
-            '<p class="cap">Buy Me a Coffee のページが開きます。</p></div></section>')
-
-
 def maker_block() -> str:
     """作った人。解析についての末尾。"""
     return (f'<h2>作った人</h2><p>{MAKER}。個人で作っています。番組の解析は、毎日、自動で増えています。</p>'
-            f'<p><a href="{GITHUB_URL}" rel="noopener" target="_blank">GitHub</a>'
-            f'<span aria-hidden="true"> / </span><a href="{SUPPORT_URL}" rel="noopener" target="_blank">Buy Me a Coffee</a></p>')
+            f'<p><a href="{GITHUB_URL}" rel="noopener" target="_blank">GitHub</a></p>')
 
 
 def about_block(a: dict | None, cfg: dict, lang: str) -> str:
@@ -879,7 +870,6 @@ def show_html(s: dict, base_url: str, cfg: dict, related: list[dict] | None = No
     parts.append(recent(s))
     parts.append(about_block(latest[1] if latest else None, cfg, lang))
     parts.append(related_block(s, related or []))
-    parts.append(support_card())
     parts.append(f"<script>{DETAIL_JS}</script>")
     return "\n".join(p for p in parts if p)
 
@@ -920,7 +910,6 @@ def episode_html(s: dict, e: dict, a: dict | None, base_url: str, cfg: dict) -> 
         if any(a.get(k) is not None for k in ("calm_star", "ear_star", "interest_level")):
             parts.append(evidence(e, a, cfg, lang))
     parts.append(about_block(a, cfg, lang).replace("この番組の解析は、まだありません。", ""))
-    parts.append(support_card())
     parts.append(f"<script>{DETAIL_JS}</script>")
     return "\n".join(p for p in parts if p)
 
@@ -956,8 +945,7 @@ def about_html() -> str:
 <h2>音声の扱い</h2>
 <p>解析のために一時的に音声を読み込み、終わったら消します。音声は保存も配信もしません。</p>
 {maker_block()}
-</section>
-{support_card()}"""
+</section>"""
 
 
 FILTER_JS = """
