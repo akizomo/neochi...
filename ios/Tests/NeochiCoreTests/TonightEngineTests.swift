@@ -182,9 +182,10 @@ final class TonightEngineTests: XCTestCase {
         XCTAssertNil(TonightEngine.listenNow(show: weather, ctx: empty))
     }
 
-    // 興味の3択の値は、DB の interest_vote の制約(-1, 0, 1)と同じ
-    func testInterestAnswerValuesMatchDatabase() {
-        XCTAssertEqual(InterestAnswer.allCases.map(\.rawValue), [-1, 0, 1])
-        XCTAssertEqual(NCString.interestLabel(.justRight), "ちょうどよかった")
+    // 🎯 の10段階のゾーンは、AIの採点(config/scoring.yaml の interest_zone 4〜6)と同じ区切り
+    func testInterestZonesMatchScoring() {
+        XCTAssertEqual((1...10).map { NCString.interestZone($0) },
+                       [.bored, .bored, .bored, .justRight, .justRight, .justRight, .absorbed, .absorbed, .absorbed, .absorbed])
+        XCTAssertEqual(NCString.interestZoneName(.justRight), "ちょうどよい")
     }
 }

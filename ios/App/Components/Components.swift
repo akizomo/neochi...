@@ -348,6 +348,44 @@ struct ChoiceScale: View {
     }
 }
 
+/// 🎯 の10段階。選んだ数字が、どのゾーンで何を意味するかを、すぐ下に出す。ゾーンの早見表も常に見える(色だけに頼らず、言葉で書く)。
+struct InterestScale: View {
+    @Binding var selection: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: NCSpace.s2) {
+            HStack {
+                Text(NCString.interestQuestion).ncText(NCText.headline)
+                Spacer()
+                InfoButton(text: NCString.infoInterest)
+            }
+            Picker(NCString.interestQuestion, selection: $selection) {
+                ForEach(1...10, id: \.self) { Text("\($0)").tag(Optional($0)) }
+            }
+            .pickerStyle(.segmented).labelsHidden()
+            HStack {
+                Text(NCString.interestLow)
+                Spacer()
+                Text(NCString.interestHigh)
+            }
+            .ncText(NCText.footnote, .textSub)
+            VStack(alignment: .leading, spacing: NCSpace.s1) {
+                ForEach(NCString.InterestZone.allCases, id: \.self) { z in
+                    let on = selection.map { NCString.interestZone($0) == z } ?? false
+                    HStack(alignment: .firstTextBaseline, spacing: NCSpace.s2) {
+                        Text(NCString.interestZoneRange(z)).ncText(NCText.footnote, on ? .textMain : .textSub)
+                            .frame(minWidth: 40, alignment: .leading)
+                        Text("\(NCString.interestZoneName(z)): \(NCString.interestZoneNote(z))")
+                            .ncText(NCText.footnote, on ? .textMain : .textSub)
+                    }
+                    .fontWeight(on ? .semibold : .regular)
+                }
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+}
+
 /// 差のピル(矢印のアイコン+値+比べた相手)。番組にとって良い向きは positive、良くない向きは negative、差がなければ無彩色。
 /// 向きは矢印でも示し、色だけに頼らない。人の睡眠の良し悪しの評価には使わない(番組の数字の変化だけ)。
 struct DeltaPill: View {

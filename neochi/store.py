@@ -13,6 +13,14 @@ import requests
 from .scoring import is_judged
 
 
+def _votes_from_rows(rows: list[dict]) -> tuple[list[int], list[int], list[int]]:
+    calm = [r["calm_vote"] for r in rows if r.get("calm_vote") is not None]
+    rating = [r["interest_rating"] for r in rows if r.get("interest_rating") is not None]
+    legacy = [r["interest_vote"] for r in rows
+              if r.get("interest_vote") is not None and r.get("interest_rating") is None]
+    return calm, rating, legacy
+
+
 class JsonStore:
     TABLES = ("show", "episode", "analysis", "sleep_log")
 
@@ -56,11 +64,11 @@ class JsonStore:
         return [a["final_star"] for a in self.rows("analysis")
                 if a["episode_id"] in eps and a.get("final_star") is not None and is_judged(a)]
 
-    def votes(self, episode_id: str) -> tuple[list[int], list[int]]:
-        """みんなの評価。(🌊 calm_vote 1〜5 の一覧, 🎯 interest_vote -1/0/1 の一覧)。"""
+    def votes(self, episode_id: str) -> tuple[list[int], list[int], list[int]]:
+        """みんなの評価。(🌊 calm_vote 1〜5 の一覧, 🎯 interest_rating 1〜10 の一覧, 旧3択 interest_vote -1/0/1 の一覧)。
+        旧3択は、10段階の導入前の行だけ(10段階があれば、そちらだけを使う)。"""
         rows = [r for r in self.rows("sleep_log") if r["episode_id"] == episode_id]
-        return ([r["calm_vote"] for r in rows if r.get("calm_vote") is not None],
-                [r["interest_vote"] for r in rows if r.get("interest_vote") is not None])
+        return _votes_from_rows(rows)
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -121,13 +129,11 @@ class SupabaseStore:
         r.raise_for_status()
         return [x["latency_min"] for x in r.json()]
 
-    def votes(self, episode_id: str) -> tuple[list[int], list[int]]:
-        r = requests.get(f"{self.base}/sleep_log?select=calm_vote,interest_vote&episode_id=eq.{episode_id}",
+    def votes(self, episode_id: str) -> tuple[list[int], list[int], list[int]]:
+        r = requests.get(f"{self.base}/sleep_log?select=calm_vote,interest_rating,interest_vote&episode_id=eq.{episode_id}",
                          headers=self.h, timeout=30)
         r.raise_for_status()
-        rows = r.json()
-        return ([x["calm_vote"] for x in rows if x.get("calm_vote") is not None],
-                [x["interest_vote"] for x in rows if x.get("interest_vote") is not None])
+        return _votes_from_rows(r.json())
 
     def save(self) -> None:
         pass

@@ -75,10 +75,10 @@ def test_crowd_blends_into_content_axes_only(cfg):
     base = scoring.total_star(5.0, 4.0, None, cfg, 2)
     # みんなの評価は10件未満なら入れない
     assert scoring.total_star(5.0, 4.0, None, cfg, 2, calm_votes=[1] * 9) == base
-    assert scoring.total_star(5.0, 4.0, None, cfg, 2, interest_votes=[0] * 9) == base
-    # 🌊: みんなが低く付けると、総合が下がる。🎯: 「ちょうどよかった」が多いと、上がる
+    assert scoring.total_star(5.0, 4.0, None, cfg, 2, interest_votes=[5] * 9) == base
+    # 🌊: みんなが低く付けると、総合が下がる。🎯: 10段階の4〜6(ゾーン)が多いと、上がる
     assert scoring.total_star(5.0, 4.0, None, cfg, 2, calm_votes=[1] * 20) < base
-    assert scoring.total_star(5.0, 4.0, None, cfg, 2, interest_votes=[0] * 20) > base
+    assert scoring.total_star(5.0, 4.0, None, cfg, 2, interest_votes=[5] * 20) > base
     # 🎧 には、みんなの評価を足さない(votes を渡しても、🎧の点は計算値のまま)
     assert scoring.blend_axis(4.0, 1.0, 5, cfg) == 4.0
 
@@ -90,10 +90,17 @@ def test_crowd_weight_is_capped_per_axis(cfg):
     assert abs(w_big - (5.0 * 0.5 + 1.0 * 0.5)) < 0.05   # 上限 0.5
 
 
-def test_interest_vote_star_matches_zone_ends(cfg):
-    assert scoring.interest_vote_star(0, cfg) == 5.0   # ちょうどよかった
-    assert scoring.interest_vote_star(-1, cfg) == 3.0  # 退屈だった(ゾーンの低い側の端)
-    assert scoring.interest_vote_star(1, cfg) == 1.0   # 聴き入った(引き込まれすぎの端)
+def test_interest_rating_uses_the_same_zone_as_ai(cfg):
+    # みんなの10段階は、AIの🎯と同じゾーンの式に通す
+    base = scoring.total_star(5.0, 4.0, None, cfg, 5)
+    assert scoring.total_star(5.0, 4.0, None, cfg, 5, interest_votes=[5] * 20) == base
+    assert scoring.total_star(5.0, 4.0, None, cfg, 5, interest_votes=[10] * 20) < base   # 引き込まれすぎ
+    assert scoring.total_star(5.0, 4.0, None, cfg, 5, interest_votes=[1] * 20) < base    # 退屈
+
+
+def test_legacy_three_choice_keeps_the_same_stars(cfg):
+    f = scoring.interest_rating_from_vote
+    assert [scoring.interest_star(f(v, cfg), cfg) for v in (-1, 0, 1)] == [3.0, 5.0, 1.0]
 
 
 def test_final_star_watch(cfg):

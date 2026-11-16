@@ -43,12 +43,6 @@ public struct ShowAspects: Hashable, Codable, Sendable {
 
 public enum InterestLevel: String, Codable, Sendable { case low, mid, high }
 
-/// 朝の振り返りの「この回の話は、どうでしたか」(3択)。値は DB の `interest_vote`(-1 / 0 / 1)と同じ。
-public enum InterestAnswer: Int, CaseIterable, Identifiable, Sendable {
-    case bored = -1, justRight = 0, absorbed = 1
-    public var id: Int { rawValue }
-}
-
 public enum ZRank: String, Codable, Sendable { case z = "Z", zz = "ZZ", zzz = "ZZZ" }
 
 /// 回。`number` は「第N回」の N。なければ公開日の順で並べる。
@@ -79,7 +73,9 @@ public struct SleepLog: Identifiable, Hashable, Codable, Sendable {
     public var startedAt: Date
     public var sleepOnsetAt: Date?
     public var source: SleepSource
-    /// 程よい興味の3択。-1 = 退屈だった、0 = ちょうどよかった、1 = 聴き入った(`InterestAnswer`)。
+    /// 引き込み力の10段階(1〜10。DB の `interest_rating`)。意味とゾーンは `NCString.interestZone`。
+    public var interestRating: Int?
+    /// 10段階の導入前の3択(-1 退屈だった / 0 ちょうどよかった / 1 聴き入った)。端末に残る古い記録の読み込み用で、新しくは書かない。
     public var interestVote: Int?
     /// 起伏の少なさ。1〜5。
     public var calmVote: Int?
@@ -88,10 +84,10 @@ public struct SleepLog: Identifiable, Hashable, Codable, Sendable {
     public var listenNo: Int
 
     public init(id: String, episodeID: String, showID: String, startedAt: Date, sleepOnsetAt: Date? = nil,
-                source: SleepSource = .watch, interestVote: Int? = nil, calmVote: Int? = nil,
+                source: SleepSource = .watch, interestRating: Int? = nil, interestVote: Int? = nil, calmVote: Int? = nil,
                 note: String? = nil, listenNo: Int = 1) {
         self.id = id; self.episodeID = episodeID; self.showID = showID; self.startedAt = startedAt
-        self.sleepOnsetAt = sleepOnsetAt; self.source = source; self.interestVote = interestVote
+        self.sleepOnsetAt = sleepOnsetAt; self.source = source; self.interestRating = interestRating; self.interestVote = interestVote
         self.calmVote = calmVote; self.note = note; self.listenNo = listenNo
     }
 

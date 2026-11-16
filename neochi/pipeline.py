@@ -134,7 +134,8 @@ def _safe(eid: str) -> str:
 def _stars(calm, ear, level, episode_id: str, cfg: dict, store, interest_score=None):
     """(AI解析だけの点, 総合評点, final_reason)。総合評点 = みんなの評価を🌊🎯に足した点に、実測を足したもの。"""
     total = scoring.total_star(calm, ear, level, cfg, interest_score)
-    calm_votes, interest_votes = store.votes(episode_id)
+    calm_votes, interest_votes, legacy_votes = store.votes(episode_id)
+    interest_votes = interest_votes + [scoring.interest_rating_from_vote(v, cfg) for v in legacy_votes]
     with_crowd = scoring.total_star(calm, ear, level, cfg, interest_score, calm_votes, interest_votes)
     watch = store.episode_watch_latencies(episode_id)
     median = statistics.median(watch) if watch else None

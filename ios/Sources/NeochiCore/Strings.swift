@@ -19,19 +19,33 @@ public enum NCString {
     public static let onsetLabel = "入眠"
     public static let ratingHeader = "この回の評価"
     public static let ratingFooter = "番組の評価に使います。答えなくても記録できます。"
-    public static let interestQuestion = "この回の話は、どうでしたか"
-    public static func interestLabel(_ a: InterestAnswer) -> String {
-        switch a {
-        case .bored: return "退屈だった"
-        case .justRight: return "ちょうどよかった"
-        case .absorbed: return "聴き入った"
+    public static let interestQuestion = "この回の話に、どれくらい引き込まれましたか"
+    public static let interestLow = "ほとんど引き込まれない"
+    public static let interestHigh = "続きが気になって仕方ない"
+
+    /// 🎯 の10段階のゾーン。AIの採点と同じ区切り(`config/scoring.yaml` の total.interest_zone、docs/SCORE.md §2)。
+    public enum InterestZone: CaseIterable, Sendable { case bored, justRight, absorbed }
+    public static func interestZone(_ rating: Int) -> InterestZone {
+        rating <= 3 ? .bored : (rating <= 6 ? .justRight : .absorbed)
+    }
+    public static func interestZoneRange(_ z: InterestZone) -> String {
+        switch z { case .bored: return "1〜3"; case .justRight: return "4〜6"; case .absorbed: return "7〜10" }
+    }
+    public static func interestZoneName(_ z: InterestZone) -> String {
+        switch z { case .bored: return "退屈寄り"; case .justRight: return "ちょうどよい"; case .absorbed: return "引き込まれすぎ" }
+    }
+    public static func interestZoneNote(_ z: InterestZone) -> String {
+        switch z {
+        case .bored: return "気が散って、別のことを考えてしまう"
+        case .justRight: return "少し気になるが、追わなくても困らない"
+        case .absorbed: return "続きが気になって、聞き続けてしまう"
         }
     }
     public static let calmQuestion = "話の流れは、ゆるやかでしたか"
     public static let calmLow = "起伏が多かった"
     public static let calmHigh = "ゆるやかだった"
     // ⓘ から開く説明。長く書かない(1〜2行)。定義の出どころは docs/SCORE.md §2・§3
-    public static let infoInterest = "「ちょうどよかった」は、少し気になるが、追わなくても困らない状態です。眠るには、これがいちばん向いています。"
+    public static let infoInterest = "話にどれくらい引き込まれたかを、1〜10で選びます。4〜6(少し気になるが、追わなくても困らない)が、眠るにはいちばん向いています。低すぎると気が散り、高すぎると聞き続けてしまいます。"
     public static let infoCalm = "盛り上がり、驚き、対立、急な話題の転換が少ないほど、ゆるやかです。数字が大きいほど、寝落ちに向いています。"
     public static let memoHeader = "メモ"
     public static let save = "記録する"

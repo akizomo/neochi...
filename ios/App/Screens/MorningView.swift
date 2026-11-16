@@ -6,7 +6,7 @@ import NeochiCore
 struct MorningView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    @State private var interest: InterestAnswer?
+    @State private var interest: Int?
     @State private var calm: Int?
     @State private var note = ""
 
@@ -96,21 +96,12 @@ struct MorningView: View {
     /// そのコンテンツの評価。2つの質問は、同じ部品(`ChoiceScale`)で出す。
     private var ratingSection: some View {
         Section {
-            ChoiceScale(question: NCString.interestQuestion, info: NCString.infoInterest, count: InterestAnswer.allCases.count,
-                        selection: interestBinding,
-                        leading: NCString.interestLabel(.bored), middle: NCString.interestLabel(.justRight),
-                        trailing: NCString.interestLabel(.absorbed))
+            InterestScale(selection: $interest)
                 .listRowBackground(Color.nc(.surface))
             ChoiceScale(question: NCString.calmQuestion, info: NCString.infoCalm, count: 5, selection: $calm,
                         leading: NCString.calmLow, trailing: NCString.calmHigh)
                 .listRowBackground(Color.nc(.surface))
         } header: { Text(NCString.ratingHeader) } footer: { Text(NCString.ratingFooter) }
-    }
-
-    /// 1〜3 の選択位置 ↔ 興味の3択(-1 / 0 / 1)。
-    private var interestBinding: Binding<Int?> {
-        Binding(get: { interest.map { $0.rawValue + 2 } },
-                set: { interest = $0.flatMap { InterestAnswer(rawValue: $0 - 2) } })
     }
 
     /// 親指が届く画面の下に置く。
