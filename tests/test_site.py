@@ -94,9 +94,41 @@ def test_record_hidden_without_data(tmp_path):
     assert "寝落ちの実績" not in h and "実測の記録はまだありません" not in h
 
 
-def test_index_has_rank_guide_and_no_star_on_total(tmp_path):
-    """トップに格付けの見かたがあり、番組の総合の点に★を使わない(docs/VOICE.md)。"""
+def test_index_has_tonight_rankings_and_no_star_on_total(tmp_path):
+    """トップは 今夜の1本 → 格付けの見かた → 2つのランキング。番組の総合の点に★を使わない(docs/VOICE.md)。"""
     site.build(DATA, tmp_path, cli.load_config())
     h = (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert strings.TAGLINE in h and "寝落ち格付けの見かた" in h and "ZZZ は4.2以上" in h
-    assert 'class="grp"' in h and "★" not in h[h.index("<main"):h.index("</main>")]
+    h = h[h.index("<main"):h.index("</main>")]
+    assert strings.TAGLINE in h and "寝落ち格付けの見かた" in h and "ZZ" in h
+    order = ["今夜の1本", "寝落ち格付けの見かた", "寝落ち向きに作られた番組ランキング", "系統で探す"]
+    pos = [h.index(t) for t in order]
+    assert pos == sorted(pos)
+    assert "ふだんの番組で、寝落ち向きランキング" not in h      # その種類の番組がなければ、棚ごと出さない
+    assert "★" not in h and "ZZZ は4.2以上" not in h            # 基準の数字は「解析について」に置く
+    assert "ZZZ は4.2以上" in (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
+
+
+def test_usual_shows_get_their_own_ranking(tmp_path):
+    data = {**DATA, "show": DATA["show"] + [{"id": "d", "title": "ふだんの雑談", "genre": "雑談", "show_star": 3.7, "z_rank": "ZZ",
+                                              "listing_status": "listed"}],
+            "episode": DATA["episode"] + [{"id": "d1", "show_id": "d", "title": "第9回", "published_at": "2026-11-02T00:00:00Z"}],
+            "analysis": DATA["analysis"] + [{"episode_id": "d1", "calm_star": 3.5, "ear_star": 3.5, "final_star": 3.7,
+                                             "interest_level": "mid", "interest_score": 5, "input_depth": "transcript"}]}
+    shows = site.build(data, tmp_path, cli.load_config())
+    assert [site.kind_of(s) for s in shows] == ["made", "usual"]
+    h = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert "ふだんの番組で、寝落ち向きランキング" in h and h.index("寝落ち向きに作られた番組ランキング") < h.index("ふだんの番組で、寝落ち向きランキング")
+    assert "寝落ち向きの回" in h        # 今夜の1本と別の番組の回が、1つ以上あるとき
+    r = (tmp_path / "ranking" / "index.html").read_text(encoding="utf-8")
+    assert 'data-kind="usual"' in r and 'data-kind="made"' in r and 'data-rank="ZZ"' in r
+    assert "ranking/" in (tmp_path / "sitemap.xml").read_text() if (tmp_path / "sitemap.xml").exists() else True
+
+
+def test_tonight_picks_highest_recent_episode():
+    from datetime import date
+    a = {"id": "x", "scored": [({"published_at": "2026-11-10T00:00:00Z"}, {"final_star": 4.0}),
+                               ({"published_at": "2026-08-01T00:00:00Z"}, {"final_star": 4.9})]}
+    b = {"id": "y", "scored": [({"published_at": "2026-11-12T00:00:00Z"}, {"final_star": 4.5})]}
+    top = site.episode_picks([a, b], date(2026, 11, 16))
+    assert [p[0]["id"] for p in top] == ["y", "x"]                   # 30日より前の4.9は、直近に該当があるうちは選ばない
+    assert site.episode_picks([a], date(2027, 6, 1))[0][2]["final_star"] == 4.9   # 直近になければ全期間から

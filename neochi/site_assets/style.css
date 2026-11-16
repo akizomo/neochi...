@@ -217,3 +217,53 @@ svg text { font-family: var(--sans); }
 .grp-head .cap { margin-left: auto; font-weight: 400; }
 .grp .list { margin: 0; }
 @media (max-width: 640px) { .score.big { font-size: 30px; } }
+
+/* トップ(今夜の1本・ランキングの棚・回・系統)とランキングページ */
+.wide .wrap { max-width: 1080px; }
+.intro { padding: 36px 0 20px; }
+.intro h1 { font-size: 22px; line-height: 30px; }
+.tonight { display: flex; gap: 24px; align-items: center; padding: 24px; background: var(--surface); border-radius: 16px; }
+.art-xl { width: 168px; height: 168px; border-radius: 14px; flex: none; }
+.tn-text { min-width: 0; display: grid; gap: 6px; }
+.tn-title { font-size: 22px; line-height: 30px; }
+.tn-score { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.tn-line { font-size: 14px; }
+.tonight .actions { padding-top: 10px; }
+.guide { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; margin: 20px 0 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; }
+.guide ul { display: flex; gap: 8px 20px; flex-wrap: wrap; list-style: none; margin: 0; padding: 0; }
+.guide li { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+.guide a { margin-left: auto; font-size: 13px; }
+.more { color: var(--result); font-size: 13px; text-decoration: none; }
+.shelf-row { list-style: none; margin: 12px -20px 0; padding: 0 20px 4px; display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
+.shelf-row::-webkit-scrollbar { display: none; }
+.pcard { flex: none; width: 148px; scroll-snap-align: start; }
+.pcard a { display: grid; gap: 6px; text-decoration: none; }
+.cv { position: relative; display: block; }
+.art-c { width: 100%; aspect-ratio: 1; height: auto; border-radius: 10px; }
+.cv .bd { position: absolute; top: 6px; right: 6px; }
+.cv .no { position: absolute; left: 6px; bottom: 6px; min-width: 26px; padding: 4px 6px; border-radius: 6px; text-align: center;
+  background: rgba(11, 13, 18, 0.78); color: #F6F7F9; font: 700 14px/1 var(--mono); }
+.pt-title { font-weight: 600; font-size: 14px; line-height: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.score-s { font-size: 13px; }
+.eps { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ep a { display: flex; align-items: center; gap: 12px; min-height: 80px; padding: 10px 12px; background: var(--surface); border-radius: 12px; text-decoration: none; }
+.ep a:hover { background: var(--surface-pressed); }
+.ep .art-s { width: 48px; height: 48px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 8px; }
+.tile { display: grid; gap: 2px; padding: 14px 16px; background: var(--surface); border-radius: 12px; text-decoration: none; }
+.tile:hover { background: var(--surface-pressed); }
+.tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 12px; }
+.tab { flex: none; min-height: 40px; padding: 0 16px; border-radius: 9999px; border: 1px solid var(--line); background: transparent; color: var(--sub); font: 600 13px/1 var(--sans); cursor: pointer; }
+.tab[aria-pressed="true"] { background: var(--result-tint); border-color: var(--result); color: var(--text); }
+.selects { display: flex; gap: 8px; flex-wrap: wrap; }
+.selects select { min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
+.grid-c { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px 16px; }
+.grid-c .pcard { width: auto; }
+.grid-c [hidden] { display: none; }
+@media (max-width: 720px) {
+  .tonight { flex-direction: column; align-items: flex-start; padding: 16px; }
+  .art-xl { width: 120px; height: 120px; }
+  .eps { grid-template-columns: 1fr; }
+  nav a + a { margin-left: 14px; }
+}
+@media (min-width: 721px) { nav a + a { margin-left: 20px; } }
