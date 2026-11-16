@@ -314,3 +314,8 @@ svg text { font-family: var(--sans); }
 .ep-more summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--sub); font-size: 13px; }
 .ep-head { margin-top: 8px; }
 .ep-head h1 { margin: 0 0 4px; font-size: 22px; line-height: 30px; }
+
+/* 作った人・応援 */
+.foot-made a { text-decoration: underline; text-underline-offset: 2px; }
+.support { justify-items: start; }
+.support p { margin: 0; }

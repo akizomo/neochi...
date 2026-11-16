@@ -170,3 +170,16 @@ def test_episodes_page_and_links_have_arrows(tmp_path):
     assert 'class="foot-nav"' in top and 'href="./episodes/"' in top
     css = (tmp_path / "style.css").read_text(encoding="utf-8")
     assert ".ep a::after" in css and ".tile::after" in css
+
+
+def test_maker_and_support_links(tmp_path):
+    """フッターと、番組・話・解析についてのページに、作った人と応援(Buy Me a Coffee)がある。外へのリンクは noopener。"""
+    site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
+    for path in ("index.html", "about/index.html", "shows/a/index.html", "shows/a/episodes/a1/index.html"):
+        h = (tmp_path / path).read_text(encoding="utf-8")
+        assert 'href="https://www.buymeacoffee.com/akizomo"' in h and "コーヒーで応援する" in h, path
+    about = (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
+    assert "作った人" in about and 'href="https://github.com/akizomo"' in about
+    for path in ("index.html", "about/index.html", "shows/a/index.html"):
+        for m in re.finditer(r'<a [^>]*href="https://(?:www\.buymeacoffee\.com|github\.com)[^>]*>', (tmp_path / path).read_text(encoding="utf-8")):
+            assert 'rel="noopener"' in m.group(0), m.group(0)
