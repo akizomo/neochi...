@@ -121,7 +121,7 @@ struct EpisodeDetailView: View {
         let reserved = model.isReservedTonight(episode: ep)
         return VStack(spacing: NCSpace.s2) {
             Button { model.toggleTonight(episode: ep, of: show) } label: {
-                Label(reserved ? "この話を今夜聴く(予約済み)" : "この話を今夜聴く", systemImage: reserved ? "checkmark" : "moon")
+                Label(reserved ? "今夜予約済み" : "この話を今夜聴く", systemImage: reserved ? "checkmark" : "moon")
                     .ncText(NCText.headline, reserved ? .textMain : .bgBase).frame(maxWidth: .infinity, minHeight: 52)
                     .background(Capsule().fill(reserved ? Color.clear : Color.nc(.textMain)))
                     .overlay(Capsule().strokeBorder(Color.nc(.textMain), lineWidth: reserved ? 1.5 : 0))

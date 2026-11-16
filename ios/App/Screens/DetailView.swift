@@ -149,7 +149,7 @@ struct DetailView: View {
             }
             HStack(spacing: NCSpace.s2) {
                 Button { model.toggleTonight(show) } label: {
-                    Label(reserved ? "今夜聴く予約済み" : "今夜聴く", systemImage: reserved ? "checkmark" : "moon")
+                    Label(reserved ? "今夜予約済み" : "今夜聴く", systemImage: reserved ? "checkmark" : "moon")
                         .ncText(NCText.headline, reserved ? .textMain : .bgBase).frame(maxWidth: .infinity, minHeight: 52)
                         .background(Capsule().fill(reserved ? Color.clear : Color.nc(.textMain)))
                         .overlay(Capsule().strokeBorder(Color.nc(.textMain), lineWidth: reserved ? 1.5 : 0))
@@ -177,6 +177,7 @@ struct DetailView: View {
         if let d = ep.publishedAt { parts.append(Self.monthDay.string(from: d)) }
         if let s = ep.durationSec { parts.append("\(max(1, Int((Double(s) / 60).rounded())))分") }
         if model.listenCount(ep) > 0 { parts.append("聴いた") }
+        if model.isReservedTonight(episode: ep) { parts.append("今夜予約済み") }
         return parts.joined(separator: " · ")
     }
 

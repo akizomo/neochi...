@@ -308,8 +308,11 @@ final class AppModel {
     func reserve(night: Int, _ candidate: Candidate) {
         let today = nightDay(0)
         reservations = reservations.filter { $0.key >= today }   // 過ぎた晩の予約は捨てる
+        let replaced = reservations[nightDay(night)].map { $0 != candidate } ?? false
         reservations[nightDay(night)] = candidate
-        showToast(night == 0 ? "今夜聴くに決めました" : "明日聴くに決めました")
+        // 前の予約があったときは、置き換わったことを伝える(予約は、その晩に1本だけ)。
+        showToast(night == 0 ? (replaced ? "今夜聴く話を変えました" : "今夜聴くに決めました")
+                             : (replaced ? "明日聴く話を変えました" : "明日聴くに決めました"))
     }
     /// 今夜の予約が、この番組か。
     func isReservedTonight(_ show: Show) -> Bool { reservation(night: 0)?.show.id == show.id }

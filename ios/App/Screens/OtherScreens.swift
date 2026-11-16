@@ -119,7 +119,7 @@ private struct BestCard: View {
                 }
                 .allowsHitTesting(false)
                 Button { model.toggleTonight(show) } label: {
-                    Label(reserved ? "今夜聴く予約済み" : "今夜聴く", systemImage: reserved ? "checkmark" : "moon")
+                    Label(reserved ? "今夜予約済み" : "今夜聴く", systemImage: reserved ? "checkmark" : "moon")
                         .ncText(NCText.headline, reserved ? .textMain : .bgBase)
                         .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
                         .background(Capsule().fill(reserved ? Color.clear : Color.nc(.textMain)))
