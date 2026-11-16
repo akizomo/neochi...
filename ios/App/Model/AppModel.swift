@@ -311,6 +311,17 @@ final class AppModel {
         reservations[nightDay(night)] = candidate
         showToast(night == 0 ? "今夜聴くに決めました" : "明日聴くに決めました")
     }
+    /// 今夜の予約が、この番組か。
+    func isReservedTonight(_ show: Show) -> Bool { reservation(night: 0)?.show.id == show.id }
+
+    /// 番組を指定して、今夜聴くを予約する。予約済みなら取り消す。候補にない番組でも、その番組自体を予約する。
+    func toggleTonight(_ show: Show) {
+        if isReservedTonight(show) { cancelReservation(night: 0); return }
+        if let c = slate(night: 0).first(where: { $0.show.id == show.id }) ?? TonightEngine.listenNow(show: show, ctx: context) {
+            reserve(night: 0, c)
+        }
+    }
+
     func cancelReservation(night: Int) {
         reservations[nightDay(night)] = nil
         showToast("予約を取り消しました")

@@ -125,14 +125,9 @@ struct DetailView: View {
 
     private func tonightRow(_ show: Show) -> some View {
         HStack(spacing: NCSpace.s2) {
-            let reserved = model.reservation(night: 0)?.show.id == show.id
+            let reserved = model.isReservedTonight(show)
             Button {
-                if reserved {
-                    model.cancelReservation(night: 0)
-                } else if let c = model.slate(night: 0).first(where: { $0.show.id == show.id })
-                            ?? TonightEngine.listenNow(show: show, ctx: model.context) {
-                    model.reserve(night: 0, c)
-                }
+                model.toggleTonight(show)
             } label: {
                 Label(reserved ? "今夜聴く予約済み" : "今夜聴く", systemImage: reserved ? "checkmark" : "moon")
                     .ncText(NCText.headline, reserved ? .textMain : .bgBase).frame(maxWidth: .infinity, minHeight: 52)

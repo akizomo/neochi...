@@ -1,32 +1,25 @@
 import SwiftUI
 import NeochiCore
 
-/// 見つける: 発見の場。AIの★が高い順に、ジャンルで絞れる。
+/// 見つける: 上から、総合のベスト1番組、寝落ち用の上位、寝落ち用ではないのに眠れる番組、系統で絞れる一覧。
+/// 順位は数字だけで出す(「位」とは書かない。`docs/VOICE.md`)。
 struct DiscoverView: View {
     @Environment(AppModel.self) private var model
     @State private var genre: String?
 
-    private var genres: [String] { Array(Set(model.shows.map(\.genre))).sorted() }
+    private var genres: [String] { Discover.genres(in: model.shows) }
     private var list: [Show] {
-        model.shows.filter { genre == nil || $0.genre == genre }.sorted { ($0.star ?? 0) > ($1.star ?? 0) }
+        Discover.ranked(model.shows.filter { genre == nil || $0.genre == genre })
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: NCSpace.s3) {
-                    Text("AIのおすすめ順").ncText(NCText.headline).padding(.top, NCSpace.s2)
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: NCSpace.s2) {
-                            chip("すべて", selected: genre == nil) { genre = nil }
-                            ForEach(genres, id: \.self) { g in chip(g, selected: genre == g) { genre = g } }
-                        }
-                    }
-                    ForEach(list) { show in
-                        NavigationLink(value: show.id) {
-                            ScoreRow(show: show, isFavorite: model.favorites.contains(show.id)) { model.toggleFavorite(show) }
-                        }.buttonStyle(.pressable)
-                    }
+                VStack(alignment: .leading, spacing: NCSpace.s6) {
+                    if let best = Discover.best(model.shows) { BestCard(show: best) }
+                    shelf("寝落ち用の、上位", note: "寝落ち用・朗読・環境音の中から", Discover.sleepMade(model.shows))
+                    shelf("寝落ち用ではないのに、寝落ちできる番組", note: "コメディ・雑談・教養の中から", Discover.notSleepMade(model.shows))
+                    browser
                 }
                 .padding(.horizontal, NCSpace.s5).padding(.bottom, NCSpace.s8)
             }
@@ -38,6 +31,45 @@ struct DiscoverView: View {
         }
     }
 
+    /// 横にスクロールする棚。順位は数字だけ。
+    @ViewBuilder private func shelf(_ title: String, note: String, _ shows: [Show]) -> some View {
+        if !shows.isEmpty {
+            VStack(alignment: .leading, spacing: NCSpace.s3) {
+                VStack(alignment: .leading, spacing: NCSpace.s1) {
+                    Text(title).ncText(NCText.headline)
+                    Text(note).ncText(NCText.footnote, .textSub)
+                }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: NCSpace.s3) {
+                        ForEach(Array(shows.enumerated()), id: \.element.id) { i, show in
+                            NavigationLink(value: show.id) { ShelfCard(rank: i + 1, show: show) }
+                                .buttonStyle(.pressable)
+                        }
+                    }
+                }
+                .scrollClipDisabled()
+            }
+        }
+    }
+
+    /// 系統で絞れる一覧。評点の高い順。
+    private var browser: some View {
+        VStack(alignment: .leading, spacing: NCSpace.s3) {
+            Text("系統で探す").ncText(NCText.headline)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: NCSpace.s2) {
+                    chip("すべて", selected: genre == nil) { genre = nil }
+                    ForEach(genres, id: \.self) { g in chip(g, selected: genre == g) { genre = g } }
+                }
+            }
+            ForEach(list) { show in
+                NavigationLink(value: show.id) {
+                    ScoreRow(show: show, isFavorite: model.favorites.contains(show.id)) { model.toggleFavorite(show) }
+                }.buttonStyle(.pressable)
+            }
+        }
+    }
+
     private func chip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title).ncText(NCText.body, selected ? .bgBase : .textMain)
@@ -45,6 +77,61 @@ struct DiscoverView: View {
                 .background(Capsule().fill(selected ? Color.nc(.textMain) : Color.clear))
                 .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: selected ? 0 : NCSize.borderW))
         }
+    }
+}
+
+/// 総合でいちばん評点の高い番組を、大きく。その場で今夜聴くを予約できる。
+private struct BestCard: View {
+    @Environment(AppModel.self) private var model
+    let show: Show
+
+    var body: some View {
+        let reserved = model.isReservedTonight(show)
+        ZStack {
+            NavigationLink(value: show.id) {
+                RoundedRectangle(cornerRadius: NCRadius.lg, style: .continuous).fill(Color.nc(.surface))
+                    .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)
+                    .contentShape(RoundedRectangle(cornerRadius: NCRadius.lg, style: .continuous))
+            }
+            .buttonStyle(CardPressStyle())
+            VStack(spacing: NCSpace.s2) {
+                Group {
+                    Text("いま、総合でいちばん").ncText(NCText.footnote, .textSub)
+                    ArtworkView(show: show, size: NCSize.artworkXl, radius: NCRadius.lg, showsRank: true)
+                    Text(show.title).ncText(NCText.title).lineLimit(2).multilineTextAlignment(.center)
+                    if let r = show.rank { Text(NCString.rankMeaning(r)).ncText(NCText.footnote, .textSub) }
+                    MetricsRow(show: show).padding(.top, NCSpace.s2)
+                }
+                .allowsHitTesting(false)
+                Button { model.toggleTonight(show) } label: {
+                    Label(reserved ? "今夜聴く予約済み" : "今夜聴く", systemImage: reserved ? "checkmark" : "moon")
+                        .ncText(NCText.headline, reserved ? .textMain : .bgBase)
+                        .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                        .background(Capsule().fill(reserved ? Color.clear : Color.nc(.textMain)))
+                        .overlay(Capsule().strokeBorder(Color.nc(.textMain), lineWidth: reserved ? 1.5 : 0))
+                }
+                .buttonStyle(.pressable)
+                .padding(.top, NCSpace.s3)
+            }
+            .padding(NCSpace.s4)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// 棚の1枚。左上に順位の数字、カバー、番組名、評点。
+private struct ShelfCard: View {
+    let rank: Int
+    let show: Show
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: NCSpace.s2) {
+            Text("\(rank)").ncText(NCText.numMd, .textSub)
+            ArtworkView(show: show, size: NCSize.artworkL, radius: NCRadius.md, showsRank: true)
+            Text(show.title).ncText(NCText.footnote).lineLimit(2, reservesSpace: true).multilineTextAlignment(.leading)
+            StarScore(star: show.star, style: NCText.headline)
+        }
+        .frame(width: NCSize.artworkL, alignment: .leading)
     }
 }
 
