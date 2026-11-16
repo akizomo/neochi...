@@ -144,3 +144,15 @@ def test_every_page_leads_further(tmp_path):
     for href in ('href="../../"', 'href="../../ranking/"', 'href="../../ranking/?genre=', 'href="../../#tonight"'):
         assert href in show, href
     assert 'class="foot-nav"' in show and 'href="../../ranking/"' in show
+
+
+def test_episodes_page_and_links_have_arrows(tmp_path):
+    """「寝落ち向きの回」には、すべて見るの行き先(/episodes/)がある。回は番組のページへつなぐ。"""
+    site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
+    e = (tmp_path / "episodes" / "index.html").read_text(encoding="utf-8")
+    assert 'class="ep"' in e and 'href="../shows/a/"' in e and 'data-star="4.40"' in e and 'id="sort"' in e
+    assert "https://example.com/episodes/" in (tmp_path / "sitemap.xml").read_text(encoding="utf-8")
+    top = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert 'class="foot-nav"' in top and 'href="./episodes/"' in top
+    css = (tmp_path / "style.css").read_text(encoding="utf-8")
+    assert ".ep a::after" in css and ".tile::after" in css

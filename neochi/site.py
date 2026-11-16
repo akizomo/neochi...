@@ -300,7 +300,7 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 </main>
 <footer class="foot"><div class="wrap">
 {wordmark(root)}
-<nav class="foot-nav"><a href="{root}">トップ</a><a href="{root}ranking/">ランキング</a><a href="{root}about/">解析について</a></nav>
+<nav class="foot-nav"><a href="{root}">トップ</a><a href="{root}ranking/">ランキング</a><a href="{root}episodes/">寝落ち向きの回</a><a href="{root}about/">解析について</a></nav>
 <p>{FOOT_NOTE}</p>
 <p>{FOOT_RIGHTS}</p>
 </div></footer>
@@ -326,7 +326,7 @@ def kind_of(s: dict) -> str:
     return GENRE_KIND.get(s.get("genre") or "", "usual")
 
 
-def episode_picks(shows: list[dict], today: date | None = None) -> list[tuple]:
+def episode_picks(shows: list[dict], today: date | None = None, fresh_only: bool = True) -> list[tuple]:
     """(番組, 回, 解析, 公開日)を、回の評点が高い順に返す。直近 FRESH_DAYS 日の回を優先し、なければ全期間。同点は新しい回が先。"""
     today = today or date.today()
     pool = [(s, e, a, (e.get("published_at") or "")[:10]) for s in shows for e, a in s["scored"]]
@@ -337,7 +337,7 @@ def episode_picks(shows: list[dict], today: date | None = None) -> list[tuple]:
         except ValueError:
             return None
     fresh = [x for x in pool if (g := age(x[3])) is not None and 0 <= g <= FRESH_DAYS]
-    pool = fresh or pool
+    pool = (fresh or pool) if fresh_only else pool
     pool.sort(key=lambda x: x[3], reverse=True)
     pool.sort(key=lambda x: -float(x[2]["final_star"]))
     return pool
@@ -395,16 +395,40 @@ def shelf(kind: str, shows: list[dict]) -> str:
             f'<ul class="shelf-row">{cards}</ul></section>')
 
 
+def episode_row(s: dict, e: dict, a: dict, root: str = "", extra: str = "") -> str:
+    return (f'<li class="ep"{extra}><a href="{root}shows/{s["id"]}/">{artwork(s.get("artwork_url"), "art-s")}'
+            f'<span class="row-text"><span class="row-title">{escape(e.get("title") or "")}</span>'
+            f'<span class="row-sub">{escape(s["title"])}</span></span>{score(float(a["final_star"]))}</a></li>')
+
+
 def episode_rows(picks: list[tuple]) -> str:
-    rows = []
-    for s, e, a, _ in picks:
-        rows.append(f'<li class="ep"><a href="shows/{s["id"]}/">{artwork(s.get("artwork_url"), "art-s")}'
-                    f'<span class="row-text"><span class="row-title">{escape(e.get("title") or "")}</span>'
-                    f'<span class="row-sub">{escape(s["title"])}</span></span>{score(float(a["final_star"]))}</a></li>')
+    rows = "".join(episode_row(s, e, a) for s, e, a, _ in picks)
     if not rows:
         return ""
-    return (f'<section class="sec"><div class="sec-head"><h2>寝落ち向きの回</h2><span class="cap">最近の回を、評点の高い順に</span></div>'
-            f'<ul class="eps">{"".join(rows)}</ul></section>')
+    return (f'<section class="sec"><div class="sec-head"><h2>寝落ち向きの回</h2>'
+            f'<a class="more" href="episodes/">すべて見る</a></div><p class="cap">最近の回を、評点の高い順に</p>'
+            f'<ul class="eps">{rows}</ul></section>')
+
+
+def episodes_html(shows: list[dict]) -> str:
+    """判定済みの回すべて。評点の高い順(並びは切り替えられる)。回のページはないので、番組のページへつなぐ。"""
+    rows = []
+    for s, e, a, d in episode_picks(shows, fresh_only=False):
+        search = f"{e.get('title') or ''} {s['title']} {s.get('genre') or ''}".lower()
+        extra = f' data-kind="{kind_of(s)}" data-q="{escape(search)}" data-star="{float(a["final_star"]):.2f}" data-ts="{d}"'
+        rows.append(episode_row(s, e, a, "../", extra))
+    kinds = '<option value="">種類: すべて</option>' + "".join(f'<option value="{k}">{v["name"]}</option>' for k, v in KINDS.items())
+    return f"""<section class="intro"><h1>寝落ち向きの回</h1><p class="lead">解析した回を、評点の高い順に並べています。回を選ぶと、その番組のページへ移ります。</p></section>
+<section class="filters" aria-label="絞り込み">
+<input id="q" type="search" placeholder="回の題名・番組名で探す" aria-label="回の題名・番組名で探す" autocomplete="off">
+<div class="selects"><select id="kind" aria-label="種類">{kinds}</select>
+<select id="sort" aria-label="並び"><option value="star">評点が高い順</option><option value="new">公開が新しい順</option></select></div>
+</section>
+<ul class="eps eps-all" id="grid">
+{chr(10).join(rows)}
+</ul>
+<p class="empty" id="empty" hidden>{EMPTY}</p>
+<script>{FILTER_JS}</script>"""
 
 
 def genre_tiles(shows: list[dict]) -> str:
@@ -805,16 +829,16 @@ def about_html() -> str:
 
 FILTER_JS = """
 (()=>{const $=id=>document.getElementById(id),q=$('q'),ul=$('grid'),items=[...ul.children],empty=$('empty');
-const sel={rank:'',kind:'',genre:'',sort:'star'};const p=new URLSearchParams(location.search);
+const sel={rank:'',kind:'',genre:'',sort:'star'};const has=k=>!!$(k);const p=new URLSearchParams(location.search);
 ['rank','kind','genre'].forEach(k=>{if(p.get(k))sel[k]=p.get(k);});
 function sync(){document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-pressed',String(t.dataset.tab===sel.rank)));
-$('kind').value=sel.kind;$('genre').value=sel.genre;$('sort').value=sel.sort;}
+['kind','genre','sort'].forEach(k=>{if(has(k))$(k).value=sel[k];});}
 function apply(){const t=q.value.trim().toLowerCase();let n=0;
 items.sort((a,b)=>sel.sort==='new'?b.dataset.ts.localeCompare(a.dataset.ts):b.dataset.star-a.dataset.star);
 items.forEach(i=>{const d=i.dataset,ok=(!t||d.q.includes(t))&&(!sel.rank||d.rank===sel.rank)&&(!sel.kind||d.kind===sel.kind)&&(!sel.genre||d.genre===sel.genre);
 i.hidden=!ok;if(ok)n++;ul.appendChild(i);});empty.hidden=n>0;sync();}
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{sel.rank=t.dataset.tab;apply();}));
-['kind','genre','sort'].forEach(k=>$(k).addEventListener('change',e=>{sel[k]=e.target.value;apply();}));
+['kind','genre','sort'].filter(has).forEach(k=>$(k).addEventListener('change',e=>{sel[k]=e.target.value;apply();}));
 q.addEventListener('input',apply);apply();})();
 """
 
@@ -853,6 +877,10 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
     (out / "ranking" / "index.html").write_text(page(title=f"ランキング | {strings.PRODUCT}", desc="寝落ち向きの番組を、評点の高い順に並べています。",
                                                      root="../", body=ranking_html(shows), canonical=base_url and base_url + "ranking/",
                                                      og_image=og, large_card=True, wide=True), encoding="utf-8")
+    (out / "episodes").mkdir()
+    (out / "episodes" / "index.html").write_text(page(title=f"寝落ち向きの回 | {strings.PRODUCT}", desc="解析した回を、評点の高い順に並べています。",
+                                                      root="../", body=episodes_html(shows), canonical=base_url and base_url + "episodes/",
+                                                      og_image=og, large_card=True, wide=True), encoding="utf-8")
     (out / "about").mkdir()
     (out / "about" / "index.html").write_text(page(title=f"解析について | {strings.PRODUCT}", desc=FOOT_NOTE, root="../",
                                                    body=about_html(), canonical=base_url and base_url + "about/",
@@ -870,7 +898,7 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
                                        body=f'<section class="hero"><h1>{EMPTY}</h1><p><a href="/">トップへ</a></p></section>'),
                                   encoding="utf-8")
     if base_url:
-        urls = [base_url, base_url + "ranking/", base_url + "about/"] + [f"{base_url}shows/{s['id']}/" for s in shows]
+        urls = [base_url, base_url + "ranking/", base_url + "episodes/", base_url + "about/"] + [f"{base_url}shows/{s['id']}/" for s in shows]
         (out / "sitemap.xml").write_text(
             '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
             + "".join(f"<url><loc>{escape(u)}</loc></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")

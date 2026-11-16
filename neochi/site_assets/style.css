@@ -286,3 +286,14 @@ svg text { font-family: var(--sans); }
 .sec > .actions { padding-top: 16px; }
 .sec .shelf-row { margin-top: 12px; }
 .guide li a { color: var(--text); }
+
+/* 押せるものには、矢印を付ける(行・タイル・格付けの見かた) */
+.ep a::after, .tile::after, .guide li a::after {
+  content: ""; flex: none; width: 8px; height: 8px; margin-left: 4px;
+  border-top: 1.8px solid var(--sub); border-right: 1.8px solid var(--sub); transform: rotate(45deg); }
+.ep a:hover::after, .tile:hover::after, .guide li a:hover::after { border-color: var(--text); }
+.tile { position: relative; padding-right: 36px; }
+.tile::after { position: absolute; right: 16px; top: 50%; margin-top: -4px; }
+.eps-all { grid-template-columns: repeat(2, 1fr); }
+.eps-all[hidden], .eps-all [hidden] { display: none; }
+@media (max-width: 720px) { .eps-all { grid-template-columns: 1fr; } }
