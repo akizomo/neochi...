@@ -70,12 +70,14 @@ actor SupabaseClient {
 
     private func request(_ path: String, query: [URLQueryItem] = [], method: String = "GET", body: Data? = nil) async throws -> Data {
         guard let base else { throw ClientError.notConfigured }
-        let s = try await validSession()
+        // 読み出し(GET)は、ログインできなくても公開キーだけで読める。匿名ログインが無効な環境でも、番組が見られるように。
+        // 書き込みは、端末ごとの ID が要るので、ログインできなければ失敗させる。
+        let session: Session? = method == "GET" ? try? await validSession() : try await validSession()
         var comps = URLComponents(url: base.appendingPathComponent("rest/v1/\(path)"), resolvingAgainstBaseURL: false)!
         if !query.isEmpty { comps.queryItems = query }
         var req = URLRequest(url: comps.url!); req.httpMethod = method
         req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.setValue("Bearer \(s.accessToken)", forHTTPHeaderField: "Authorization")
+        if let session { req.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization") }
         if let body { req.httpBody = body; req.setValue("application/json", forHTTPHeaderField: "Content-Type") }
         let (data, resp) = try await URLSession.shared.data(for: req)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
@@ -86,6 +88,7 @@ actor SupabaseClient {
     private struct ShowRow: Decodable {
         let id: String; let title: String; let genre: String?; let show_star: Double?; let z_rank: String?
         let listing_status: String
+        let artwork_url: String?; let link_url: String?; let apple_url: String?
     }
     private struct EpisodeRow: Decodable {
         let id: String; let show_id: String; let title: String?; let audio_url: String?
@@ -104,12 +107,14 @@ actor SupabaseClient {
         return d
     }
 
-    /// 掲載中(listed)の番組。ランクは掲載中だけ付く。
+    /// 掲載中(listed)の番組だけ。基準未満の番組は返さない。
     func fetchShows() async throws -> [Show] {
-        let data = try await request("show", query: [URLQueryItem(name: "select", value: "id,title,genre,show_star,z_rank,listing_status")])
-        return try Self.decoder.decode([ShowRow].self, from: data).map {
-            Show(id: $0.id, title: $0.title, genre: $0.genre ?? "", star: $0.show_star,
-                 rank: $0.listing_status == "listed" ? $0.z_rank.flatMap(ZRank.init(rawValue:)) : nil)
+        let data = try await request("show", query: [URLQueryItem(name: "select", value: "id,title,genre,show_star,z_rank,listing_status,artwork_url,link_url,apple_url")])
+        return try Self.decoder.decode([ShowRow].self, from: data).filter { $0.listing_status == "listed" && $0.z_rank != nil }.map {
+            Show(id: $0.id, title: $0.title, genre: $0.genre ?? "",
+                 artworkURL: $0.artwork_url.flatMap(URL.init(string:)), linkURL: $0.link_url.flatMap(URL.init(string:)),
+                 appleURL: $0.apple_url.flatMap(URL.init(string:)), star: $0.show_star,
+                 rank: $0.z_rank.flatMap(ZRank.init(rawValue:)))
         }
     }
 
@@ -125,26 +130,85 @@ actor SupabaseClient {
     }
 
     private struct AnalysisRow: Decodable {
-        let episode_id: String; let calm_star: Double?; let ear_star: Double?
-        let interest_level: String?; let final_reason: String?
+        let episode_id: String; let calm_star: Double?; let ear_star: Double?; let final_star: Double?
+        let interest_level: String?; let interest_score: Int?; let input_depth: String?
+        let reasons: Reasons?; let features: Features?
+        let calm_per_min: [Double]?; let content_summary: String?
+        struct Reasons: Decodable {
+            let llm: String?; let moments: [M]?; let items: Items?
+            struct M: Decodable { let min: Int; let note: String; let level: Int? }
+            struct Item: Decodable { let score: Int; let min: Int? }
+            struct Items: Decodable { let interest: [String: Item]?; let calm: [String: Item]? }
+        }
+        struct Features: Decodable {
+            let duration_sec: Double?; let speech_rate: Double?; let speech_rate_cv: Double?; let volume_std_db: Double?; let sudden_per_10min: Double?
+            let ear_parts: Parts?; let timeline: Timeline?
+            struct Parts: Decodable { let rate: Double?; let rate_cv: Double?; let volume: Double?; let sudden: Double? }
+            struct Timeline: Decodable { let rate_per_min: [Double?]?; let volume_db: [Double?]?; let sudden_at_sec: [Int]? }
+        }
     }
 
-    /// 解析結果を番組ごとにまとめる(★は各回の平均、一行は最新の回の理由)。
-    func fetchAspects(episodes: [String: [Episode]]) async throws -> [String: (ShowAspects, String?)] {
-        let data = try await request("analysis", query: [
-            URLQueryItem(name: "select", value: "episode_id,calm_star,ear_star,interest_level,final_reason"),
-            URLQueryItem(name: "order", value: "analyzed_at.desc")])
-        let rows = try Self.decoder.decode([AnalysisRow].self, from: data)
-        var showOf: [String: String] = [:]
-        for (sid, eps) in episodes { for e in eps { showOf[e.id] = sid } }
-        var out: [String: (ShowAspects, String?)] = [:]
-        for (sid, group) in Dictionary(grouping: rows.filter { showOf[$0.episode_id] != nil }, by: { showOf[$0.episode_id]! }) {
-            func avg(_ v: [Double]) -> Double? { v.isEmpty ? nil : v.reduce(0, +) / Double(v.count) }
-            let levels = group.compactMap { $0.interest_level.flatMap(InterestLevel.init(rawValue:)) }
-            out[sid] = (ShowAspects(calmStar: avg(group.compactMap(\.calm_star)), earStar: avg(group.compactMap(\.ear_star)),
-                                    interest: levels.first), group.first?.final_reason)
+    private static func items(_ d: [String: AnalysisRow.Reasons.Item]?) -> [ScoredItem] {
+        (d ?? [:]).map { ScoredItem(key: $0.key, score: $0.value.score, minute: $0.value.min) }.sorted { $0.key < $1.key }
+    }
+
+    private static let analysisColumns = "episode_id,calm_star,ear_star,final_star,interest_level,interest_score,input_depth,reasons,features"
+
+    /// 各回の解析。★と、根拠のデータ(古い解析にない項目は nil)。
+    /// 1分ごとの起伏と要約の列(migration 0007)がまだ無い環境では、その列を除いて読み直す。
+    func fetchAnalyses() async throws -> [EpisodeAnalysis] {
+        func fetch(_ select: String) async throws -> Data {
+            try await request("analysis", query: [URLQueryItem(name: "select", value: select),
+                                                  URLQueryItem(name: "order", value: "analyzed_at.desc")])
         }
-        return out
+        let data: Data
+        do { data = try await fetch(Self.analysisColumns + ",calm_per_min,content_summary") }
+        catch ClientError.http(400) { data = try await fetch(Self.analysisColumns) }
+        return try Self.decoder.decode([AnalysisRow].self, from: data).map { r in
+            let f = r.features
+            var a = EpisodeAnalysis(
+                episodeID: r.episode_id, finalStar: r.final_star, calmStar: r.calm_star, earStar: r.ear_star,
+                interest: r.interest_level.flatMap(InterestLevel.init(rawValue:)), interestScore: r.interest_score,
+                reason: r.reasons?.llm, inputDepth: r.input_depth, durationSec: f?.duration_sec,
+                earParts: f?.ear_parts.map { EarParts(rate: $0.rate, rateCV: $0.rate_cv, volume: $0.volume, sudden: $0.sudden) },
+                speechRate: f?.speech_rate, volumeStdDB: f?.volume_std_db, suddenPer10Min: f?.sudden_per_10min)
+            a.speechRateCV = f?.speech_rate_cv
+            a.interestItems = Self.items(r.reasons?.items?.interest)
+            a.calmItems = Self.items(r.reasons?.items?.calm)
+            a.ratePerMin = f?.timeline?.rate_per_min ?? []
+            a.volumePerMin = f?.timeline?.volume_db ?? []
+            a.suddenAtSec = f?.timeline?.sudden_at_sec ?? []
+            a.moments = (r.reasons?.moments ?? []).map { Moment(minute: $0.min, note: $0.note, level: $0.level) }
+            a.calmPerMin = r.calm_per_min ?? []
+            a.contentSummary = r.content_summary
+            return a
+        }
+    }
+
+    private struct StatsRow: Decodable { let show_id: String; let n: Int; let avg_min: Int; let min_min: Int; let max_min: Int; let under30: Int }
+
+    /// 番組ごとの実績(view `show_stats`。未作成・失敗のときは呼び出し側で無視する)。
+    func fetchStats() async throws -> [String: ShowStats] {
+        let data = try await request("show_stats", query: [URLQueryItem(name: "select", value: "*")])
+        let rows = try Self.decoder.decode([StatsRow].self, from: data)
+        return Dictionary(uniqueKeysWithValues: rows.map {
+            ($0.show_id, ShowStats(count: $0.n, avgMinutes: $0.avg_min, minMinutes: $0.min_min, maxMinutes: $0.max_min, under30: $0.under30))
+        })
+    }
+
+    private struct PointRow: Decodable { let show_id: String; let night: String; let latency_min: Int }
+
+    /// 番組ごとの実績の点(view `show_sleep_points`。古い順)。未作成・失敗のときは呼び出し側で無視する。
+    func fetchSleepPoints() async throws -> [String: [SleepPoint]] {
+        let data = try await request("show_sleep_points", query: [URLQueryItem(name: "select", value: "show_id,night,latency_min"),
+                                                                  URLQueryItem(name: "order", value: "night.asc")])
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian); f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "Asia/Tokyo"); f.dateFormat = "yyyy-MM-dd"
+        let rows = try Self.decoder.decode([PointRow].self, from: data)
+        return Dictionary(grouping: rows.compactMap { r in
+            f.date(from: r.night).map { (r.show_id, SleepPoint(night: $0, minutes: r.latency_min)) }
+        }, by: \.0).mapValues { $0.map(\.1) }
     }
 
     private struct LogUpload: Encodable {

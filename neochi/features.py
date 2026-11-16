@@ -32,21 +32,31 @@ def frame_db(x: np.ndarray, sr: int, frame_sec: float = 1.0) -> np.ndarray:
 def acoustic_features(x: np.ndarray, sr: int, cfg: dict) -> dict:
     """duration_sec / volume_std_db / sudden_per_10min。
 
-    突発音: 中央値より +10dB 超、かつ直前のフレームから +6dB 超のフレームを1回と数える。
+    音量のばらつきと突発音は、冒頭 window_min 分(寝落ちの線 30 分)だけで測る。入眠後の音は、寝つきに関係しない。
+    duration_sec は、回全体の長さ。中央値、timeline も、この区間のもの。
+    突発音: 直前 sudden_context_sec 秒の音の中央値より +12dB 超、かつ直前のフレームから +8dB 超のフレームを1回と数える。
+    (回全体の中央値と比べると、抑揚の大きい語りの山を、すべて突発音と数えてしまう)
     """
     a = cfg["acoustic"]
     db = frame_db(x, sr, a["frame_sec"])
     duration = len(x) / sr
+    db = db[: int(a["window_min"] * 60 / a["frame_sec"])]
+    measured = len(db) * a["frame_sec"]   # 測った長さ(秒)
     active = db[db > a["silence_floor_db"]]
     if len(active) == 0:
         return {"duration_sec": duration, "volume_std_db": None, "sudden_per_10min": None}
     median = float(np.median(active))
     sudden_at: list[int] = []
+    ctx = max(5, int(a["sudden_context_sec"] / a["frame_sec"]))
     for i in range(1, len(db)):
-        if db[i] > a["silence_floor_db"] and db[i] > median + a["sudden_over_median_db"] \
+        before = db[max(0, i - ctx):i]
+        before = before[before > a["silence_floor_db"]]
+        if len(before) < 5:   # 比べる音が、まだ足りない
+            continue
+        if db[i] > a["silence_floor_db"] and db[i] > float(np.median(before)) + a["sudden_over_context_db"] \
                 and db[i] - db[i - 1] > a["sudden_over_prev_db"]:
             sudden_at.append(int(i * a["frame_sec"]))
-    minutes = max(duration / 60, 1e-9)
+    minutes = max(measured / 60, 1e-9)
     return {
         "duration_sec": duration,
         "volume_std_db": float(active.std()),

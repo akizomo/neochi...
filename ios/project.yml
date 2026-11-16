@@ -9,6 +9,10 @@ options:
 packages:
   NeochiCore:
     path: .
+  # カバー画像の取得。表示サイズへの縮小と、縮小後の画像のディスクキャッシュのために使う(標準の AsyncImage は、大きい画像をキャッシュしない)。
+  Nuke:
+    url: https://github.com/kean/Nuke
+    from: 12.8.0
 targets:
   Neochi:
     type: application
@@ -17,17 +21,25 @@ targets:
       - path: App
     dependencies:
       - package: NeochiCore
+      - package: Nuke
+        product: Nuke
+      - package: Nuke
+        product: NukeUI
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.neochi
         SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone のみ。iPad の画面は、まだ確かめていない
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_CFBundleDisplayName: NeochiPickzz   # ホーム画面の名前。xcodegen は Info.plist を作り直すので、ここに置く
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_NSHealthShareUsageDescription: 睡眠データから入眠の時刻を推定し、寝落ちまでの分数を記録するために読み取ります。広告や外部への提供には使いません。
+        # ヘルスケアへは書き込まない(読み取りだけ)。App Store Connect は、requestAuthorization(toShare:read:) を呼ぶアプリに、この説明を求める。
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: ヘルスケアへの書き込みは行いません。睡眠データの読み取りだけを使います。
         INFOPLIST_KEY_UIUserInterfaceStyle: Automatic
         # 接続先。空なら端末内だけで動く(docs/SETUP.md)。ホスト名だけ(例: abcd.supabase.co)。
         SUPABASE_HOST: "rogbmmjfwvatojrjvsjl.supabase.co"

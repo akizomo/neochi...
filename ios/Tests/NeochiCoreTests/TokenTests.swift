@@ -28,7 +28,9 @@ final class TokenTests: XCTestCase {
     // 選択状態の面(tint)の上でも、accent の文字は 4.5:1 以上
     func testAccentOnTintMeetsAA() {
         for theme in NCTheme.allCases {
-            let pairs: [(NCColor, NCColor)] = [(.accentFactor, .factorTint), (.accentResult, .resultTint)]
+            let pairs: [(NCColor, NCColor)] = [(.accentFactor, .factorTint), (.accentResult, .resultTint),
+                                               (.positive, .positiveTint), (.negative, .negativeTint),
+                                               (.success, .successTint), (.warning, .warningTint), (.error, .errorTint)]
             for (fg, tint) in pairs {
                 for ground in [NCColor.bgBase, .surface] {
                     let bg = NCContrast.over(tint.rgba(theme), ground.rgba(theme))
@@ -86,6 +88,16 @@ final class TokenTests: XCTestCase {
         let styles: [NCTextStyle] = [NCText.title, NCText.headline, NCText.body, NCText.footnote, NCText.caption, NCText.numHero, NCText.numLg, NCText.numMd, NCText.numSm, NCText.numXs]
         for s in styles {
             XCTAssertGreaterThanOrEqual(s.size, 11)
+        }
+    }
+
+    // success / error は positive / negative の別名(同じ色を2か所で決めない)
+    func testStatusColorsAliasDeltaColors() {
+        for theme in NCTheme.allCases {
+            XCTAssertEqual(NCColor.success.rgba(theme), NCColor.positive.rgba(theme))
+            XCTAssertEqual(NCColor.error.rgba(theme), NCColor.negative.rgba(theme))
+            XCTAssertEqual(NCColor.successTint.rgba(theme), NCColor.positiveTint.rgba(theme))
+            XCTAssertEqual(NCColor.errorTint.rgba(theme), NCColor.negativeTint.rgba(theme))
         }
     }
 }

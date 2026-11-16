@@ -1,4 +1,4 @@
-# neochi… iOS アプリ
+# NeochiPickzz iOS アプリ
 
 SwiftUI の iOS アプリ(MVP)。画面・色・部品の規則は、デザインシステムと `docs`(別途)に従う。
 

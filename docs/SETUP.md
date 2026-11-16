@@ -27,7 +27,7 @@
    - Xcode でプロジェクトを開き、Signing & Capabilities → + Capability → Background Modes → **Audio, AirPlay, and Picture in Picture** にチェック。HealthKit の Capability も、同じ画面で追加する。
    - 確認: Signing & Capabilities に、HealthKit と Background Modes の2つが並ぶ。
 5. App Store Connect でアプリを作る。
-   - appstoreconnect.apple.com → Apps → + → New App。プラットフォームは iOS、言語は日本語、名前は「neochi」(「neochi…」の三点リーダーが使えなければ、記号なしで)、Bundle ID は 2 のもの、SKU は任意の英数字(例: neochi-001)。
+   - appstoreconnect.apple.com → Apps → + → New App。プラットフォームは iOS、言語は日本語、名前は「NeochiPickzz」、Bundle ID は 2 のもの、SKU は任意の英数字(例: neochi-001)。
    - 確認: Apps の一覧にアプリが出る。名前が使用済みと言われたら、そこで重複に気づける(F も参照)。
 6. ビルドをアップロードする(Xcode のビルドができてから)。
    - Xcode で、実機ではなく Any iOS Device を選び、Product → Archive → Distribute App → App Store Connect → Upload。
@@ -103,9 +103,9 @@ App Store の審査と、ヘルスケアのデータを扱うアプリに必要�
 
 下書き(`[ ]` は、あなたが埋める):
 
-> **neochi… プライバシーポリシー**
+> **NeochiPickzz プライバシーポリシー**
 >
-> [事業者名・個人名]( 以下「運営者」)は、neochi…(以下「本アプリ」)で扱う情報について、次のとおり定めます。
+> [事業者名・個人名]( 以下「運営者」)は、NeochiPickzz(以下「本アプリ」)で扱う情報について、次のとおり定めます。
 >
 > **取得する情報**
 > 1. ヘルスケアの睡眠データ(読み取りのみ。端末の許可を得た場合に限ります)
@@ -140,7 +140,7 @@ App Store の審査と、ヘルスケアのデータを扱うアプリに必要�
   3. 自分のドメインの静的ページ(Vercel など): 名前の重複確認(F)でドメインが取れたら。
   - 確認: 公開した URL を、ログインなしのブラウザで開いて、全文が読める。
 
-## F. 名前の重複確認(neochi…)
+## F. 名前の重複確認(NeochiPickzz)
 
 1. App Store: App Store Connect でのアプリ作成時に、名前が使えるか分かる。事前に、App Store で「neochi」を検索する。
    - 確認: 同じ名前の、別のアプリがない。

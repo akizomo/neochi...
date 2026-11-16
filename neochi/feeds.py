@@ -14,7 +14,7 @@ import requests
 
 log = logging.getLogger("neochi.feeds")
 NS = {"itunes": "http://www.itunes.com/dtds/podcast-1.0.dtd"}
-_NAMESPACE = uuid.UUID("6f1c0c8e-5f55-4a54-9c1e-6e0c0c0c0001")  # neochi… 固定
+_NAMESPACE = uuid.UUID("6f1c0c8e-5f55-4a54-9c1e-6e0c0c0c0001")  # NeochiPickzz 固定
 
 
 def show_id(rss_url: str) -> str:
@@ -31,8 +31,9 @@ class Show:
     title: str
     publisher: str
     rss_url: str
-    genre: str
+    genre: str  # 画面に出す系統(寝落ち用・朗読・芸人ラジオ・雑談・教養・環境音)。docs/VOICE.md §7
     lang: str = "ja"
+    cohort: str = "core"  # 集めた目的(core・popular・control・benchmark_en)。画面には出さない
     artwork_url: str | None = None  # RSS の itunes:image。複製せず URL だけ持つ
     link_url: str | None = None  # 配信元の番組のサイト(RSS の channel/link)
 
@@ -50,7 +51,7 @@ class Episode:
 
 
 def load_shows(csv_path: str | Path) -> list[Show]:
-    """列: title, publisher, rss_url, genre, lang(省略時 ja)。"""
+    """列: title, publisher, rss_url, genre, cohort(省略時 core), lang(省略時 ja)。"""
     shows = []
     with open(csv_path, encoding="utf-8-sig", newline="") as f:
         for row in csv.DictReader(f):
@@ -64,6 +65,7 @@ def load_shows(csv_path: str | Path) -> list[Show]:
                 rss_url=url,
                 genre=(row.get("genre") or "").strip(),
                 lang=(row.get("lang") or "ja").strip() or "ja",
+                cohort=(row.get("cohort") or "core").strip() or "core",
             ))
     return shows
 

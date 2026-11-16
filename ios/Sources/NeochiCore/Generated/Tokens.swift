@@ -22,6 +22,16 @@ public enum NCColor: String, CaseIterable, Sendable {
     case textDisabled = "text-disabled"
     case factorTint = "factor-tint"
     case resultTint = "result-tint"
+    case positive = "positive"
+    case negative = "negative"
+    case positiveTint = "positive-tint"
+    case negativeTint = "negative-tint"
+    case success = "success"
+    case warning = "warning"
+    case error = "error"
+    case successTint = "success-tint"
+    case warningTint = "warning-tint"
+    case errorTint = "error-tint"
     case scrim = "scrim"
     case onAccent = "on-accent"
     case focusRing = "focus-ring"
@@ -44,8 +54,8 @@ public enum NCColor: String, CaseIterable, Sendable {
         case (.accentFactor, .light): return NCRGBA(0.498039, 0.352941, 0.019608, 1.0000)
         case (.accentResult, .dark): return NCRGBA(0.623529, 0.717647, 0.850980, 1.0000)
         case (.accentResult, .light): return NCRGBA(0.219608, 0.360784, 0.549020, 1.0000)
-        case (.borderControl, .dark): return NCRGBA(0.407843, 0.439216, 0.494118, 1.0000)
-        case (.borderControl, .light): return NCRGBA(0.435294, 0.470588, 0.533333, 1.0000)
+        case (.borderControl, .dark): return NCRGBA(0.392157, 0.423529, 0.478431, 1.0000)
+        case (.borderControl, .light): return NCRGBA(0.486275, 0.521569, 0.580392, 1.0000)
         case (.surfacePressed, .dark): return NCRGBA(0.141176, 0.160784, 0.196078, 1.0000)
         case (.surfacePressed, .light): return NCRGBA(0.913725, 0.917647, 0.929412, 1.0000)
         case (.textDisabled, .dark): return NCRGBA(0.333333, 0.360784, 0.419608, 1.0000)
@@ -54,6 +64,26 @@ public enum NCColor: String, CaseIterable, Sendable {
         case (.factorTint, .light): return NCRGBA(0.498039, 0.352941, 0.019608, 0.1000)
         case (.resultTint, .dark): return NCRGBA(0.623529, 0.717647, 0.850980, 0.1400)
         case (.resultTint, .light): return NCRGBA(0.219608, 0.360784, 0.549020, 0.1200)
+        case (.positive, .dark): return NCRGBA(0.486275, 0.768627, 0.627451, 1.0000)
+        case (.positive, .light): return NCRGBA(0.172549, 0.419608, 0.294118, 1.0000)
+        case (.negative, .dark): return NCRGBA(0.909804, 0.627451, 0.627451, 1.0000)
+        case (.negative, .light): return NCRGBA(0.631373, 0.227451, 0.227451, 1.0000)
+        case (.positiveTint, .dark): return NCRGBA(0.486275, 0.768627, 0.627451, 0.1400)
+        case (.positiveTint, .light): return NCRGBA(0.172549, 0.419608, 0.294118, 0.1200)
+        case (.negativeTint, .dark): return NCRGBA(0.909804, 0.627451, 0.627451, 0.1400)
+        case (.negativeTint, .light): return NCRGBA(0.631373, 0.227451, 0.227451, 0.1200)
+        case (.success, .dark): return NCRGBA(0.486275, 0.768627, 0.627451, 1.0000)
+        case (.success, .light): return NCRGBA(0.172549, 0.419608, 0.294118, 1.0000)
+        case (.warning, .dark): return NCRGBA(0.941176, 0.647059, 0.431373, 1.0000)
+        case (.warning, .light): return NCRGBA(0.560784, 0.278431, 0.062745, 1.0000)
+        case (.error, .dark): return NCRGBA(0.909804, 0.627451, 0.627451, 1.0000)
+        case (.error, .light): return NCRGBA(0.631373, 0.227451, 0.227451, 1.0000)
+        case (.successTint, .dark): return NCRGBA(0.486275, 0.768627, 0.627451, 0.1400)
+        case (.successTint, .light): return NCRGBA(0.172549, 0.419608, 0.294118, 0.1200)
+        case (.warningTint, .dark): return NCRGBA(0.941176, 0.647059, 0.431373, 0.1400)
+        case (.warningTint, .light): return NCRGBA(0.560784, 0.278431, 0.062745, 0.1200)
+        case (.errorTint, .dark): return NCRGBA(0.909804, 0.627451, 0.627451, 0.1400)
+        case (.errorTint, .light): return NCRGBA(0.631373, 0.227451, 0.227451, 0.1200)
         case (.scrim, .dark): return NCRGBA(0.000000, 0.000000, 0.000000, 0.6000)
         case (.scrim, .light): return NCRGBA(0.000000, 0.000000, 0.000000, 0.4000)
         case (.onAccent, .dark): return NCRGBA(0.043137, 0.050980, 0.070588, 1.0000)
@@ -97,8 +127,10 @@ public enum NCSize {
     public static let sheetH: Double = 160
     public static let borderW: Double = 1
     public static let badgeH: Double = 24
+    public static let iconSm: Double = 12
     public static let iconMd: Double = 18
     public static let iconPlay: Double = 36
+    public static let popoverW: Double = 300
 }
 
 public enum NCDuration {
@@ -110,12 +142,8 @@ public enum NCDuration {
 
 public enum NCOpacity {
     public static let logo1: Double = 1
-    public static let logo2: Double = 0.88
-    public static let logo3: Double = 0.76
-    public static let logo4: Double = 0.64
-    public static let logo5: Double = 0.52
-    public static let logo6: Double = 0.4
-    public static let logo7: Double = 0.28
+    public static let logo2: Double = 0.6
+    public static let logo3: Double = 0.28
     public static let disabled: Double = 0.4
 }
 

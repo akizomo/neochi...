@@ -10,6 +10,8 @@ from pathlib import Path
 
 import requests
 
+from .scoring import is_judged
+
 
 class JsonStore:
     TABLES = ("show", "episode", "analysis", "sleep_log")
@@ -43,16 +45,22 @@ class JsonStore:
         return [r["latency_min"] for r in self.rows("sleep_log")
                 if r.get("source") == "watch" and r["episode_id"] in eps and r.get("latency_min") is not None]
 
+    def episode_watch_latencies(self, episode_id: str) -> list[float]:
+        """その回の実測(source=watch)の分数。自己申告は入れない。"""
+        return [r["latency_min"] for r in self.rows("sleep_log")
+                if r.get("source") == "watch" and r["episode_id"] == episode_id and r.get("latency_min") is not None]
+
     def final_stars(self, sid: str) -> list[float]:
+        """番組の評点に使う、回の総合評点。起伏と興味の両方を判定済みの回だけ(scoring.is_judged)。"""
         eps = {e["id"] for e in self.rows("episode") if e["show_id"] == sid}
         return [a["final_star"] for a in self.rows("analysis")
-                if a["episode_id"] in eps and a.get("final_star") is not None]
+                if a["episode_id"] in eps and a.get("final_star") is not None and is_judged(a)]
 
-    def community(self, episode_id: str) -> tuple[float | None, int]:
-        """みんなの🌊★(sleep_log.calm_vote の平均)と件数。"""
-        v = [r["calm_vote"] for r in self.rows("sleep_log")
-             if r["episode_id"] == episode_id and r.get("calm_vote") is not None]
-        return (sum(v) / len(v), len(v)) if v else (None, 0)
+    def votes(self, episode_id: str) -> tuple[list[int], list[int]]:
+        """みんなの評価。(🌊 calm_vote 1〜5 の一覧, 🎯 interest_vote -1/0/1 の一覧)。"""
+        rows = [r for r in self.rows("sleep_log") if r["episode_id"] == episode_id]
+        return ([r["calm_vote"] for r in rows if r.get("calm_vote") is not None],
+                [r["interest_vote"] for r in rows if r.get("interest_vote") is not None])
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -94,10 +102,10 @@ class SupabaseStore:
         return r.json()
 
     def final_stars(self, sid: str) -> list[float]:
-        r = requests.get(f"{self.base}/analysis?select=final_star,episode!inner(show_id)"
-                         f"&episode.show_id=eq.{sid}&final_star=not.is.null", headers=self.h, timeout=30)
+        r = requests.get(f"{self.base}/analysis?select=final_star,calm_star,interest_score,interest_level,episode!inner(show_id)"
+                         f"&episode.show_id=eq.{sid}&final_star=not.is.null&calm_star=not.is.null", headers=self.h, timeout=30)
         r.raise_for_status()
-        return [x["final_star"] for x in r.json()]
+        return [x["final_star"] for x in r.json() if is_judged(x)]
 
     def watch_latencies(self, sid: str) -> list[float]:
         r = requests.get(
@@ -107,12 +115,19 @@ class SupabaseStore:
         r.raise_for_status()
         return [x["latency_min"] for x in r.json()]
 
-    def community(self, episode_id: str) -> tuple[float | None, int]:
-        r = requests.get(f"{self.base}/sleep_log?select=calm_vote&episode_id=eq.{episode_id}&calm_vote=not.is.null",
+    def episode_watch_latencies(self, episode_id: str) -> list[float]:
+        r = requests.get(f"{self.base}/sleep_log?select=latency_min&episode_id=eq.{episode_id}"
+                         f"&source=eq.watch&latency_min=not.is.null", headers=self.h, timeout=30)
+        r.raise_for_status()
+        return [x["latency_min"] for x in r.json()]
+
+    def votes(self, episode_id: str) -> tuple[list[int], list[int]]:
+        r = requests.get(f"{self.base}/sleep_log?select=calm_vote,interest_vote&episode_id=eq.{episode_id}",
                          headers=self.h, timeout=30)
         r.raise_for_status()
-        v = [x["calm_vote"] for x in r.json()]
-        return (sum(v) / len(v), len(v)) if v else (None, 0)
+        rows = r.json()
+        return ([x["calm_vote"] for x in rows if x.get("calm_vote") is not None],
+                [x["interest_vote"] for x in rows if x.get("interest_vote") is not None])
 
     def save(self) -> None:
         pass

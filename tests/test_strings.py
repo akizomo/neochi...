@@ -3,7 +3,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BANNED = ["🥄", "スプーン", "不眠", "障害", "病気", "症状", "改善", "治る", "効果", "効く",
-          "睡眠の質", "科学的に証明", "ゆったり", "癒し"]
+          "睡眠の質", "科学的に証明", "ゆったり", "癒し",
+          "快眠", "熟睡", "安眠", "ぐっすり", "最強", "神回", "圏外", "寝落ち適性"]
 
 
 def test_no_banned_words():
@@ -22,3 +23,14 @@ def test_no_emoji_in_display_strings():
 def test_no_exclamation_in_copy():
     s = (ROOT / "neochi" / "strings.py").read_text(encoding="utf-8")
     assert "！" not in s
+
+
+def test_no_ellipsis_in_display_strings():
+    s = (ROOT / "neochi" / "strings.py").read_text(encoding="utf-8")
+    assert "…" not in s and "..." not in s
+
+
+def test_product_name_and_listen_wording():
+    from neochi import strings
+    assert strings.PRODUCT == "NeochiPickzz"
+    assert "聞" not in "".join(v for v in vars(strings).values() if isinstance(v, str))

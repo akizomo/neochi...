@@ -8,22 +8,23 @@ public struct Show: Identifiable, Hashable, Codable, Sendable {
     public var artworkURL: URL?
     public var linkURL: URL?
     public var appleURL: URL?
-    /// AI解析の最終★(1.0〜5.0)。解析前は nil。
+    /// 総合評点(1.0〜5.0)。AI解析を土台に、実測とみんなの評価を足したもの。解析前は nil。
     public var star: Double?
-    /// 掲載ランク(実測の集計)。実測がなければ nil(調査中)。
+    /// 寝落ち格付け(総合評点で決まる)。基準未満の番組は掲載しない。
     public var rank: ZRank?
     /// AIの一行(一覧に出す)。
     public var oneLiner: String?
     /// 実測の平均(分)。実測がなければ nil。
     public var avgMinutes: Int?
     public var aspects: ShowAspects?
+    public var stats: ShowStats?
 
     public init(id: String, title: String, genre: String, artworkURL: URL? = nil, linkURL: URL? = nil,
                 appleURL: URL? = nil, star: Double? = nil, rank: ZRank? = nil,
-                oneLiner: String? = nil, avgMinutes: Int? = nil, aspects: ShowAspects? = nil) {
+                oneLiner: String? = nil, avgMinutes: Int? = nil, aspects: ShowAspects? = nil, stats: ShowStats? = nil) {
         self.id = id; self.title = title; self.genre = genre; self.artworkURL = artworkURL
         self.linkURL = linkURL; self.appleURL = appleURL; self.star = star; self.rank = rank
-        self.oneLiner = oneLiner; self.avgMinutes = avgMinutes; self.aspects = aspects
+        self.oneLiner = oneLiner; self.avgMinutes = avgMinutes; self.aspects = aspects; self.stats = stats
     }
 }
 
@@ -41,6 +42,12 @@ public struct ShowAspects: Hashable, Codable, Sendable {
 }
 
 public enum InterestLevel: String, Codable, Sendable { case low, mid, high }
+
+/// 朝の振り返りの「この回の話は、どうでしたか」(3択)。値は DB の `interest_vote`(-1 / 0 / 1)と同じ。
+public enum InterestAnswer: Int, CaseIterable, Identifiable, Sendable {
+    case bored = -1, justRight = 0, absorbed = 1
+    public var id: Int { rawValue }
+}
 
 public enum ZRank: String, Codable, Sendable { case z = "Z", zz = "ZZ", zzz = "ZZZ" }
 
@@ -72,7 +79,7 @@ public struct SleepLog: Identifiable, Hashable, Codable, Sendable {
     public var startedAt: Date
     public var sleepOnsetAt: Date?
     public var source: SleepSource
-    /// 程よい興味。0〜100の10刻み。
+    /// 程よい興味の3択。-1 = 退屈だった、0 = ちょうどよかった、1 = 聴き入った(`InterestAnswer`)。
     public var interestVote: Int?
     /// 起伏の少なさ。1〜5。
     public var calmVote: Int?
