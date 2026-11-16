@@ -126,11 +126,10 @@ def test_z_rank(zcfg):
     assert z_rank(4.5, zcfg) == "ZZZ"             # AI解析だけでも付く(実測の件数は条件にしない)
 
 
-def test_z_rank_demote_needs_watch(zcfg):
-    assert z_rank(3.7, zcfg, current="ZZZ", watch_n=4) == "ZZZ"   # 実測5件未満は下げない
-    assert z_rank(3.7, zcfg, current="ZZZ", watch_n=5) == "Z"
-    assert z_rank(2.0, zcfg, current="Z", watch_n=2) == "Z"
-    assert z_rank(4.5, zcfg, current="Z", watch_n=0) == "ZZZ"      # 上がるのは、いつでも
+def test_z_rank_follows_star_both_ways(zcfg):
+    assert z_rank(3.7, zcfg) == "Z"      # 評点が下がれば、格付けもすぐ下がる(格下げの保留はしない)
+    assert z_rank(3.5, zcfg) is None
+    assert z_rank(4.5, zcfg) == "ZZZ"    # 上がるのも、いつでも
 
 
 def _judgement(**extra):
@@ -205,7 +204,7 @@ def test_curve_that_contradicts_items_is_dropped():
 
 
 def test_z_rank_cleared_when_not_judged(zcfg):
-    assert z_rank(None, zcfg, current="ZZZ", watch_n=0) is None   # 判定待ちは、格付けを引き継がない
+    assert z_rank(None, zcfg) is None   # 判定待ちは、格付けを付けない
 
 
 def test_show_star_uses_judged_episodes_only(cfg, tmp_path):
