@@ -161,10 +161,10 @@ def test_every_page_leads_further(tmp_path):
 
 
 def test_episodes_page_and_links_have_arrows(tmp_path):
-    """「寝落ち向きの話」には、すべて見るの行き先(/episodes/)がある。話は番組のページへつなぐ。"""
+    """「寝落ち向きの話」には、すべて見るの行き先(/episodes/)がある。話は、話のページへつなぐ。"""
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     e = (tmp_path / "episodes" / "index.html").read_text(encoding="utf-8")
-    assert 'class="ep"' in e and 'href="../shows/a/"' in e and 'data-star="4.40"' in e and 'id="sort"' in e
+    assert 'class="ep"' in e and 'href="../shows/a/episodes/a1/"' in e and 'data-star="4.40"' in e and 'id="sort"' in e
     assert "https://example.com/episodes/" in (tmp_path / "sitemap.xml").read_text(encoding="utf-8")
     top = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert 'class="foot-nav"' in top and 'href="./episodes/"' in top

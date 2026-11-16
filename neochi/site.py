@@ -360,7 +360,8 @@ def cover_card(s: dict, no: int | None = None, root: str = "", extra: str = "") 
 def tonight(pick: tuple) -> str:
     s, e, a, _ = pick
     line = (a.get("reasons") or {}).get("llm")
-    links = [f'<a class="btn" href="shows/{s["id"]}/">番組のページへ</a>']
+    links = [f'<a class="btn" href="shows/{s["id"]}/episodes/{e["id"]}/">この話のページへ</a>',
+             f'<a class="btn btn-ghost" href="shows/{s["id"]}/">番組のページへ</a>']
     if s.get("apple_url"):
         links.append(f'<a class="btn btn-ghost" href="{escape(s["apple_url"])}" rel="noopener" target="_blank">Apple Podcasts で聴く</a>')
     elif s.get("link_url"):
@@ -371,7 +372,7 @@ def tonight(pick: tuple) -> str:
 <p class="cap">今夜の1本</p>
 <p class="rank-line">{badge(s['z_rank'])}<span class="cap">{RANK_MEANING[s['z_rank']]}</span></p>
 <h2 class="tn-title"><a href="shows/{s['id']}/">{escape(s['title'])}</a></h2>
-<p class="cap one-line">{escape(e.get('title') or '')}</p>
+<p class="cap one-line"><a href="shows/{s['id']}/episodes/{e['id']}/">{escape(e.get('title') or '')}</a></p>
 <p class="tn-score">{score(float(a['final_star']), 'big')}<span class="cap">この話の評点。番組の評点は {n1(s['show_star'])}</span></p>
 <p class="cap">{breakdown(s['stats'])}</p>
 {f'<p class="tn-line">{escape(line)}</p>' if line else ''}
@@ -396,7 +397,7 @@ def shelf(kind: str, shows: list[dict]) -> str:
 
 
 def episode_row(s: dict, e: dict, a: dict, root: str = "", extra: str = "") -> str:
-    return (f'<li class="ep"{extra}><a href="{root}shows/{s["id"]}/">{artwork(s.get("artwork_url"), "art-s")}'
+    return (f'<li class="ep"{extra}><a href="{root}shows/{s["id"]}/episodes/{e["id"]}/">{artwork(s.get("artwork_url"), "art-s")}'
             f'<span class="row-text"><span class="row-title">{escape(e.get("title") or "")}</span>'
             f'<span class="row-sub">{escape(s["title"])}</span></span>{score(float(a["final_star"]))}</a></li>')
 
@@ -798,7 +799,7 @@ def episode_list(s: dict) -> str:
     more = (f'<details class="ep-more"><summary>すべての話を見る</summary><ul>{"".join(rows[8:])}</ul></details>'
             if len(rows) > 8 else "")
     return (f'<section class="sec"><div class="sec-head"><h2>話の一覧</h2><span class="cap num">{len(rows)}話</span></div>'
-            f'<ul class="eps">{"".join(rows[:8])}</ul>{more}</section>')
+            f'<ul class="show-eps">{"".join(rows[:8])}</ul>{more}</section>')
 
 
 def about_block(a: dict | None, cfg: dict, lang: str) -> str:
