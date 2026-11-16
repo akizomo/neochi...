@@ -40,6 +40,10 @@ public struct Candidate: Hashable, Sendable {
     /// この再生が、その回の何回目か。2以上のときだけ「N回目」と出す。
     public let playCount: Int
     public let reason: Reason
+
+    public init(show: Show, episode: Episode?, playCount: Int, reason: Reason) {
+        self.show = show; self.episode = episode; self.playCount = playCount; self.reason = reason
+    }
 }
 
 /// 今夜の3つを決める。1つの指標の上位3件ではなく、尺度の違う3本(安心→変化→冒険)。
@@ -89,6 +93,12 @@ public enum TonightEngine {
         guard let p = pick(show: show, ctx: ctx) else { return nil }
         return Candidate(show: show, episode: p.episode, playCount: p.playCount,
                          reason: p.playCount > 1 ? .heardBefore : .unlistened)
+    }
+
+    /// 話を指定して聴くときの候補(話の詳細から)。何回目かは、聴いた履歴から数える。
+    public static func candidate(show: Show, episode: Episode, ctx: TonightContext) -> Candidate {
+        let plays = ctx.history.filter { $0.episodeID == episode.id }.count
+        return Candidate(show: show, episode: episode, playCount: plays + 1, reason: plays > 0 ? .heardBefore : .unlistened)
     }
 
     private static func current(_ ctx: TonightContext) -> Show? {

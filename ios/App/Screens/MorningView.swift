@@ -34,7 +34,7 @@ struct MorningView: View {
             .scrollContentBackground(.hidden)
             .background(Color.nc(.bgBase))
             .scrollDismissesKeyboard(.interactively)
-            .navigationDestination(for: String.self) { DetailView(showID: $0) }
+            .appDestinations()
             .navigationTitle(NCString.morningTitle)
             .toolbarTitleDisplayMode(.inlineLarge)
             .safeAreaInset(edge: .bottom) { actions }

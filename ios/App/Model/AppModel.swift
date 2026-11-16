@@ -313,13 +313,40 @@ final class AppModel {
     }
     /// 今夜の予約が、この番組か。
     func isReservedTonight(_ show: Show) -> Bool { reservation(night: 0)?.show.id == show.id }
+    /// 今夜の予約が、この話か。
+    func isReservedTonight(episode: Episode) -> Bool { reservation(night: 0)?.episode?.id == episode.id }
+
+    /// 番組の「次に聴く話」。今夜の候補にあればそれ、なければ、番組の中で次に聴く話。
+    func nextCandidate(for show: Show) -> Candidate? {
+        slate(night: 0).first(where: { $0.show.id == show.id && $0.episode != nil })
+            ?? TonightEngine.listenNow(show: show, ctx: context)
+    }
 
     /// 番組を指定して、今夜聴くを予約する。予約済みなら取り消す。候補にない番組でも、その番組自体を予約する。
     func toggleTonight(_ show: Show) {
         if isReservedTonight(show) { cancelReservation(night: 0); return }
-        if let c = slate(night: 0).first(where: { $0.show.id == show.id }) ?? TonightEngine.listenNow(show: show, ctx: context) {
-            reserve(night: 0, c)
+        if let c = nextCandidate(for: show) { reserve(night: 0, c) }
+    }
+
+    /// 話を指定して、今夜聴くを予約する。この話が予約済みなら取り消す(ほかの話が予約済みなら、この話に変える)。
+    func toggleTonight(episode: Episode, of show: Show) {
+        if isReservedTonight(episode: episode) { cancelReservation(night: 0); return }
+        reserve(night: 0, TonightEngine.candidate(show: show, episode: episode, ctx: context))
+    }
+
+    /// 話を指定して、いま聴く。
+    func playNow(episode: Episode, of show: Show) {
+        play(TonightEngine.candidate(show: show, episode: episode, ctx: context))
+    }
+
+    /// その話を聴いた回数(再生した履歴から)。
+    func listenCount(_ episode: Episode) -> Int { history.filter { $0.episodeID == episode.id }.count }
+
+    func episode(id: String) -> (show: Show, episode: Episode)? {
+        for (showID, list) in episodes {
+            if let e = list.first(where: { $0.id == id }), let s = shows.first(where: { $0.id == showID }) { return (s, e) }
         }
+        return nil
     }
 
     func cancelReservation(night: Int) {

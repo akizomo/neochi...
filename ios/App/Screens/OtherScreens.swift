@@ -38,7 +38,7 @@ struct DiscoverView: View {
             }
             .background(Color.nc(.bgBase))
             .modifier(SoftTopEdge())
-            .navigationDestination(for: String.self) { DetailView(showID: $0) }
+            .appDestinations()
             .navigationTitle("見つける")
             .toolbarTitleDisplayMode(.inlineLarge)
         }
@@ -197,8 +197,7 @@ struct LogView: View {
             .navigationTitle("記録")
             .toolbarTitleDisplayMode(.inlineLarge)
             .contentMargins(.top, NCSpace.s5, for: .scrollContent)
-            .navigationDestination(for: LogRoute.self) { RecordDetailView(logID: $0.id) }
-            .navigationDestination(for: String.self) { DetailView(showID: $0) }
+            .appDestinations()
             .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         }
     }

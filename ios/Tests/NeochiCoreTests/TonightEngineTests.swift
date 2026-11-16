@@ -187,4 +187,13 @@ final class TonightEngineTests: XCTestCase {
         XCTAssertEqual(InterestAnswer.allCases.map(\.rawValue), [-1, 0, 1])
         XCTAssertEqual(NCString.interestLabel(.justRight), "ちょうどよかった")
     }
+
+    // 話を指定した候補。聴いた回数から、何回目かと理由を決める
+    func testCandidateForEpisode() {
+        let c = ctx(history: play("phonebook", 7, times: 2))
+        let heard = TonightEngine.candidate(show: phonebook, episode: eps("phonebook", top: 7)[0], ctx: c)
+        XCTAssertEqual(heard.playCount, 3); XCTAssertEqual(heard.reason, .heardBefore)
+        let fresh = TonightEngine.candidate(show: phonebook, episode: eps("phonebook", top: 7)[1], ctx: c)
+        XCTAssertEqual(fresh.playCount, 1); XCTAssertEqual(fresh.reason, .unlistened)
+    }
 }

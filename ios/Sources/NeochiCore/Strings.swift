@@ -2,6 +2,11 @@ import Foundation
 
 /// 表示文字列の唯一の置き場。絵文字は使わない。診断に見える語は使わない。
 public enum NCString {
+    /// 程よい興味の水準の言葉(番組の傾向と、話の根拠で同じ言葉を使う)。
+    public static func interestWord(_ l: InterestLevel) -> String {
+        switch l { case .low: "静かめ"; case .mid: "程よい"; case .high: "強め" }
+    }
+
     /// 寝落ちまでの分数 → コメント。
     public static func comment(minutes: Int) -> String {
         switch minutes {
@@ -49,7 +54,7 @@ public enum NCString {
 
     // 番組詳細の図
     public static func momentLabel(minute: Int) -> String { "\(minute)分の山" }
-    public static func analyzedEpisode(_ number: Int?) -> String { number.map { "\($0)話の解析" } ?? "最新の話の解析" }
+    public static func analyzedEpisode(_ number: Int?) -> String { number.map { "\($0)話の解析" } ?? "この話の解析" }
     public static let summaryHeader = "この話の内容(AIの要約)"
     public static let interestZoneNote = "4〜6が寝落ち向き"
     public static let analyzing = "解析中"

@@ -252,14 +252,23 @@ struct TonightCard: View {
     let primaryIcon: String
     let onPrimary: () -> Void
 
+    private var surface: some View {
+        RoundedRectangle(cornerRadius: NCRadius.lg, style: .continuous).fill(Color.nc(.surface))
+            .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)   // 面を、背景から浮かせる
+            .contentShape(RoundedRectangle(cornerRadius: NCRadius.lg, style: .continuous))
+    }
+
     var body: some View {
         // カードぜんたいが、詳細への入口。下のレイヤーがカードの面(押すと少し沈む)で、
         // 上のレイヤーの文字や画像は、タップを下へ通す。主ボタンだけが別の操作。
         ZStack {
-            NavigationLink(value: candidate.show.id) {
-                RoundedRectangle(cornerRadius: NCRadius.lg, style: .continuous).fill(Color.nc(.surface))
-                    .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 8)   // 面を、背景から浮かせる
-                    .contentShape(RoundedRectangle(cornerRadius: NCRadius.lg, style: .continuous))
+            // 話を提案しているカードは、話の詳細へ。話が決まっていない(明日以降の「続き」)ときは、番組の詳細へ。
+            Group {
+                if let ep = candidate.episode {
+                    NavigationLink(value: EpisodeRoute(id: ep.id)) { surface }
+                } else {
+                    NavigationLink(value: candidate.show.id) { surface }
+                }
             }
             .buttonStyle(CardPressStyle())
             VStack(spacing: NCSpace.s2) {
@@ -436,4 +445,21 @@ struct MarqueeText: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(text)
     }
+}
+
+/// 話の詳細への行き先。番組の詳細は、番組のID(文字列)で開く。
+struct EpisodeRoute: Hashable { let id: String }
+
+/// アプリの行き先(番組の詳細・話の詳細・記録の詳細)。どのタブの画面からも、同じ行き先に進めるよう、各タブの NavigationStack の中に付ける。
+private struct AppDestinations: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .navigationDestination(for: String.self) { DetailView(showID: $0) }
+            .navigationDestination(for: EpisodeRoute.self) { EpisodeDetailView(episodeID: $0.id) }
+            .navigationDestination(for: LogRoute.self) { RecordDetailView(logID: $0.id) }
+    }
+}
+
+extension View {
+    func appDestinations() -> some View { modifier(AppDestinations()) }
 }

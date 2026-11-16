@@ -28,7 +28,7 @@ struct TonightView: View {
                 let next = night + (dx < 0 ? 1 : -1)
                 if labels.indices.contains(next) { withAnimation { night = next } }
             })
-            .navigationDestination(for: String.self) { DetailView(showID: $0) }
+            .appDestinations()
             .navigationTitle(labels[night])
             .toolbarTitleDisplayMode(.inlineLarge)
             .contentMargins(.top, NCSpace.s5, for: .scrollContent)
