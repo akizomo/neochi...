@@ -179,7 +179,7 @@ def test_maker_and_support_links(tmp_path):
         h = (tmp_path / path).read_text(encoding="utf-8")
         assert h.count("buymeacoffee.com/akizomo") == (2 if path == "about/index.html" else 1), path
         assert 'class="bmc-fab"' in h and "img.buymeacoffee.com/button-api" in h and "コーヒーで応援する" in h, path
-        assert 'class="foot-made">made by akihiro uezono</p>' in h, path
+        assert re.search(r'class="foot-brand">.*?</a><span class="foot-made">made by akihiro uezono</span>', h), path
         assert "作った人" not in h or path == "about/index.html"
     about = (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
     assert "作った人" in about and "akihiro uezono" in about and 'href="https://github.com/akizomo"' in about
