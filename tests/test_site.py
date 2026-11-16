@@ -194,3 +194,28 @@ def test_ranking_pages_switch_between_shows_and_episodes(tmp_path):
     assert re.search(r'<a href="\.\./ranking/" aria-current="page">番組', shows) and 'href="../episodes/">話' in shows
     assert re.search(r'<a href="\.\./episodes/" aria-current="page">話', eps) and 'href="../ranking/">番組' in eps
     assert "<h1>ランキング</h1>" in eps and "その話のページへ移ります" in eps
+
+
+def test_short_urls_and_old_urls_redirect(tmp_path):
+    """URL には、UUID の先頭8文字を使う。公開済みの長い URL は、短い URL へ移す。"""
+    uid, eid = "023d5b4d-8991-57ec-8f1e-5399e6b0e822", "93a7a6c6-0f6d-5d52-b356-8a0fc482d7e1"
+    data = {**DATA, "show": [{**DATA["show"][0], "id": uid}, *DATA["show"][1:]],
+            "episode": [{**DATA["episode"][0], "id": eid, "show_id": uid}, *DATA["episode"][1:]],
+            "analysis": [{**DATA["analysis"][0], "episode_id": eid}, *DATA["analysis"][1:]],
+            "show_stats": [{**DATA["show_stats"][0], "show_id": uid}],
+            "show_sleep_points": [{**p, "show_id": uid} for p in DATA["show_sleep_points"]]}
+    site.build(data, tmp_path, cli.load_config(), "https://example.com/")
+    new = tmp_path / "shows" / "023d5b4d" / "episodes" / "93a7a6c6" / "index.html"
+    assert new.exists() and (tmp_path / "shows" / "023d5b4d" / "index.html").exists()
+    top = (tmp_path / "ranking" / "index.html").read_text(encoding="utf-8")
+    assert 'href="../shows/023d5b4d/"' in top and uid not in top
+    assert uid not in (tmp_path / "sitemap.xml").read_text() and "shows/023d5b4d/episodes/93a7a6c6/" in (tmp_path / "sitemap.xml").read_text()
+    old = (tmp_path / "shows" / uid / "episodes" / eid / "index.html").read_text(encoding="utf-8")
+    assert 'url=../../../023d5b4d/episodes/93a7a6c6/' in old
+    assert 'url=../023d5b4d/' in (tmp_path / "shows" / uid / "index.html").read_text(encoding="utf-8")
+
+
+def test_short_slugs_stay_unique():
+    ids = ["aaaaaaaa-1111-0000-0000-000000000001", "aaaaaaaa-2222-0000-0000-000000000002", "bbbbbbbb-0000-0000-0000-000000000003"]
+    sl = site.short_slugs(ids)
+    assert len(set(sl.values())) == 3 and sl[ids[2]] == "bbbbbbbb" and len(sl[ids[0]]) > 8
