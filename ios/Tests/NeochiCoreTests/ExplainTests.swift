@@ -9,11 +9,11 @@ final class ExplainTests: XCTestCase {
     }
 
     func testRateIsTrapezoid() {
-        // 250字/分以下は、遅くても満点(遅いほど良い、ではない)
+        // 290字/分以下は、遅くても満点(遅いほど良い、ではない)
         XCTAssertTrue(Explain.earParts(analysis(rate: 92)).first!.good)
-        XCTAssertTrue(Explain.earParts(analysis(rate: 250)).first!.good)
+        XCTAssertTrue(Explain.earParts(analysis(rate: 290)).first!.good)
         XCTAssertFalse(Explain.earParts(analysis(rate: 380)).first!.good)
-        XCTAssertEqual(Explain.earParts(analysis(rate: 400)).first!.verdict, "かなり速いです")
+        XCTAssertEqual(Explain.earParts(analysis(rate: 450)).first!.verdict, "かなり速いです")
     }
 
     // 実データの回(突発音 9.8回/10分 は、★1.1 のほぼ最低)で、「ときどき」と言わない
@@ -24,7 +24,7 @@ final class ExplainTests: XCTestCase {
     }
 
     func testCriteriaMatchScoringYaml() {
-        XCTAssertEqual(EarCriteria.rateBestMax, 250); XCTAssertEqual(EarCriteria.rateWorst, 400)
+        XCTAssertEqual(EarCriteria.rateBestMax, 290); XCTAssertEqual(EarCriteria.rateWorst, 450)
         XCTAssertEqual(EarCriteria.cvBest, 0.10); XCTAssertEqual(EarCriteria.cvWorst, 0.40)
         XCTAssertEqual(EarCriteria.volumeBest, 4); XCTAssertEqual(EarCriteria.volumeWorst, 12)
         XCTAssertEqual(EarCriteria.suddenBest, 0); XCTAssertEqual(EarCriteria.suddenWorst, 10)

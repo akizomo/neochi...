@@ -66,6 +66,11 @@ def ear_star(features: dict, lang: str, cfg: dict) -> float | None:
     return _star(sum(parts[k] * w[k] for k in parts) / sum(w.values()))
 
 
+def calm_star(items_sum: float, cfg: dict) -> float:
+    """🌊★。起伏の項目(0〜2点 × 4)の合計から、5 − 合計 × calm_slope(下限 1.0)。"""
+    return max(1.0, round(5 - cfg["total"]["calm_slope"] * items_sum, 1))
+
+
 def interest_star(score: float, cfg: dict) -> float:
     """🎯★。引き込み力(1〜10)がゾーンに入れば満点、外れるほど下がる(左右で下がり方が違う)。"""
     z = cfg["total"]["interest_zone"]

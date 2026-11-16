@@ -103,8 +103,8 @@ def test_final_star_watch(cfg):
     f, reason = scoring.final_star(4.5, cfg, 40, 3)
     assert f < 4.5 and reason and "実測" in reason
     # 実測が短いほど高い。10分以下は 5.0、40分以上は 1.0
-    assert scoring.watch_star(5, cfg) == 5.0 and scoring.watch_star(45, cfg) == 1.0
-    assert scoring.watch_star(25, cfg) == 3.0
+    assert scoring.watch_star(5, cfg) == 5.0 and scoring.watch_star(60, cfg) == 1.0
+    assert scoring.watch_star(37.5, cfg) == 3.0
     # 件数が増えるほど実測に寄る(上限 0.6)
     f3, _ = scoring.final_star(4.5, cfg, 40, 3)
     f50, _ = scoring.final_star(4.5, cfg, 40, 50)
@@ -113,10 +113,10 @@ def test_final_star_watch(cfg):
 
 def test_z_rank(zcfg):
     assert z_rank(None, zcfg) is None
-    assert z_rank(3.4, zcfg) is None              # 基準未満は掲載しない
-    assert z_rank(3.5, zcfg) == "Z"
-    assert z_rank(4.0, zcfg) == "ZZ"
-    assert z_rank(4.4, zcfg) == "ZZZ"             # AI解析だけでも付く(実測の件数は条件にしない)
+    assert z_rank(3.5, zcfg) is None              # 基準未満は掲載しない
+    assert z_rank(3.6, zcfg) == "Z"
+    assert z_rank(4.1, zcfg) == "ZZ"
+    assert z_rank(4.5, zcfg) == "ZZZ"             # AI解析だけでも付く(実測の件数は条件にしない)
 
 
 def test_z_rank_demote_needs_watch(zcfg):

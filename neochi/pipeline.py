@@ -184,9 +184,19 @@ def remeasure_acoustics(row: dict, audio_url: str, lang: str, cfg: dict, store, 
     return out
 
 
+def recalm(row: dict, cfg: dict) -> dict:
+    """保存済みの項目の点から、🌊★を計算し直す(calm_slope を変えたとき)。項目がない古い解析は、そのまま。"""
+    items = ((row.get("reasons") or {}).get("items") or {}).get("calm")
+    if not items:
+        return row
+    return {**row, "calm_star": scoring.calm_star(sum(v["score"] for v in items.values()), cfg)}
+
+
 def reear(row: dict, lang: str, cfg: dict) -> dict:
     """保存済みの特徴から、🎧★と内訳を計算し直す(🎧の基準や重みを変えたとき)。測り直しではない。"""
-    feat = dict(row.get("features") or {})
+    if not row.get("features"):
+        return row
+    feat = dict(row["features"])
     ear = scoring.ear_star(feat, lang, cfg)
     if ear is not None:
         feat["ear_parts"] = scoring.ear_parts(feat, lang, cfg)
@@ -211,7 +221,7 @@ def apply_judgement(j: dict, cfg: dict, store) -> dict:
 
     j は config/rubric.md の出力形式(項目ごとの 0/1/2)に episode_id を足したもの。値の検証は llm.parse_judgement。
     """
-    v = llm.parse_judgement(json.dumps(j, ensure_ascii=False))
+    v = llm.parse_judgement(json.dumps(j, ensure_ascii=False), cfg)
     row = store.get("analysis", j["episode_id"])
     if row is None:
         raise KeyError(f"解析が見つかりません: {j['episode_id']}")

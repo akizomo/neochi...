@@ -86,6 +86,6 @@ public enum NCString {
 /// 格付けの線(`config/z_rank.yaml` と同じ値。仮)。変えるときは、yaml と一緒に直す。
 public enum RankCriteria {
     public static func minStar(_ r: ZRank) -> Double {
-        switch r { case .z: 3.5; case .zz: 4.0; case .zzz: 4.4 }
+        switch r { case .z: 3.6; case .zz: 4.1; case .zzz: 4.5 }
     }
 }

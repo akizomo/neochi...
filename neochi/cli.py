@@ -143,11 +143,11 @@ def cmd_z_rank(a) -> int:
     episodes = {e["id"]: e for e in store.rows("episode")}
     shows = {s["id"]: s for s in store.rows("show")}
     for row in store.rows("analysis"):
-        if a.rules_changed and row.get("features"):  # 採点ルールが変わったときは、🎧も保存済みの特徴から計算し直す
+        if a.rules_changed:  # 採点ルールが変わったときは、🌊(項目の点)と🎧(特徴)も、保存済みの値から計算し直す
             lang = (shows.get((episodes.get(row["episode_id"]) or {}).get("show_id")) or {}).get("lang") or "ja"
-            row = pipeline.reear(row, lang, cfg)
-            ai_total = pipeline.restar_ai(row, cfg)
-            store.update("analysis", row["episode_id"], {"features": row["features"], "ear_star": row["ear_star"], "total_star": ai_total})
+            row = pipeline.recalm(pipeline.reear(row, lang, cfg), cfg)
+            store.update("analysis", row["episode_id"], {"features": row["features"], "ear_star": row["ear_star"],
+                                                         "calm_star": row["calm_star"], "total_star": pipeline.restar_ai(row, cfg)})
         final, reason = pipeline.restar(row, cfg, store)
         store.update("analysis", row["episode_id"], {"final_star": final, "final_reason": reason})
     ids = [s["id"] for s in store.rows("show")]

@@ -1,9 +1,13 @@
-"""採点ルールの較正(2026-11-16)。格付けが甘くなり、ほとんどの番組が ZZZ になったので、物差しを置く。
+"""採点ルールの物差し(2026-11-16)。
 
-tests/data/calibration_shows.json は、2026-11-15 に公開していた97番組の、最新の回の判定(🌊🎯の項目の点と音響の測定値)。
-cohort=control は、寝落ち用ではない教養トークの番組(対照群)。core は寝落ち用の番組。
-人の手で個別の番組を動かすためではなく、ルール(config/scoring.yaml と z_rank.yaml)を変えたときに、
-格付けがまた甘くなっていないかを確かめるための目安。回の平均ではなく1回ぶんなので、番組の評点よりばらつきが大きい。
+方針: 採点の数値は、睡眠の根拠の強さで決める(docs/EVIDENCE.md)。「寝落ち用の番組」「対照群」といったラベルを正解にして
+数値を合わせることはしない(ラベルは、実際に眠れたことの証拠ではないため)。差をつけるのは、格付けの線(方針)で行う。
+
+ここで確かめるのは次の3つ。
+1. 重みが、根拠の強さに沿っている(研究がある項目 ◯ が、仮説 △ より重い)。
+2. 極端な2つの回(昂る回・穏やかな回)の向きが、根拠のとおりに出る。
+3. 格付けの割合が、方針(上位約15%が ZZZ、約45%が ZZ、約80%が Z)から外れていない。
+   tests/data/calibration_shows.json は、2026-11-15 に公開していた97番組の最新の回の判定(割合を見るためだけに使う)。
 """
 import json
 from pathlib import Path
@@ -16,32 +20,40 @@ from neochi.z_rank import z_rank
 DATA = json.loads((Path(__file__).parent / "data" / "calibration_shows.json").read_text(encoding="utf-8"))
 
 
-def _total(o: dict, cfg: dict) -> float:
-    feats = {"speech_rate": o["rate"], "speech_rate_cv": o["cv"], "volume_std_db": o["vol"], "sudden_per_10min": o["sudden"]}
+def _total(calm_sum: int, interest_sum: int, feats: dict, cfg: dict) -> float:
     ear = scoring.ear_star({k: v for k, v in feats.items() if v is not None}, "ja", cfg)
-    calm = 5 - 0.5 * sum(o["calm"].values())
-    return scoring.total_star(calm, ear, None, cfg, interest_score=max(1, sum(o["intr"].values())))
+    return scoring.total_star(scoring.calm_star(calm_sum, cfg), ear, None, cfg, interest_score=max(1, interest_sum))
 
 
-@pytest.fixture(scope="module")
-def scored(cfg):
-    return [(o, _total(o, cfg)) for o in DATA]
+def _show_total(o: dict, cfg: dict) -> float:
+    feats = {"speech_rate": o["rate"], "speech_rate_cv": o["cv"], "volume_std_db": o["vol"], "sudden_per_10min": o["sudden"]}
+    return _total(sum(o["calm"].values()), sum(o["intr"].values()), feats, cfg)
 
 
-def test_most_shows_are_not_top_rank(scored, zcfg):
-    ranks = [z_rank(v, zcfg) for _, v in scored]
-    assert ranks.count("ZZZ") / len(ranks) <= 0.25     # 以前は 73%
-    assert ranks.count(None) / len(ranks) <= 0.10      # 載せられる番組が、極端に減らない
+def test_weights_follow_evidence_strength(cfg):
+    """🌊(研究がある)が最も重く、🎯のゾーンと🎧の多くは仮説なので、それぞれ🌊より軽い。突発音は🎧の中で最も重い。"""
+    w = cfg["total"]["weights"]
+    assert w["calm"] > w["interest"] and w["calm"] > w["ear"]
+    ew = cfg["ear"]["weights"]
+    assert ew["sudden"] == max(ew.values())
 
 
-def test_control_ranks_below_sleep_shows_on_average(scored):
-    core = [v for o, v in scored if o["cohort"] == "core"]
-    ctl = [v for o, v in scored if o["cohort"] == "control"]
-    assert sum(core) / len(core) > sum(ctl) / len(ctl)
+def test_calm_star_uses_wider_slope(cfg):
+    assert scoring.calm_star(0, cfg) == 5.0
+    assert scoring.calm_star(2, cfg) == 3.5      # 5 − 2×0.75
+    assert scoring.calm_star(8, cfg) == 1.0      # 下限
 
 
-def test_clearly_exciting_control_shows_do_not_reach_zz(scored, zcfg):
-    """対照群のうち、解析で明らかに起伏・引き込みの強かった番組(ゆる言語学・ゆる天文学)は、ZZ に届かない。"""
-    hit = [(o["title"], v) for o, v in scored if o["cohort"] == "control" and ("言語学" in o["title"] or "天文学" in o["title"])]
-    assert len(hit) == 2
-    assert all(z_rank(v, zcfg) in (None, "Z") for _, v in hit)
+def test_extreme_cases_go_the_evidence_way(cfg, zcfg):
+    loud = {"speech_rate": 450, "speech_rate_cv": 0.4, "volume_std_db": 12, "sudden_per_10min": 10}
+    gentle = {"speech_rate": 200, "speech_rate_cv": 0.08, "volume_std_db": 3, "sudden_per_10min": 0}
+    assert z_rank(_total(6, 9, loud, cfg), zcfg) is None       # 感情・対立・負荷が多く、突発音も多い回は、載せない
+    assert z_rank(_total(0, 4, gentle, cfg), zcfg) == "ZZZ"    # 昂る要素がなく、突発音もない回
+
+
+def test_rank_shares_match_policy(cfg, zcfg):
+    ranks = [z_rank(_show_total(o, cfg), zcfg) for o in DATA]
+    n = len(ranks)
+    assert 0.08 <= ranks.count("ZZZ") / n <= 0.22                              # 上位約15%(以前は 73%)
+    assert 0.35 <= (ranks.count("ZZZ") + ranks.count("ZZ")) / n <= 0.55        # 上位約45%
+    assert 0.10 <= ranks.count(None) / n <= 0.30                               # 残りの約2割は載せない

@@ -209,6 +209,14 @@ svg text { font-family: var(--sans); }
 .prose dt { font-weight: 600; margin-top: 16px; }
 .prose dd { margin-left: 0; color: var(--sub); }
 .en { color: var(--sub); font-style: italic; font-size: 14px; }
+.prose ol { margin: 8px 0 0 20px; padding: 0; }
+.prose li { margin-top: 4px; }
+.prose dt .tag { margin-left: 8px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 400; line-height: 16px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--sub); white-space: nowrap; vertical-align: 1px; }
+.tag.study { color: var(--text); }
+.ref { font-size: 11px; margin-left: 2px; text-decoration: none; }
+.refs { font-size: 12px; line-height: 18px; color: var(--sub); }
+.refs a { color: inherit; }
 
 .foot { border-top: 1px solid var(--line); margin-top: 56px; padding: 28px 0 44px; }
 .foot .logo { font-size: 16px; margin-bottom: 12px; }

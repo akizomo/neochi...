@@ -133,11 +133,17 @@ def level_of(score: int) -> str:
     return "low" if score <= 3 else "mid" if score <= 6 else "high"
 
 
-def parse_judgement(raw: str) -> dict:
+def _default_cfg() -> dict:
+    import yaml  # 遅延 import(cfg を渡されたときは、読まない)
+
+    return yaml.safe_load((RUBRIC.parent / "scoring.yaml").read_text(encoding="utf-8"))
+
+
+def parse_judgement(raw: str, cfg: dict | None = None) -> dict:
     """応答からJSONを取り出して検証する。不正なら ValueError。
 
     新形式: {"interest": {A..E: 0/1/2 または {"score", "min"}}, "calm": {A..D: 同}, "moments": [...], "reason": "..."}
-      → 引き込み力 = 合計(0のとき1)、🌊★ = 5 − 合計×0.5 をコードで計算する(AIに★を直接付けさせない)。
+      → 引き込み力 = 合計(0のとき1)、🌊★ = 5 − 合計×calm_slope(config/scoring.yaml)をコードで計算する(AIに★を直接付けさせない)。
     旧形式: {"calm_star", "interest_level", "reason"} も受ける。
     """
     m = re.search(r"\{.*\}", raw, re.S)
@@ -149,7 +155,9 @@ def parse_judgement(raw: str) -> dict:
         ii = _items(d.get("interest"), INTEREST_ITEMS, "interest")
         cc = _items(d.get("calm"), CALM_ITEMS, "calm")
         score = max(1, sum(v["score"] for v in ii.values()))
-        calm = 5 - 0.5 * sum(v["score"] for v in cc.values())
+        from .scoring import calm_star as _calm_star
+
+        calm = _calm_star(sum(v["score"] for v in cc.values()), cfg or _default_cfg())
         per_min = calm_per_min(d.get("calm_per_min"))
         if per_min and not curve_consistent(per_min, cc):
             per_min = None   # 4項目の点と食い違う線は保存しない(★は4項目から計算するので、線だけが別のことを言わないように)
@@ -183,4 +191,4 @@ def judge(title: str, show_title: str, text: str, cfg: dict, client=None) -> dic
         max_tokens=cfg["llm"]["max_tokens"],
         messages=[{"role": "user", "content": build_prompt(title, show_title, text, cfg)}],
     )
-    return parse_judgement("".join(b.text for b in msg.content if getattr(b, "type", "") == "text"))
+    return parse_judgement("".join(b.text for b in msg.content if getattr(b, "type", "") == "text"), cfg)

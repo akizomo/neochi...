@@ -71,7 +71,7 @@ struct EvidenceView: View {
             }
             if !a.calmItems.isEmpty {
                 itemRows(a.calmItems, labels: Explain.calmLabels)
-                Text("項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.5)").ncText(NCText.caption, .textSub)
+                Text("項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.75)").ncText(NCText.caption, .textSub)
             }
             if a.calmPerMin.isEmpty {   // 古い解析: 線がないので、目立つ箇所を文字で出す
                 ForEach(a.moments, id: \.self) { m in

@@ -28,7 +28,7 @@ RANK_ORDER = {"ZZZ": 3, "ZZ": 2, "Z": 1}
 # 格付けのひとこと(Strings.swift の rankMeaning と同じ)
 RANK_MEANING = {"ZZZ": "眠りたい夜は、まずこの番組", "ZZ": "寝落ちのために選びたい番組", "Z": "寝落ちに向いた番組"}
 # 格付けの線(config/z_rank.yaml と同じ値)
-RANK_MIN = {"Z": 3.5, "ZZ": 4.0, "ZZZ": 4.4}
+RANK_MIN = {"Z": 3.6, "ZZ": 4.1, "ZZZ": 4.5}
 
 LEAD = "AI解析とウォッチの実測をもとに、Z・ZZ・ZZZ の3段階で格付けしています。"
 ENGLISH = "Neochi (n.) — Japanese for drifting off mid-episode. NeochiPickzz picks what to drift off to."
@@ -301,7 +301,7 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 </head>
 <body>
 <a class="skip" href="#main">本文へ</a>
-<header class="top"><div class="wrap">{wordmark(root)}<nav aria-label="メニュー"><a href="{root}about/">解析について</a></nav></div></header>
+<header class="top"><div class="wrap">{wordmark(root)}<nav aria-label="メニュー"><a href="{root}about/">スコアと根拠</a></nav></div></header>
 <main class="wrap" id="main" tabindex="-1">
 {body}
 </main>
@@ -323,7 +323,7 @@ def rank_guide() -> str:
     """格付けの見かた(一行)。各格付けのひとことは、下のまとまりの見出しに出す。"""
     rule = "、".join(f"{r} は{RANK_MIN[r]:.1f}以上" for r in ("ZZZ", "ZZ", "Z"))
     return (f'<p class="guide cap" aria-label="寝落ち格付けの見かた">寝落ち格付けは、評点で決めます。{rule}。'
-            '基準に届かない番組は、掲載しません。<a href="about/">解析について</a></p>')
+            '基準に届かない番組は、掲載しません。<a href="about/">スコアと根拠</a></p>')
 
 
 def index_html(shows: list[dict]) -> str:
@@ -508,7 +508,7 @@ def evidence(e: dict, a: dict, cfg: dict, lang: str) -> str:
         elif calm_items:
             body += f"<p>{calm_verdict(calm_items)}</p>"
         if calm_items:
-            body += item_rows(calm_items, CALM_LABELS) + '<p class="cap">項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.5)</p>'
+            body += item_rows(calm_items, CALM_LABELS) + '<p class="cap">項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.75)</p>'
         if not per and moments:
             body += '<ul class="moments">' + "".join(f'<li><b class="num fac">{m["min"]}分</b> {escape(m["note"])}</li>' for m in moments) + "</ul>"
         rows.append(axis_row("起伏の少なさ", star(a["calm_star"], "star"), body, open_=True))
@@ -687,7 +687,7 @@ def about_block(a: dict | None, cfg: dict, lang: str) -> str:
             f"<p>耳のゆるさの基準(★5が満点、★1が最低)<br>{crit}</p>"
             "<p>音量の推移と突発音は、冒頭30分を測っています。話す速さと、起伏・興味の判定は、冒頭を文字起こしして行っています。"
             f"30分以降を聴くのは寝つけなかったときだけなので、内容の評価は冒頭20分までにしています。{depth}</p>"
-            f"<p>{RANK_CRITERIA}</p></div></details>")
+            f'<p>{RANK_CRITERIA}</p><p><a href="../../about/">スコアと根拠(出典つき)</a></p></div></details>')
 
 
 def show_html(s: dict, base_url: str, cfg: dict) -> str:
@@ -773,25 +773,11 @@ def episode_html(s: dict, e: dict, a: dict | None, base_url: str, cfg: dict) -> 
     return "\n".join(p for p in parts if p)
 
 
-def about_html() -> str:
-    return f"""<section class="prose">
-{mark_svg("hero-mark")}
-<h1>解析について</h1>
-<p class="en">{ENGLISH}</p>
-<h2>評点</h2>
-<p>番組が寝落ちに向いた作りかを、1.0〜5.0の★で表します。3つの観点を合わせた点です。</p>
-<dl>
-<dt>{strings.LABEL_INTEREST}</dt><dd>少し気になるが、追わなくても困らないくらいが、いちばん高くなります。冒頭を文字起こしして判定しています。</dd>
-<dt>{strings.LABEL_CALM}</dt><dd>盛り上がり、驚き、対立、急な話題の転換が少ないほど、高くなります。</dd>
-<dt>{strings.LABEL_EAR}</dt><dd>話す速さ、速さのばらつき、音量の変化、突発音を、音から測っています。</dd>
-</dl>
-<h2>寝落ち格付け</h2>
-<p>{RANK_CRITERIA}</p>
-<h2>寝落ちまで</h2>
-<p>再生を始めてから眠るまでの分数です。Apple Watch の記録から測ります。睡眠の良し悪しは評価しません。</p>
-<h2>音声の扱い</h2>
-<p>解析のために一時的に音声を読み込み、終わったら消します。音声は保存も配信もしません。</p>
-</section>"""
+def about_html(cfg: dict) -> str:
+    """スコアと根拠の説明ページ。中身は neochi/explainer.py(根拠の台帳 docs/EVIDENCE.md が正)。"""
+    from .explainer import explainer_html
+
+    return explainer_html(cfg, RANK_MIN, ENGLISH, mark_svg("hero-mark"))
 
 
 TOP_JS = """
@@ -844,8 +830,8 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
                                                  "url": base_url, "inLanguage": "ja", "description": LEAD} if base_url else None),
                                     encoding="utf-8")
     (out / "about").mkdir()
-    (out / "about" / "index.html").write_text(page(title=f"解析について | {strings.PRODUCT}", desc=FOOT_NOTE, root="../",
-                                                   body=about_html(), canonical=base_url and base_url + "about/",
+    (out / "about" / "index.html").write_text(page(title=f"スコアと根拠 | {strings.PRODUCT}", desc=FOOT_NOTE, root="../",
+                                                   body=about_html(cfg), canonical=base_url and base_url + "about/",
                                                    og_image=og, large_card=True), encoding="utf-8")
     for s in shows:
         d = out / "shows" / s["id"]
