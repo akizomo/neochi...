@@ -107,6 +107,27 @@ def content_summary(v) -> str | None:
     return t
 
 
+CONTENT_START_MAX_SEC = 300   # 本編の開始は、冒頭5分まで(それより後なら、見つけられていないとみなす)
+ANCHOR_MAX = 40
+
+
+def content_start(v) -> dict | None:
+    """本編が始まる位置: {"sec": 秒(0〜300), "anchor": 本編の最初の一言(40字以内)}。形が違えば None。
+
+    sec = 0 は「冒頭から本編」(飛ばす所がない)。0 より大きいときは、anchor が必須(再生する音声は広告が差し替わって
+    秒がずれるので、端末は anchor の一言で位置を合わせる)。anchor のない秒だけの値は、使えないので保存しない。
+    """
+    if not isinstance(v, dict):
+        return None
+    sec = v.get("sec")
+    if not isinstance(sec, (int, float)) or isinstance(sec, bool) or not 0 <= sec <= CONTENT_START_MAX_SEC:
+        return None
+    anchor = " ".join(str(v.get("anchor") or "").split())[:ANCHOR_MAX]
+    if sec > 0 and not anchor:
+        return None
+    return {"sec": int(round(sec)), "anchor": anchor or None}
+
+
 def level_of(score: int) -> str:
     """引き込み力(1〜10)から3段階を決める。表示とユーザーの3択との比較用。"""
     return "low" if score <= 3 else "mid" if score <= 6 else "high"
@@ -142,13 +163,14 @@ def parse_judgement(raw: str) -> dict:
                     moments.append({"min": int(x["min"]), "note": str(x["note"]).strip()[:60]})
         return {"calm_star": calm, "interest_level": level_of(score), "interest_score": score, "reason": reason,
                 "items": {"interest": ii, "calm": cc}, "moments": moments,
-                "calm_per_min": per_min, "content_summary": content_summary(d.get("content_summary"))}
+                "calm_per_min": per_min, "content_summary": content_summary(d.get("content_summary")),
+                "content_start": content_start(d.get("content_start"))}
     calm = float(d["calm_star"])
     level = d["interest_level"]
     if not 1 <= calm <= 5 or level not in LEVELS:
         raise ValueError(f"範囲外の値: {d}")
     return {"calm_star": round(calm * 2) / 2, "interest_level": level, "interest_score": None, "reason": reason,
-            "items": None, "moments": [], "calm_per_min": None, "content_summary": None}
+            "items": None, "moments": [], "calm_per_min": None, "content_summary": None, "content_start": None}
 
 
 def judge(title: str, show_title: str, text: str, cfg: dict, client=None) -> dict:

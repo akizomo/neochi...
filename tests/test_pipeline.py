@@ -132,6 +132,31 @@ def test_new_outputs_saved_from_api_and_session(tmp_path, cfg):
     assert new["calm_per_min"] == per and new["reasons"]["moments"][0]["level"] == 2
 
 
+def test_content_start_saved_and_opening_marks(tmp_path, cfg):
+    spans = [(0, 8, "ジングル"), (65.4, 70, "こんばんは"), (400, 410, "後半")]
+    assert pipeline.with_second_marks(spans) == "[0:00] ジングル\n[1:05] こんばんは"   # 5分+1分より後は入れない
+    assert pipeline._new_outputs({"content_start": {"sec": 65, "anchor": "こんばんは"}}) == {
+        "content_start_sec": 65, "content_start_anchor": "こんばんは"}
+    assert pipeline._new_outputs({"content_start": {"sec": 0, "anchor": None}}) == {
+        "content_start_sec": 0, "content_start_anchor": None}      # 0 = 冒頭から本編(判定した、という記録)
+    assert pipeline._new_outputs({"content_start": None}) == {}      # 見つからないときは書かない(null のまま)
+    # セッション判定: 取り込むと列に入る
+    from neochi import llm
+    store = JsonStore(tmp_path / "s.json")
+    deps = make_deps(made_dirs=[])
+    deps.judge, deps.pending_dir = None, str(tmp_path / "pending")
+    pipeline.analyze_episode(SHOW, ep(4), cfg, store, deps)
+    pending = json.loads((tmp_path / "pending" / f"{pipeline._safe(ep(4).id)}.json").read_text(encoding="utf-8"))
+    assert "opening" in pending
+    new = pipeline.apply_judgement({"episode_id": ep(4).id, "calm_star": 4, "interest_level": "mid", "reason": "淡々",
+                                    "content_start": {"sec": 65, "anchor": "こんばんは"}}, cfg, store)
+    assert "content_start_sec" not in new       # 旧形式の判定では、本編の開始は読まない
+    j = {"interest": {k: {"score": 1, "min": 3} for k in "ABCDE"}, "calm": {k: {"score": 0, "min": None} for k in "ABCD"},
+         "reason": "淡々", "content_start": {"sec": 65, "anchor": "こんばんは"}}
+    new = pipeline.apply_judgement({**j, "episode_id": ep(4).id}, cfg, store)
+    assert new["content_start_sec"] == 65 and new["content_start_anchor"] == "こんばんは"
+
+
 def test_old_format_judgement_leaves_new_outputs_empty(tmp_path, cfg):
     store = JsonStore(tmp_path / "s.json")
     row = pipeline.analyze_episode(SHOW, ep(3), cfg, store, make_deps(made_dirs=[]))

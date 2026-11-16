@@ -164,6 +164,18 @@ def test_flat_peak_counts_once():
     assert [m["min"] for m in llm.calm_peaks([0, 1.5, 1.5, 0], [{"min": 1, "note": "a"}, {"min": 2, "note": "b"}])] == [1]
 
 
+def test_content_start_validation():
+    ok = llm.parse_judgement(_judgement(content_start={"sec": 94.6, "anchor": "  こんばんは、\n今夜は  "}))["content_start"]
+    assert ok == {"sec": 95, "anchor": "こんばんは、 今夜は"}
+    assert llm.parse_judgement(_judgement(content_start={"sec": 0}))["content_start"] == {"sec": 0, "anchor": None}
+    long = llm.parse_judgement(_judgement(content_start={"sec": 10, "anchor": "あ" * 60}))["content_start"]
+    assert len(long["anchor"]) == 40
+    # 一言のない秒、冒頭5分より後、負、真偽値、形が違うものは保存しない(飛ばさないほうが安全)
+    for bad in ({"sec": 30}, {"sec": 301, "anchor": "x"}, {"sec": -1, "anchor": "x"}, {"sec": True, "anchor": "x"}, "95", [95]):
+        assert llm.parse_judgement(_judgement(content_start=bad))["content_start"] is None
+    assert llm.parse_judgement(_judgement())["content_start"] is None
+
+
 def test_content_summary_limits():
     ok = "冬に布団を買い替えた話から、実家の毛布の思い出へ移ります。後半はお便りを2通読みます。"
     assert llm.parse_judgement(_judgement(content_summary=ok))["content_summary"] == ok

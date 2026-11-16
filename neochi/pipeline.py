@@ -61,6 +61,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
         (d / f"{_safe(ep.id)}.json").write_text(json.dumps({
             "episode_id": ep.id, "show": show.title, "title": ep.title,
             "transcript": with_minute_marks(spans) if spans else text,
+            "opening": with_second_marks(spans) if spans else "",   # 本編の開始を秒で答えるための、冒頭5分
         }, ensure_ascii=False, indent=1), encoding="utf-8")
     elif input_depth == "transcript":
         try:
@@ -112,7 +113,11 @@ def _new_outputs(v: dict | None) -> dict:
     """1分ごとの起伏と内容の要約(列)。無いときは書かない(古い回は null のまま、画面はその図と箱を出さない)。"""
     if not v:
         return {}
-    return {k: v[k] for k in ("calm_per_min", "content_summary") if v.get(k) is not None}
+    out = {k: v[k] for k in ("calm_per_min", "content_summary") if v.get(k) is not None}
+    cs = v.get("content_start")
+    if cs:  # 本編の開始(秒と、最初の一言)。解析時の音声での位置。アプリは一言で位置を合わせ直す
+        out["content_start_sec"], out["content_start_anchor"] = cs["sec"], cs["anchor"]
+    return out
 
 
 def with_minute_marks(spans) -> str:
@@ -125,6 +130,16 @@ def with_minute_marks(spans) -> str:
             cur = m
         out.append(t)
     return "".join(out).strip()
+
+
+def with_second_marks(spans, until_sec: int = llm.CONTENT_START_MAX_SEC + 60) -> str:
+    """冒頭の文字起こしに、[m:ss] の目印を行ごとに入れる(本編が始まる秒を、判定で答えられるように)。"""
+    lines = []
+    for a, _b, t in spans:
+        if a > until_sec:
+            break
+        lines.append(f"[{int(a // 60)}:{int(a % 60):02d}] {t.strip()}")
+    return "\n".join(lines)
 
 
 def _safe(eid: str) -> str:
