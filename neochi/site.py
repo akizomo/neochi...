@@ -389,9 +389,9 @@ def shelf(kind: str, shows: list[dict]) -> str:
     cards = "".join(cover_card(s, i) for i, s in enumerate(items[:SHELF_MAX], 1))
     href = f"ranking/?kind={kind}"
     cards += (f'<li class="pcard pcard-more"><a href="{href}"><span class="more-tile"><b>すべて見る</b>'
-              f'<span class="cap">{len(items)}番組</span><span class="arrow" aria-hidden="true">→</span></span></a></li>')
+              f'<span class="arrow" aria-hidden="true">→</span></span></a></li>')
     return (f'<section class="sec shelf"><div class="sec-head"><h2>{k["title"]}</h2>'
-            f'<a class="more" href="{href}">すべて見る({len(items)}番組)</a></div><p class="cap">{k["sub"]}</p>'
+            f'<a class="more" href="{href}">すべて見る</a></div><p class="cap">{k["sub"]}</p>'
             f'<ul class="shelf-row">{cards}</ul></section>')
 
 
@@ -412,7 +412,7 @@ def genre_tiles(shows: list[dict]) -> str:
     for s in shows:
         if s.get("genre"):
             counts[s["genre"]] = counts.get(s["genre"], 0) + 1
-    tiles = "".join(f'<a class="tile" href="ranking/?genre={urllib.parse.quote(g)}"><b>{escape(g)}</b><span class="cap">{n}番組</span></a>'
+    tiles = "".join(f'<a class="tile" href="ranking/?genre={urllib.parse.quote(g)}"><b>{escape(g)}</b></a>'
                     for g, n in sorted(counts.items(), key=lambda kv: -kv[1]))
     return f'<section class="sec"><div class="sec-head"><h2>系統で探す</h2></div><div class="tiles">{tiles}</div></section>' if tiles else ""
 
