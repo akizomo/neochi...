@@ -52,18 +52,32 @@ def test_show_page_has_breakdown_and_ogp(tmp_path):
 
 
 def test_show_page_matches_app_detail(tmp_path):
-    """アプリの番組の詳細と同じ並び: AI解析 → 観点ごとの根拠 → 寝落ちの実績 → 解析について。"""
+    """アプリの番組の詳細と同じ並び: 最新の話 → この番組の傾向 → 話の一覧 → 寝落ちの実績 → 解析について。
+    観点ごとの根拠は、番組のページには出さない(話のページで見せる)。"""
     site.build(DATA, tmp_path, cli.load_config())
     h = (tmp_path / "shows" / "a" / "index.html").read_text(encoding="utf-8")
     h = h[h.index("<main"):h.index("</main>")]   # ヘッダーの「解析について」を除く
-    order =["穏やかな語りの回です。", "観点ごとの根拠", "起伏の少なさ", "耳のゆるさ", "程よい興味", "寝落ちの実績", "解析について"]
+    order = ["最新の話", "この番組の傾向", "穏やかな語りの回です。", "起伏の少なさ", "耳のゆるさ", "程よい興味",
+             "話の一覧", "寝落ちの実績", "解析について"]
+    pos = [h.index(t) for t in order]
+    assert pos == sorted(pos)
+    assert 'href="episodes/a1/"' in h and "解析待ち" not in h
+    assert "観点ごとの根拠" not in h and "珍しい花の話" not in h and "260字/分" not in h
+    assert 'aria-label="寝落ちの実績 4件"' in h and "30分未満 3件" in h
+
+
+def test_episode_page_has_evidence(tmp_path):
+    """話のページ: 番組へ戻る → この話の評点 → AI解析 → 観点ごとの根拠 → 解析について。"""
+    site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
+    h = (tmp_path / "shows" / "a" / "episodes" / "a1" / "index.html").read_text(encoding="utf-8")
+    h = h[h.index("<main"):h.index("</main>")]
+    order = ["深夜の植物図鑑", "この話の評点", "穏やかな語りの回です。", "観点ごとの根拠", "起伏の少なさ", "耳のゆるさ", "程よい興味", "解析について"]
     pos = [h.index(t) for t in order]
     assert pos == sorted(pos)
     assert "冒頭4分に、小さな山が1つだけです。" in h and "珍しい花の話" in h
     assert "260字/分" in h and "15%" in h and "5.0dB" in h and "1.0回/10分" in h
-    assert "この回の内容(AIの要約)" in h and "程よい" in h
-    assert 'aria-label="寝落ちの実績 4件"' in h and "30分未満 3件" in h
-    assert "290字/分までは満点、450字で最低" in h
+    assert "この話の内容(AIの要約)" in h and "290字/分までは満点、450字で最低" in h
+    assert "https://example.com/shows/a/episodes/a1/" in (tmp_path / "sitemap.xml").read_text()
 
 
 def test_logo_and_icons(tmp_path):
@@ -118,7 +132,7 @@ def test_usual_shows_get_their_own_ranking(tmp_path):
     assert [site.kind_of(s) for s in shows] == ["made", "usual"]
     h = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert "ふだんの番組で、寝落ち向きランキング" in h and h.index("寝落ち向きに作られた番組ランキング") < h.index("ふだんの番組で、寝落ち向きランキング")
-    assert "寝落ち向きの回" in h        # 今夜の1本と別の番組の回が、1つ以上あるとき
+    assert "寝落ち向きの話" in h        # 今夜の1本と別の番組の回が、1つ以上あるとき
     r = (tmp_path / "ranking" / "index.html").read_text(encoding="utf-8")
     assert 'data-kind="usual"' in r and 'data-kind="made"' in r and 'data-rank="ZZ"' in r
     assert "ranking/" in (tmp_path / "sitemap.xml").read_text() if (tmp_path / "sitemap.xml").exists() else True
@@ -147,7 +161,7 @@ def test_every_page_leads_further(tmp_path):
 
 
 def test_episodes_page_and_links_have_arrows(tmp_path):
-    """「寝落ち向きの回」には、すべて見るの行き先(/episodes/)がある。回は番組のページへつなぐ。"""
+    """「寝落ち向きの話」には、すべて見るの行き先(/episodes/)がある。話は番組のページへつなぐ。"""
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     e = (tmp_path / "episodes" / "index.html").read_text(encoding="utf-8")
     assert 'class="ep"' in e and 'href="../shows/a/"' in e and 'data-star="4.40"' in e and 'id="sort"' in e
