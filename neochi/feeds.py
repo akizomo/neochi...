@@ -12,6 +12,8 @@ from pathlib import Path
 
 import requests
 
+from . import genre
+
 log = logging.getLogger("neochi.feeds")
 NS = {"itunes": "http://www.itunes.com/dtds/podcast-1.0.dtd"}
 _NAMESPACE = uuid.UUID("6f1c0c8e-5f55-4a54-9c1e-6e0c0c0c0001")  # NeochiPickzz 固定
@@ -31,9 +33,10 @@ class Show:
     title: str
     publisher: str
     rss_url: str
-    genre: str  # 画面に出す系統(寝落ち用・朗読・芸人ラジオ・雑談・教養・環境音)。docs/VOICE.md §7
+    genre: str  # 画面に出す系統(寝落ち用・朗読・環境音・コメディ・雑談・教養)。docs/VOICE.md §7
     lang: str = "ja"
     cohort: str = "core"  # 集めた目的(core・popular・control・benchmark_en)。画面には出さない
+    apple_category: str | None = None  # 配信者が RSS に書いた Apple Podcasts のカテゴリ(「大分類>小分類」)
     artwork_url: str | None = None  # RSS の itunes:image。複製せず URL だけ持つ
     link_url: str | None = None  # 配信元の番組のサイト(RSS の channel/link)
 
@@ -51,7 +54,8 @@ class Episode:
 
 
 def load_shows(csv_path: str | Path) -> list[Show]:
-    """列: title, publisher, rss_url, genre, cohort(省略時 core), lang(省略時 ja)。"""
+    """列: title, publisher, rss_url, genre, apple_category, cohort(省略時 core), lang(省略時 ja)。
+    genre が空なら、apple_category から初期値を決める(neochi/genre.py)。"""
     shows = []
     with open(csv_path, encoding="utf-8-sig", newline="") as f:
         for row in csv.DictReader(f):
@@ -63,7 +67,8 @@ def load_shows(csv_path: str | Path) -> list[Show]:
                 title=(row.get("title") or "").strip(),
                 publisher=(row.get("publisher") or "").strip(),
                 rss_url=url,
-                genre=(row.get("genre") or "").strip(),
+                genre=genre.resolve(row.get("genre"), row.get("apple_category")),
+                apple_category=(row.get("apple_category") or "").strip() or None,
                 lang=(row.get("lang") or "ja").strip() or "ja",
                 cohort=(row.get("cohort") or "core").strip() or "core",
             ))
@@ -127,6 +132,16 @@ def parse_artwork(xml_bytes: bytes) -> str | None:
         return img.get("href").strip()
     url = (root.findtext("./channel/image/url") or "").strip()
     return url or None
+
+
+def parse_category(xml_bytes: bytes) -> str | None:
+    """配信者が選んだ Apple Podcasts のカテゴリ(itunes:category)。最初の1つを「大分類>小分類」の形で返す。"""
+    cat = ET.fromstring(xml_bytes).find("./channel/itunes:category", NS)
+    if cat is None or not (cat.get("text") or "").strip():
+        return None
+    top = cat.get("text").strip()
+    sub = cat.find("itunes:category", NS)
+    return f"{top}>{sub.get('text').strip()}" if sub is not None and (sub.get("text") or "").strip() else top
 
 
 def parse_link(xml_bytes: bytes) -> str | None:

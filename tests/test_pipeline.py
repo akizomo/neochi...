@@ -132,6 +132,31 @@ def test_new_outputs_saved_from_api_and_session(tmp_path, cfg):
     assert new["calm_per_min"] == per and new["reasons"]["moments"][0]["level"] == 2
 
 
+def test_content_start_saved_and_opening_marks(tmp_path, cfg):
+    spans = [(0, 8, "ジングル"), (65.4, 70, "こんばんは"), (400, 410, "後半")]
+    assert pipeline.with_second_marks(spans) == "[0:00] ジングル\n[1:05] こんばんは"   # 5分+1分より後は入れない
+    assert pipeline._new_outputs({"content_start": {"sec": 65, "anchor": "こんばんは"}}) == {
+        "content_start_sec": 65, "content_start_anchor": "こんばんは"}
+    assert pipeline._new_outputs({"content_start": {"sec": 0, "anchor": None}}) == {
+        "content_start_sec": 0, "content_start_anchor": None}      # 0 = 冒頭から本編(判定した、という記録)
+    assert pipeline._new_outputs({"content_start": None}) == {}      # 見つからないときは書かない(null のまま)
+    # セッション判定: 取り込むと列に入る
+    from neochi import llm
+    store = JsonStore(tmp_path / "s.json")
+    deps = make_deps(made_dirs=[])
+    deps.judge, deps.pending_dir = None, str(tmp_path / "pending")
+    pipeline.analyze_episode(SHOW, ep(4), cfg, store, deps)
+    pending = json.loads((tmp_path / "pending" / f"{pipeline._safe(ep(4).id)}.json").read_text(encoding="utf-8"))
+    assert "opening" in pending
+    new = pipeline.apply_judgement({"episode_id": ep(4).id, "calm_star": 4, "interest_level": "mid", "reason": "淡々",
+                                    "content_start": {"sec": 65, "anchor": "こんばんは"}}, cfg, store)
+    assert "content_start_sec" not in new       # 旧形式の判定では、本編の開始は読まない
+    j = {"interest": {k: {"score": 1, "min": 3} for k in "ABCDE"}, "calm": {k: {"score": 0, "min": None} for k in "ABCD"},
+         "reason": "淡々", "content_start": {"sec": 65, "anchor": "こんばんは"}}
+    new = pipeline.apply_judgement({**j, "episode_id": ep(4).id}, cfg, store)
+    assert new["content_start_sec"] == 65 and new["content_start_anchor"] == "こんばんは"
+
+
 def test_old_format_judgement_leaves_new_outputs_empty(tmp_path, cfg):
     store = JsonStore(tmp_path / "s.json")
     row = pipeline.analyze_episode(SHOW, ep(3), cfg, store, make_deps(made_dirs=[]))
@@ -141,7 +166,10 @@ def test_old_format_judgement_leaves_new_outputs_empty(tmp_path, cfg):
 def test_shows_csv_genres_are_display_names():
     """genre は画面に出す系統だけ。集めた目的は cohort に分ける(docs/VOICE.md §7)。"""
     shows = feeds.load_shows("data/shows.csv")
-    assert {s.genre for s in shows} <= {"寝落ち用", "朗読", "芸人ラジオ", "雑談", "教養", "環境音"}
+    from neochi import genre
+
+    assert {s.genre for s in shows} <= set(genre.GENRES)
+    assert all(s.apple_category for s in shows)  # categorize で読み済み
     assert {s.cohort for s in shows} <= {"core", "popular", "control", "benchmark_en"}
     assert all(s.lang == "en" for s in shows if s.cohort == "benchmark_en")
 
@@ -152,9 +180,9 @@ def test_sync_shows_copies_genre_and_cohort(tmp_path, monkeypatch):
     monkeypatch.delenv("SUPABASE_URL", raising=False)  # 本番の DB に書かないように
     monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
     csv_path = tmp_path / "s.csv"
-    csv_path.write_text("title,publisher,rss_url,genre,cohort,lang\n"
-                        "テスト番組,p,https://x/f,教養,control,ja\n"
-                        "未登録,p,https://x/g,朗読,core,ja\n", encoding="utf-8")
+    csv_path.write_text("title,publisher,rss_url,genre,apple_category,cohort,lang\n"
+                        "テスト番組,p,https://x/f,教養,History,control,ja\n"
+                        "未登録,p,https://x/g,朗読,Arts>Books,core,ja\n", encoding="utf-8")
     store_path = tmp_path / "store.json"
     st = JsonStore(store_path)
     st.upsert("show", {"id": SHOW.id, "title": "テスト番組", "rss_url": SHOW.rss_url, "genre": "人気番組（一般）"})
@@ -162,4 +190,25 @@ def test_sync_shows_copies_genre_and_cohort(tmp_path, monkeypatch):
     assert cli.main(["--store", str(store_path), "sync-shows", "--csv", str(csv_path)]) == 0
     rows = JsonStore(store_path).rows("show")
     assert len(rows) == 1  # 未登録の番組は足さない
-    assert rows[0]["genre"] == "教養" and rows[0]["cohort"] == "control"
+    assert rows[0]["genre"] == "教養" and rows[0]["cohort"] == "control" and rows[0]["apple_category"] == "History"
+
+
+def test_genre_from_apple_category():
+    from neochi import genre
+
+    assert genre.from_apple("Comedy>Improv") == "コメディ"
+    assert genre.from_apple("History") == "教養"
+    assert genre.from_apple("Society & Culture>Documentary") == "雑談"
+    assert genre.from_apple(None) == "雑談"
+    assert genre.resolve("寝落ち用", "Health & Fitness") == "寝落ち用"  # 手で書いた系統が優先
+    assert genre.resolve("", "Comedy") == "コメディ"
+    assert set(genre.APPLE_TO_GENRE.values()) <= set(genre.GENRES)
+    assert not (genre.SLEEP_MADE & genre.NOT_SLEEP_MADE)
+
+
+def test_parse_category():
+    xml = (b'<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel>'
+           b'<itunes:category text="Comedy"><itunes:category text="Improv"/></itunes:category>'
+           b'<itunes:category text="Arts"/></channel></rss>')
+    assert feeds.parse_category(xml) == "Comedy>Improv"
+    assert feeds.parse_category(b"<rss><channel></channel></rss>") is None

@@ -66,7 +66,7 @@ final class AppModel {
         openNightIfBedtime()
     }
 
-    /// 記録タブに出す、ふだんの就寝時刻。履歴が十分なら自動(中央値)、足りなければ手で決めたもの。
+    /// 自分タブに出す、ふだんの就寝時刻。履歴が十分なら自動(中央値)、足りなければ手で決めたもの。
     var bedtimeIsAuto: Bool { BedtimeWindow.typicalMinute(starts: healthStarts, calendar: .current) != nil }
     var bedtimeMinute: Int? {
         if let m = BedtimeWindow.typicalMinute(starts: healthStarts, calendar: .current) { return m }
@@ -98,6 +98,28 @@ final class AppModel {
         self.shows = shows; self.episodes = episodes; self.history = history; self.favorites = favorites
         self.queue = queue; self.currentShowID = currentShowID; self.lastNight = lastNight
         self.genreStreakNights = genreStreakNights; self.pendingMorning = pendingMorning
+        restorePendingNight()
+    }
+
+    /// 再生した晩のこと。夜のうちにアプリが終了されても、朝に振り返りを出せるよう、端末に残す。
+    private struct PendingNight: Codable {
+        var startedAt: Date; var episodeID: String?; var showID: String?
+    }
+    private static let pendingNightKey = "pendingNight"
+
+    private func savePendingNight() {
+        guard pendingMorning, let s = playStartedAt else {
+            UserDefaults.standard.removeObject(forKey: Self.pendingNightKey); return
+        }
+        let v = PendingNight(startedAt: s, episodeID: playEpisodeID, showID: playShowID)
+        UserDefaults.standard.set(try? JSONEncoder().encode(v), forKey: Self.pendingNightKey)
+    }
+
+    private func restorePendingNight() {
+        guard let data = UserDefaults.standard.data(forKey: Self.pendingNightKey),
+              let v = try? JSONDecoder().decode(PendingNight.self, from: data) else { return }
+        playStartedAt = v.startedAt; playEpisodeID = v.episodeID; playShowID = v.showID
+        pendingMorning = true
     }
 
     /// 番組の読み込みの状態。Release で接続先があるときは、見本の番組を出さず、読み込めるまで待つ(取り違えを防ぐ)。
@@ -158,19 +180,31 @@ final class AppModel {
     }
 
     /// 「記録する」で保存。入力は任意。
-    func saveLog(interest: InterestAnswer?, calm: Int?, note: String) {
-        guard let s = playStartedAt, let ep = playEpisodeID, let show = playShowID else { pendingMorning = false; return }
+    func saveLog(interest: Int?, calm: Int?, note: String, selfReport: SelfReportLatency? = nil) {
+        guard let s = playStartedAt, let ep = playEpisodeID, let show = playShowID else {
+            pendingMorning = false; savePendingNight(); return
+        }
         let listenNo = history.filter { $0.episodeID == ep }.count
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
         let log = SleepLog(id: UUID().uuidString, episodeID: ep, showID: show, startedAt: s, sleepOnsetAt: onsetAt,
-                           source: onsetAt == nil ? .selfReport : .watch, interestVote: interest?.rawValue, calmVote: calm,
-                           note: trimmed.isEmpty ? nil : trimmed, listenNo: max(1, listenNo))
+                           source: onsetAt == nil ? .selfReport : .watch, interestRating: interest, calmVote: calm,
+                           note: trimmed.isEmpty ? nil : trimmed, listenNo: max(1, listenNo),
+                           selfReport: onsetAt == nil ? selfReport : nil)
         logs.append(log)
         if let m = log.latencyMinutes { lastNight = LastNight(showID: show, episodeID: ep, minutes: m) }
         pendingMorning = false
         playStartedAt = nil; onsetAt = nil
+        savePendingNight()
         LogStore.save(logs)
         Task { try? await SupabaseClient.shared.upload(log) }
+    }
+
+    /// 記録をすべて削除する。サーバーの記録を先に消し、消せたら端末の記録も消す(サーバーで失敗したときは、何も消さない)。
+    func deleteAllRecords() async throws {
+        if SupabaseClient.shared.isConfigured { try await SupabaseClient.shared.deleteMyRecords() }
+        logs = []
+        LogStore.save(logs)
+        lastNight = nil
     }
 
     /// 記録のメモをあとから直す(空にすると消す)。
@@ -201,7 +235,7 @@ final class AppModel {
         guard !fetched.isEmpty else { loadFailed("番組が0件(show が空、または読み取りの権限がない)"); return }
         let e: [String: [Episode]]
         do { e = try await SupabaseClient.shared.fetchEpisodes() }
-        catch { loadFailed("回の読み込みに失敗: \(error)"); return }
+        catch { loadFailed("話の読み込みに失敗: \(error)"); return }
         var s = fetched
         var notes: [String] = []
         var list: [EpisodeAnalysis] = []
@@ -219,7 +253,7 @@ final class AppModel {
         analyses = Dictionary(list.map { ($0.episodeID, $0) }, uniquingKeysWith: { a, _ in a })
         shows = s; episodes = e; sleepPoints = points
         loadState = .ready
-        remoteStatus = "番組\(s.count)・回\(e.values.reduce(0) { $0 + $1.count })・解析\(list.count)・実績\(stats.count)" + (notes.isEmpty ? "" : "\n" + notes.joined(separator: "\n"))
+        remoteStatus = "番組\(s.count)・話\(e.values.reduce(0) { $0 + $1.count })・解析\(list.count)・実績\(stats.count)" + (notes.isEmpty ? "" : "\n" + notes.joined(separator: "\n"))
         // 見本の状態は、実データには存在しない番組を指すので外す。
         let r = SessionState(history: history, favorites: favorites, queue: queue, currentShowID: currentShowID,
                              lastNight: lastNight, genreStreakNights: genreStreakNights, pendingMorning: pendingMorning,
@@ -269,14 +303,64 @@ final class AppModel {
         return cal.date(byAdding: .day, value: night, to: base) ?? base
     }
 
+    /// 朝の振り返りを出してよいか。聴いた晩が明けてから(午前4時を過ぎてから)。同じ日のうちは出さない。
+    var morningDue: Bool {
+        guard pendingMorning else { return false }
+        guard let s = playStartedAt else { return true }   // 前回の起動から残った分
+        let cal = Calendar.current
+        let startNight = cal.startOfDay(for: s.addingTimeInterval(-4 * 3600))
+        return nightDay(0) > startNight
+    }
+
     func reservation(night: Int) -> Candidate? { reservations[nightDay(night)] }
 
     func reserve(night: Int, _ candidate: Candidate) {
         let today = nightDay(0)
         reservations = reservations.filter { $0.key >= today }   // 過ぎた晩の予約は捨てる
+        let replaced = reservations[nightDay(night)].map { $0 != candidate } ?? false
         reservations[nightDay(night)] = candidate
-        showToast(night == 0 ? "今夜聴くに決めました" : "明日聴くに決めました")
+        // 前の予約があったときは、置き換わったことを伝える(予約は、その晩に1本だけ)。
+        showToast(night == 0 ? (replaced ? "今夜聴く話を変えました" : "今夜聴くに決めました")
+                             : (replaced ? "明日聴く話を変えました" : "明日聴くに決めました"))
     }
+    /// 今夜の予約が、この番組か。
+    func isReservedTonight(_ show: Show) -> Bool { reservation(night: 0)?.show.id == show.id }
+    /// 今夜の予約が、この話か。
+    func isReservedTonight(episode: Episode) -> Bool { reservation(night: 0)?.episode?.id == episode.id }
+
+    /// 番組の「次に聴く話」。今夜の候補にあればそれ、なければ、番組の中で次に聴く話。
+    func nextCandidate(for show: Show) -> Candidate? {
+        slate(night: 0).first(where: { $0.show.id == show.id && $0.episode != nil })
+            ?? TonightEngine.listenNow(show: show, ctx: context)
+    }
+
+    /// 番組を指定して、今夜聴くを予約する。予約済みなら取り消す。候補にない番組でも、その番組自体を予約する。
+    func toggleTonight(_ show: Show) {
+        if isReservedTonight(show) { cancelReservation(night: 0); return }
+        if let c = nextCandidate(for: show) { reserve(night: 0, c) }
+    }
+
+    /// 話を指定して、今夜聴くを予約する。この話が予約済みなら取り消す(ほかの話が予約済みなら、この話に変える)。
+    func toggleTonight(episode: Episode, of show: Show) {
+        if isReservedTonight(episode: episode) { cancelReservation(night: 0); return }
+        reserve(night: 0, TonightEngine.candidate(show: show, episode: episode, ctx: context))
+    }
+
+    /// 話を指定して、いま聴く。
+    func playNow(episode: Episode, of show: Show) {
+        play(TonightEngine.candidate(show: show, episode: episode, ctx: context))
+    }
+
+    /// その話を聴いた回数(再生した履歴から)。
+    func listenCount(_ episode: Episode) -> Int { history.filter { $0.episodeID == episode.id }.count }
+
+    func episode(id: String) -> (show: Show, episode: Episode)? {
+        for (showID, list) in episodes {
+            if let e = list.first(where: { $0.id == id }), let s = shows.first(where: { $0.id == showID }) { return (s, e) }
+        }
+        return nil
+    }
+
     func cancelReservation(night: Int) {
         reservations[nightDay(night)] = nil
         showToast("予約を取り消しました")
@@ -298,8 +382,13 @@ final class AppModel {
         playStartedAt = Date(); onsetAt = nil
         playEpisodeID = candidate.episode?.id; playShowID = candidate.show.id
         pendingMorning = true
+        savePendingNight()
         playing = candidate
-        player.start(url: candidate.episode?.audioURL, title: candidate.show.title)
+        if let ep = candidate.episode {
+            player.start(url: ep.audioURL, title: ep.title, subtitle: candidate.show.title)
+        } else {
+            player.start(url: nil, title: candidate.show.title)
+        }
         if nightScreen == nil { nightScreen = .playing }
     }
 }

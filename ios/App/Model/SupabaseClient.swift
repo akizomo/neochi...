@@ -66,6 +66,91 @@ actor SupabaseClient {
         return try accept(data)
     }
 
+    // MARK: アカウント(Sign in with Apple)
+
+    struct AccountInfo: Equatable {
+        var isAnonymous: Bool
+        var email: String?
+        var providers: [String]
+    }
+
+    enum LinkResult { case linked, restored }
+
+    private struct UserResponse: Decodable {
+        let is_anonymous: Bool?; let email: String?
+        let identities: [Identity]?
+        struct Identity: Decodable { let provider: String }
+    }
+
+    /// いまのログインの状態。匿名なら isAnonymous、Apple に連携済みなら providers に "apple" が入る。
+    func account() async throws -> AccountInfo {
+        guard let base else { throw ClientError.notConfigured }
+        let s = try await validSession()
+        var req = URLRequest(url: base.appendingPathComponent("auth/v1/user"))
+        req.setValue(anonKey, forHTTPHeaderField: "apikey")
+        req.setValue("Bearer \(s.accessToken)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard code == 200 else { throw ClientError.http(code) }
+        let u = try JSONDecoder().decode(UserResponse.self, from: data)
+        let providers = (u.identities ?? []).map(\.provider).filter { $0 != "anonymous" }
+        return AccountInfo(isAnonymous: u.is_anonymous ?? providers.isEmpty, email: u.email, providers: providers)
+    }
+
+    private func idTokenRequest(idToken: String, nonce: String, link: Bool, bearer: String?) async throws -> (Data, Int) {
+        guard let base else { throw ClientError.notConfigured }
+        var comps = URLComponents(url: base.appendingPathComponent("auth/v1/token"), resolvingAgainstBaseURL: false)!
+        comps.queryItems = [URLQueryItem(name: "grant_type", value: "id_token")]
+        var req = URLRequest(url: comps.url!); req.httpMethod = "POST"
+        req.setValue(anonKey, forHTTPHeaderField: "apikey")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let bearer { req.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization") }
+        var body: [String: Any] = ["provider": "apple", "id_token": idToken, "nonce": nonce]
+        if link { body["link_identity"] = true }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        return (data, (resp as? HTTPURLResponse)?.statusCode ?? 0)
+    }
+
+    /// Apple の ID トークンで、いまの匿名ユーザーに Apple を連携する(user_id は変わらず、これまでの記録が残る)。
+    /// その Apple ID がすでに別のユーザーに連携済み(機種変更・入れ直し)なら、そのユーザーとしてログインし直す(.restored)。
+    /// このとき、この端末の匿名のあいだの記録は、新しいユーザーには移らない。
+    func linkApple(idToken: String, nonce: String) async throws -> LinkResult {
+        let current = try await validSession()
+        let (data, code) = try await idTokenRequest(idToken: idToken, nonce: nonce, link: true, bearer: current.accessToken)
+        if code == 200 { _ = try accept(data); return .linked }
+        guard (400..<500).contains(code), code != 401, code != 429 else { throw ClientError.http(code) }
+        let (data2, code2) = try await idTokenRequest(idToken: idToken, nonce: nonce, link: false, bearer: nil)
+        guard code2 == 200 else { throw ClientError.http(code2) }
+        _ = try accept(data2)
+        return .restored
+    }
+
+    /// ログアウト。端末のログインを消す。次に使うときは、新しい匿名ユーザーになる
+    /// (連携していない匿名のままログアウトすると、そのあいだの記録には戻れない。画面で止める)。
+    func signOut() async {
+        if let base, let s = session {
+            var req = URLRequest(url: base.appendingPathComponent("auth/v1/logout")); req.httpMethod = "POST"
+            req.setValue(anonKey, forHTTPHeaderField: "apikey")
+            req.setValue("Bearer \(s.accessToken)", forHTTPHeaderField: "Authorization")
+            _ = try? await URLSession.shared.data(for: req)
+        }
+        session = nil; Keychain.clear()
+    }
+
+    /// アカウントの削除。Edge Function(supabase/functions/delete-account)が、本人の記録と auth のユーザーを消す。
+    func deleteAccount() async throws {
+        guard let base else { throw ClientError.notConfigured }
+        let s = try await validSession()
+        var req = URLRequest(url: base.appendingPathComponent("functions/v1/delete-account")); req.httpMethod = "POST"
+        req.setValue(anonKey, forHTTPHeaderField: "apikey")
+        req.setValue("Bearer \(s.accessToken)", forHTTPHeaderField: "Authorization")
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(code) else { throw ClientError.http(code) }
+        session = nil; Keychain.clear()
+    }
+
     // MARK: REST
 
     private func request(_ path: String, query: [URLQueryItem] = [], method: String = "GET", body: Data? = nil) async throws -> Data {
@@ -111,7 +196,7 @@ actor SupabaseClient {
     func fetchShows() async throws -> [Show] {
         let data = try await request("show", query: [URLQueryItem(name: "select", value: "id,title,genre,show_star,z_rank,listing_status,artwork_url,link_url,apple_url")])
         return try Self.decoder.decode([ShowRow].self, from: data).filter { $0.listing_status == "listed" && $0.z_rank != nil }.map {
-            Show(id: $0.id, title: $0.title, genre: $0.genre ?? "",
+            Show(id: $0.id, title: $0.title, genre: GenreLabel.display($0.genre ?? "") ?? "",  // 古い分類名は、いまの系統に読み替える
                  artworkURL: $0.artwork_url.flatMap(URL.init(string:)), linkURL: $0.link_url.flatMap(URL.init(string:)),
                  appleURL: $0.apple_url.flatMap(URL.init(string:)), star: $0.show_star,
                  rank: $0.z_rank.flatMap(ZRank.init(rawValue:)))
@@ -213,15 +298,20 @@ actor SupabaseClient {
 
     private struct LogUpload: Encodable {
         let id: String; let episode_id: String; let started_at: Date; let sleep_onset_at: Date?
-        let latency_min: Int?; let source: String; let interest_vote: Int?; let calm_vote: Int?
+        let latency_min: Int?; let source: String; let interest_rating: Int?; let calm_vote: Int?
         let note: String?; let listen_no: Int
+    }
+
+    /// 自分の記録をすべて削除する(RLS により、本人の行だけが消える。migration 0010)。
+    func deleteMyRecords() async throws {
+        _ = try await request("sleep_log", query: [URLQueryItem(name: "id", value: "not.is.null")], method: "DELETE")
     }
 
     /// 記録の送信。同じ id は上書き(再送しても重ならない)。
     func upload(_ log: SleepLog) async throws {
         let e = JSONEncoder(); e.dateEncodingStrategy = .iso8601
         let row = LogUpload(id: log.id, episode_id: log.episodeID, started_at: log.startedAt, sleep_onset_at: log.sleepOnsetAt,
-                            latency_min: log.latencyMinutes, source: log.source.rawValue, interest_vote: log.interestVote,
+                            latency_min: log.uploadLatencyMinutes, source: log.source.rawValue, interest_rating: log.interestRating,
                             calm_vote: log.calmVote, note: log.note, listen_no: log.listenNo)
         _ = try await request("sleep_log", query: [URLQueryItem(name: "on_conflict", value: "id")], method: "POST",
                               body: try e.encode(row))
@@ -239,6 +329,7 @@ private enum Keychain {
         guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let data = out as? Data else { return nil }
         return try? JSONDecoder().decode(SupabaseClient.Session.self, from: data)
     }
+    static func clear() { SecItemDelete(query as CFDictionary) }
     static func save(_ s: SupabaseClient.Session) {
         guard let data = try? JSONEncoder().encode(s) else { return }
         SecItemDelete(query as CFDictionary)

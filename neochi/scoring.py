@@ -66,6 +66,11 @@ def ear_star(features: dict, lang: str, cfg: dict) -> float | None:
     return _star(sum(parts[k] * w[k] for k in parts) / sum(w.values()))
 
 
+def calm_star(items_sum: float, cfg: dict) -> float:
+    """🌊★。起伏の項目(0〜2点 × 4)の合計から、5 − 合計 × calm_slope(下限 1.0)。"""
+    return max(1.0, round(5 - cfg["total"]["calm_slope"] * items_sum, 1))
+
+
 def interest_star(score: float, cfg: dict) -> float:
     """🎯★。引き込み力(1〜10)がゾーンに入れば満点、外れるほど下がる(左右で下がり方が違う)。"""
     z = cfg["total"]["interest_zone"]
@@ -79,9 +84,9 @@ def interest_star(score: float, cfg: dict) -> float:
     return round(5.0 + (y1 - 5.0) * (score - hi) / (x1 - hi), 1)
 
 
-def interest_vote_star(vote: int, cfg: dict) -> float:
-    """朝の振り返りの3択(-1 退屈だった / 0 ちょうどよかった / 1 聴き入った)→ 🎯★。ゾーンの式の両端に合わせる。"""
-    return float(cfg["final"]["interest_vote_star"][vote])
+def interest_rating_from_vote(vote: int, cfg: dict) -> int:
+    """旧形式の3択(`interest_vote` -1 / 0 / 1)→ 10段階(1〜10)。10段階の導入前の行を、同じ★のまま引き継ぐ。"""
+    return int(cfg["final"]["interest_vote_legacy_rating"][vote])
 
 
 def blend_axis(ai: float | None, crowd: float | None, n: int, cfg: dict) -> float | None:
@@ -101,7 +106,7 @@ def total_star(calm: float | None, ear: float | None, interest_level: str | None
                calm_votes: list[int] | None = None, interest_votes: list[int] | None = None) -> float | None:
     """😴 総合の元になる点(🎯🌊🎧)。欠けた要素は除いて重みを再配分する。
 
-    calm_votes / interest_votes を渡すと、その軸にみんなの評価を足してから重み付けする(🎧には足さない)。
+    calm_votes(1〜5) / interest_votes(🎯 引き込み力の10段階 1〜10)を渡すと、その軸にみんなの評価を足してから重み付けする(🎧には足さない)。
     渡さなければ、AI解析だけの点(`analysis.total_star`)。
     """
     t = cfg["total"]
@@ -119,7 +124,7 @@ def total_star(calm: float | None, ear: float | None, interest_level: str | None
     if calm_votes and "calm" in vals:
         vals["calm"] = blend_axis(vals["calm"], sum(calm_votes) / len(calm_votes), len(calm_votes), cfg)
     if interest_votes and "interest" in vals:
-        stars = [interest_vote_star(v, cfg) for v in interest_votes]
+        stars = [interest_star(v, cfg) for v in interest_votes]  # みんなの10段階も、AIと同じゾーンの式に通す
         vals["interest"] = blend_axis(vals["interest"], sum(stars) / len(stars), len(stars), cfg)
     w = {k: t["weights"][k] for k in vals}
     return round(sum(vals[k] * w[k] for k in vals) / sum(w.values()), 1)
@@ -137,7 +142,7 @@ def final_star(total: float | None, cfg: dict,
     """総合評点と final_reason。人の手では上書きしない。
 
     total は、みんなの評価を軸ごとに足したあとの点(`total_star(..., calm_votes, interest_votes)`)。
-    それに、ウォッチの実測を足す: 総合評点 = total×(1−w実測) + 実測点×w実測
+    それに、ヘルスケアの実測を足す: 総合評点 = total×(1−w実測) + 実測点×w実測
     w実測 = min(上限, n / (n + prior_n))。3件(watch_min_n)未満は計算に入れない。
     ai_total(AI解析だけの点)があれば、実測とのずれが大きいときの理由に使う。
     """

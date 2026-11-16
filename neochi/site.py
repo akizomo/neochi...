@@ -28,9 +28,9 @@ RANK_ORDER = {"ZZZ": 3, "ZZ": 2, "Z": 1}
 # 格付けのひとこと(Strings.swift の rankMeaning と同じ)
 RANK_MEANING = {"ZZZ": "眠りたい夜は、まずこの番組", "ZZ": "寝落ちのために選びたい番組", "Z": "寝落ちに向いた番組"}
 # 格付けの線(config/z_rank.yaml と同じ値)
-RANK_MIN = {"Z": 3.0, "ZZ": 3.6, "ZZZ": 4.2}
+RANK_MIN = {"Z": 3.6, "ZZ": 4.1, "ZZZ": 4.5}
 
-LEAD = "AI解析とウォッチの実測をもとに、Z・ZZ・ZZZ の3段階で格付けしています。"
+LEAD = "AI解析とヘルスケアの実測をもとに、Z・ZZ・ZZZ の3段階で格付けしています。"
 ENGLISH = "Neochi (n.) — Japanese for drifting off mid-episode. NeochiPickzz picks what to drift off to."
 FOOT_NOTE = "評点は推定です。睡眠の良し悪しは評価していません。"
 FOOT_RIGHTS = "番組名とカバー画像の権利は、各配信元にあります。音声は配信元で聴けます。"
@@ -45,7 +45,7 @@ BMC_BUTTON = ("https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coff
 EMPTY = "まだ掲載していません"
 RANK_CRITERIA = ("寝落ち格付けは、番組の評点で決めます。"
                  + "、".join(f"{r} は{RANK_MIN[r]:.1f}以上" for r in ("Z", "ZZ", "ZZZ"))
-                 + "です。基準に届かない番組は、掲載しません。評点は、AI解析を土台に、ウォッチの実測とみんなの評価が集まるほど、それらを足したものです。")
+                 + "です。基準に届かない番組は、掲載しません。評点は、AI解析を土台に、ヘルスケアの実測とみんなの評価が集まるほど、それらを足したものです。")
 
 INTEREST_LABELS = {"A": "未解決の問い", "B": "驚き・新しい情報", "C": "笑い", "D": "追い続ける必要", "E": "聴き手への働きかけ"}
 CALM_LABELS = {"A": "感情の強さ", "B": "対立・緊張", "C": "頭の負荷", "D": "急な転換"}
@@ -238,7 +238,7 @@ def breakdown(stats: dict | None) -> str:
     """評点の内訳。あるものだけ並べる(Strings.swift の ratingBreakdown と同じ)。"""
     n = int((stats or {}).get("n") or 0)
     if n >= 3:
-        return f"AI解析・寝落ちまで 平均{stats['avg_min']}分(ウォッチの実測 {n}件)"
+        return f"AI解析・寝落ちまで 平均{stats['avg_min']}分(ヘルスケアの実測 {n}件)"
     return "AI解析"
 
 
@@ -301,7 +301,7 @@ def delta_pill(d: float, higher_is_better: bool, fmt, caption: str) -> str:
 
 
 def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og_image: str = "",
-         og_type: str = "website", large_card: bool = False, wide: bool = False) -> str:
+         og_type: str = "website", large_card: bool = False, wide: bool = False, jsonld: dict | None = None) -> str:
     meta = [
         f'<meta name="description" content="{escape(desc)}">',
         f'<meta property="og:title" content="{escape(title)}">',
@@ -310,16 +310,22 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
         '<meta property="og:site_name" content="NeochiPickzz">',
         '<meta property="og:locale" content="ja_JP">',
         f'<meta name="twitter:card" content="{"summary_large_image" if large_card else "summary"}">',
+        f'<meta name="twitter:title" content="{escape(title)}">',
+        f'<meta name="twitter:description" content="{escape(desc)}">',
     ]
     if canonical:
         meta += [f'<link rel="canonical" href="{escape(canonical)}">', f'<meta property="og:url" content="{escape(canonical)}">']
     if og_image:
-        meta.append(f'<meta property="og:image" content="{escape(og_image)}">')
+        meta += [f'<meta property="og:image" content="{escape(og_image)}">', f'<meta name="twitter:image" content="{escape(og_image)}">',
+                 f'<meta property="og:image:alt" content="{escape(title)}">']
+    if jsonld:
+        meta.append(f'<script type="application/ld+json">{json.dumps(jsonld, ensure_ascii=False).replace("</", "<\\/")}</script>')
     return f"""<!doctype html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
 <title>{escape(title)}</title>
 {chr(10).join(meta)}
 <meta name="theme-color" content="#171C33">
@@ -328,17 +334,20 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 <link rel="stylesheet" href="{root}style.css">
 </head>
 <body{' class="wide"' if wide else ''}>
-<header class="top"><div class="wrap">{wordmark(root)}<nav><a href="{root}#tonight">今夜の1本</a><a href="{root}ranking/">ランキング</a><a href="{root}about/">解析について</a></nav></div></header>
-<main class="wrap">
+<a class="skip" href="#main">本文へ</a>
+<header class="top"><div class="wrap">{wordmark(root)}<nav aria-label="メニュー"><a href="{root}#tonight">今夜の1本</a><a href="{root}ranking/">ランキング</a><a href="{root}about/">スコアと根拠</a></nav></div></header>
+<main class="wrap" id="main" tabindex="-1">
 {body}
 </main>
 <footer class="foot"><div class="wrap">
 <div class="foot-brand">{wordmark(root)}<span class="foot-made">made by {MAKER}</span></div>
-<nav class="foot-nav"><a href="{root}">トップ</a><a href="{root}ranking/">ランキング</a><a href="{root}episodes/">寝落ち向きの話</a><a href="{root}about/">解析について</a></nav>
+<nav class="foot-nav"><a href="{root}">トップ</a><a href="{root}ranking/">ランキング</a><a href="{root}episodes/">寝落ち向きの話</a><a href="{root}about/">スコアと根拠</a></nav>
 <p>{FOOT_NOTE}</p>
 <p>{FOOT_RIGHTS}</p>
 </div></footer>
 <a class="bmc-fab" href="{SUPPORT_URL}" rel="noopener" target="_blank"><img src="{BMC_BUTTON}" alt="{SUPPORT_LABEL}(Buy Me a Coffee)" width="169" height="36" loading="lazy"></a>
+<a class="to-top" href="#" id="top-btn" aria-label="ページの先頭へ" hidden><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5L6 4l3.5 3.5"/></svg></a>
+<script>{TOP_JS}</script>
 </body>
 </html>
 """
@@ -379,7 +388,7 @@ def episode_picks(shows: list[dict], today: date | None = None, fresh_only: bool
 
 
 def rank_guide() -> str:
-    """格付けの見かた。しきい値ではなく、どんな夜に向くかで伝える。基準の数字は「解析について」に置く。"""
+    """格付けの見かた。しきい値ではなく、どんな夜に向くかで伝える。基準の数字は「スコアと根拠」に置く。"""
     rows = "".join(f'<li><a href="ranking/?rank={r}">{badge(r)}<span>{RANK_MEANING[r]}</span></a></li>' for r in ("ZZZ", "ZZ", "Z"))
     return (f'<section class="guide" aria-label="寝落ち格付けの見かた"><p class="cap">寝落ち格付けの見かた</p>'
             f'<ul>{rows}</ul><a href="about/">格付けの決め方</a></section>')
@@ -680,7 +689,7 @@ def evidence(e: dict, a: dict, cfg: dict, lang: str) -> str:
         elif calm_items:
             body += f"<p>{calm_verdict(calm_items)}</p>"
         if calm_items:
-            body += item_rows(calm_items, CALM_LABELS) + '<p class="cap">項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.5)</p>'
+            body += item_rows(calm_items, CALM_LABELS) + '<p class="cap">項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.75)</p>'
         if not per and moments:
             body += '<ul class="moments">' + "".join(f'<li><b class="num fac">{m["min"]}分</b> {escape(m["note"])}</li>' for m in moments) + "</ul>"
         rows.append(axis_row("起伏の少なさ", star(a["calm_star"], "star"), body, open_=True))
@@ -731,7 +740,7 @@ def record(s: dict) -> str:
     avg = round(mean(mins)) if mins else (st or {}).get("avg_min")
     if avg is None:
         return ""   # データがない間は、欄ごと出さない
-    head = '<div class="sec-head"><h2>寝落ちの実績</h2><span class="cap">再生を始めてから眠るまで(ウォッチの実測)</span></div>'
+    head = '<div class="sec-head"><h2>寝落ちの実績</h2><span class="cap">再生を始めてから眠るまで(ヘルスケアの実測)</span></div>'
     d = delta([float(m) for m in mins])
     pill = delta_pill(d, False, lambda v: f"{round(v)}分", "前の4件") if d is not None else ""
     body = (f'<div class="row-between"><span><span class="cap">平均</span> <b class="num big res">{avg}</b>'
@@ -849,7 +858,7 @@ def episode_list(s: dict) -> str:
 
 
 def maker_block() -> str:
-    """作った人。解析についての末尾。"""
+    """作った人。スコアと根拠のページの末尾。"""
     return (f'<h2>作った人</h2><p>{MAKER}。個人で作っています。番組の解析は、毎日、自動で増えています。</p>'
             f'<p><a href="{GITHUB_URL}" rel="noopener" target="_blank">GitHub</a>'
             f'<span aria-hidden="true"> / </span><a href="{SUPPORT_URL}" rel="noopener" target="_blank">Buy Me a Coffee</a></p>')
@@ -866,7 +875,7 @@ def about_block(a: dict | None, cfg: dict, lang: str) -> str:
             f"<p>耳のゆるさの基準(★5が満点、★1が最低)<br>{crit}</p>"
             "<p>音量の推移と突発音は、冒頭30分を測っています。話す速さと、起伏・興味の判定は、冒頭を文字起こしして行っています。"
             f"30分以降を聴くのは寝つけなかったときだけなので、内容の評価は冒頭20分までにしています。{depth}</p>"
-            f"<p>{RANK_CRITERIA}</p></div></details>")
+            f'<p>{RANK_CRITERIA}</p><p><a href="../../about/">スコアと根拠(出典つき)</a></p></div></details>')
 
 
 def show_html(s: dict, base_url: str, cfg: dict, related: list[dict] | None = None) -> str:
@@ -876,7 +885,7 @@ def show_html(s: dict, base_url: str, cfg: dict, related: list[dict] | None = No
     sub = escape(s.get("genre") or "")
     avg = (st or {}).get("avg_min") if (st or {}).get("n") else None
     duo = (f'<section class="duo"><div><p class="cap">評点</p>{score(s["show_star"], "big")}</div><span class="vr"></span>'
-           f'<div><p class="cap">寝落ちまで(ウォッチの実測の平均)</p>'
+           f'<div><p class="cap">寝落ちまで(ヘルスケアの実測の平均)</p>'
            + (f'<p><b class="num big res">{avg}</b><span class="res">分</span></p>' if avg is not None else '<p class="num big muted">―</p>')
            + f'</div></section><p class="cap">{breakdown(st)}</p>')
     links = []
@@ -975,27 +984,19 @@ def redirect_page(rel: str, canonical: str = "") -> str:
             f'<body><a href="{rel}">移動しました</a></body></html>')
 
 
-def about_html() -> str:
-    return f"""<section class="prose">
-{mark_svg("hero-mark")}
-<h1>解析について</h1>
-<p class="en">{ENGLISH}</p>
-<h2>評点</h2>
-<p>番組が寝落ちに向いた作りかを、1.0〜5.0の★で表します。3つの観点を合わせた点です。</p>
-<dl>
-<dt>{strings.LABEL_INTEREST}</dt><dd>少し気になるが、追わなくても困らないくらいが、いちばん高くなります。冒頭を文字起こしして判定しています。</dd>
-<dt>{strings.LABEL_CALM}</dt><dd>盛り上がり、驚き、対立、急な話題の転換が少ないほど、高くなります。</dd>
-<dt>{strings.LABEL_EAR}</dt><dd>話す速さ、速さのばらつき、音量の変化、突発音を、音から測っています。</dd>
-</dl>
-<h2>寝落ち格付け</h2>
-<p>{RANK_CRITERIA}</p>
-<h2>寝落ちまで</h2>
-<p>再生を始めてから眠るまでの分数です。Apple Watch の記録から測ります。睡眠の良し悪しは評価しません。</p>
-<h2>音声の扱い</h2>
-<p>解析のために一時的に音声を読み込み、終わったら消します。音声は保存も配信もしません。</p>
-{maker_block()}
-</section>"""
 
+
+def about_html(cfg: dict) -> str:
+    """スコアと根拠の説明ページ。中身は neochi/explainer.py(根拠の台帳 docs/EVIDENCE.md が正)。"""
+    from .explainer import explainer_html
+
+    return explainer_html(cfg, RANK_MIN, ENGLISH, mark_svg("hero-mark"), maker_block())
+
+
+TOP_JS = """
+(()=>{const b=document.getElementById('top-btn');if(!b)return;const f=()=>{b.hidden=scrollY<600;};addEventListener('scroll',f,{passive:true});f();
+b.addEventListener('click',e=>{e.preventDefault();scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});});})();
+"""
 
 FILTER_JS = """
 (()=>{const $=id=>document.getElementById(id),q=$('q'),ul=$('grid'),items=[...ul.children],empty=$('empty');
@@ -1041,7 +1042,9 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
     (out / "favicon.svg").write_text(FAVICON, encoding="utf-8")
     og = f"{base_url}og.png" if base_url else ""
     (out / "index.html").write_text(page(title=f"{strings.PRODUCT} — {strings.TAGLINE}", desc=LEAD, root="./",
-                                         body=index_html(shows), canonical=base_url, og_image=og, large_card=True, wide=True),
+                                         body=index_html(shows), canonical=base_url, og_image=og, large_card=True, wide=True,
+                                         jsonld={"@context": "https://schema.org", "@type": "WebSite", "name": strings.PRODUCT,
+                                                 "url": base_url, "inLanguage": "ja", "description": LEAD} if base_url else None),
                                     encoding="utf-8")
     (out / "ranking").mkdir()
     (out / "ranking" / "index.html").write_text(page(title=f"ランキング | {strings.PRODUCT}", desc="寝落ち向きの番組を、評点の高い順に並べています。",
@@ -1052,8 +1055,8 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
                                                       root="../", body=episodes_html(shows), canonical=base_url and base_url + "episodes/",
                                                       og_image=og, large_card=True, wide=True), encoding="utf-8")
     (out / "about").mkdir()
-    (out / "about" / "index.html").write_text(page(title=f"解析について | {strings.PRODUCT}", desc=FOOT_NOTE, root="../",
-                                                   body=about_html(), canonical=base_url and base_url + "about/",
+    (out / "about" / "index.html").write_text(page(title=f"スコアと根拠 | {strings.PRODUCT}", desc=FOOT_NOTE, root="../",
+                                                   body=about_html(cfg), canonical=base_url and base_url + "about/",
                                                    og_image=og, large_card=True), encoding="utf-8")
     for s in shows:
         d = out / "shows" / slug(s)
@@ -1065,7 +1068,10 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
         desc = f"評点 {s['show_star']:.1f}、寝落ち格付け {s['z_rank']}。{RANK_MEANING[s['z_rank']]}です。"
         d.joinpath("index.html").write_text(page(
             title=f"{s['title']} | {strings.PRODUCT}", desc=desc, root="../../", body=show_html(s, base_url, cfg, [r for r in shows if r["id"] != s["id"] and r.get("genre") and r.get("genre") == s.get("genre")]),
-            canonical=base_url and f"{base_url}shows/{slug(s)}/", og_image=s.get("artwork_url") or og, og_type="article"),
+            canonical=base_url and f"{base_url}shows/{slug(s)}/", og_image=s.get("artwork_url") or og, og_type="article",
+            jsonld={"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": strings.PRODUCT, "item": base_url},
+                {"@type": "ListItem", "position": 2, "name": s["title"], "item": f"{base_url}shows/{slug(s)}/"}]} if base_url else None),
             encoding="utf-8")
         an = dict((x["id"], y) for x, y in s["analyzed"])
         for e in s["episodes"]:
@@ -1083,7 +1089,12 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
                 title=f"{title} | {s['title']} | {strings.PRODUCT}", desc=edesc, root="../../../../",
                 body=episode_html(s, e, a, base_url, cfg),
                 canonical=base_url and f"{base_url}shows/{slug(s)}/episodes/{slug(e)}/", og_image=s.get("artwork_url") or og,
-                og_type="article"), encoding="utf-8")
+                og_type="article",
+                jsonld={"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+                    {"@type": "ListItem", "position": 1, "name": strings.PRODUCT, "item": base_url},
+                    {"@type": "ListItem", "position": 2, "name": s["title"], "item": f"{base_url}shows/{slug(s)}/"},
+                    {"@type": "ListItem", "position": 3, "name": title, "item": f"{base_url}shows/{slug(s)}/episodes/{slug(e)}/"}]} if base_url else None),
+                encoding="utf-8")
 
     (out / "404.html").write_text(page(title=f"{EMPTY} | {strings.PRODUCT}", desc=LEAD, root="/",
                                        body=f'<section class="hero"><h1>{EMPTY}</h1><p><a href="/">トップへ</a></p></section>'),

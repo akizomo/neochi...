@@ -23,7 +23,7 @@ struct RootView: View {
         TabView {
             TonightView().tabItem { Label("今夜", systemImage: "moon") }
             DiscoverView().tabItem { Label("見つける", systemImage: "magnifyingglass") }
-            LogView().tabItem { Label("記録", systemImage: "clock") }
+            LogView().tabItem { Label("自分", systemImage: "person.crop.circle") }
         }
         .tint(Color.nc(.textMain))
         // 番組を読み込めるまで(Release)。読み込めなかったときは、見本の番組を出さず、やり直しを出す。
