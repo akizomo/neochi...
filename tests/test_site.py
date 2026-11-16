@@ -177,7 +177,7 @@ def test_maker_and_support_links(tmp_path):
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     for path in ("index.html", "about/index.html", "shows/a/index.html", "shows/a/episodes/a1/index.html"):
         h = (tmp_path / path).read_text(encoding="utf-8")
-        assert h.count("buymeacoffee.com/akizomo") == (2 if path == "about/index.html" else 1) and 'class="foot-made"' in h and "img.buymeacoffee.com/button-api" in h and "コーヒーで応援する" in h, path
+        assert h.count("buymeacoffee.com/akizomo") == (2 if path == "about/index.html" else 1) and 'class="foot-made"' in h and "made by akihiro uezono" in h and "個人で作っています。</span>" not in h and "img.buymeacoffee.com/button-api" in h and "コーヒーで応援する" in h, path
         assert "作った人" not in h or path == "about/index.html"
     about = (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
     assert "作った人" in about and "akihiro uezono" in about and 'href="https://github.com/akizomo"' in about

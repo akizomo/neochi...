@@ -311,7 +311,7 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 <nav class="foot-nav"><a href="{root}">トップ</a><a href="{root}ranking/">ランキング</a><a href="{root}episodes/">寝落ち向きの話</a><a href="{root}about/">解析について</a></nav>
 <p>{FOOT_NOTE}</p>
 <p>{FOOT_RIGHTS}</p>
-<p class="foot-made"><span>個人で作っています。</span><a class="bmc" href="{SUPPORT_URL}" rel="noopener" target="_blank"><img src="{BMC_BUTTON}" alt="{SUPPORT_LABEL}(Buy Me a Coffee)" width="169" height="36" loading="lazy"></a></p>
+<p class="foot-made"><span>made by {MAKER}</span><a class="bmc" href="{SUPPORT_URL}" rel="noopener" target="_blank"><img src="{BMC_BUTTON}" alt="{SUPPORT_LABEL}(Buy Me a Coffee)" width="169" height="36" loading="lazy"></a></p>
 </div></footer>
 </body>
 </html>
