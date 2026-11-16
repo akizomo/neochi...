@@ -166,6 +166,7 @@ struct LogView: View {
 
     @State private var editingBedtime = false
     @State private var editingGenres = false
+    @Environment(\.openURL) private var openURL
     @State private var showingAccount = false
     @State private var accountTick = 0
     @State private var confirmDeleteAll = false
@@ -194,6 +195,31 @@ struct LogView: View {
         .buttonStyle(.pressable).disabled(auto)
     }
 
+    /// ヘルスケア(睡眠データ)の許可。最初に許可しなかった人が、あとから変えられる入口。
+    /// 読み取りの許可が「あるか」は、アプリからは分からない。聞いていなければ許可画面を出し、聞いたあとは、ヘルスケアで変えてもらう。
+    @ViewBuilder private var healthRow: some View {
+        if model.healthAccess != .unavailable {
+            let notAsked = model.healthAccess == .notAsked
+            VStack(alignment: .leading, spacing: NCSpace.s2) {
+                Text("ヘルスケア(睡眠データ)").ncText(NCText.footnote, .textSub)
+                Text(notAsked ? "まだ許可していません。許可すると、寝落ちまでの分数を自動で記録できます。"
+                              : "許可を変えるときは、ヘルスケアのプロフィールから、NeochiPickzz の睡眠を選んでください。")
+                    .ncText(NCText.body).fixedSize(horizontal: false, vertical: true)
+                Button {
+                    if notAsked { Task { await model.requestHealth() } }
+                    else if let u = URL(string: "x-apple-health://") { openURL(u) }
+                } label: {
+                    Text(notAsked ? "許可する" : "ヘルスケアを開く").ncText(NCText.headline, .bgBase)
+                        .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                        .background(Capsule().fill(Color.nc(.textMain)))
+                }
+                .buttonStyle(.pressable)
+            }
+            .padding(NCSpace.s4)
+            .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+        }
+    }
+
     /// 好みのジャンル(最初に聞いたもの)。記録がたまるまでの、最初の番組と並びに使う。
     private var genreRow: some View {
         let names = Discover.genreOrder.filter { model.preferredGenres.contains($0) }
@@ -219,6 +245,7 @@ struct LogView: View {
                     AccountRow(tick: accountTick) { showingAccount = true }
                     bedtimeRow
                     genreRow
+                    healthRow
                     if model.logs.isEmpty {
                         Text("まだ記録がありません。").ncText(NCText.footnote, .textSub)
                     } else {

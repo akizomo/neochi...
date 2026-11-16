@@ -40,8 +40,9 @@ struct RootView: View {
         .fullScreenCover(item: $model.nightScreen) { _ in NightView() }
         .task { await model.loadRemote() }
         .task { await model.loadHealthBedtimes() }
+        .task { await model.refreshHealthAccess() }
         .onAppear { model.openNightIfBedtime() }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime() } }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime(); Task { await model.refreshHealthAccess() } } }
         .sheet(isPresented: Binding(get: { model.needsBedtimeQuestion }, set: { _ in })) { BedtimeSetupView().interactiveDismissDisabled() }
         .sheet(isPresented: Binding(get: { model.needsGenreQuestion }, set: { _ in })) { GenrePreferenceView().interactiveDismissDisabled() }
         .fullScreenCover(isPresented: $model.morningOpen) { MorningView() }
