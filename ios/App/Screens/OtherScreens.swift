@@ -36,6 +36,7 @@ struct DiscoverView: View {
                     } header: { genreChips }
                 }
             }
+            .refreshable { await model.refresh() }
             .background(Color.nc(.bgBase))
             .modifier(SoftTopEdge())
             .appDestinations()
@@ -164,6 +165,7 @@ struct LogView: View {
     @Environment(AppModel.self) private var model
 
     @State private var editingBedtime = false
+    @State private var editingGenres = false
     @State private var showingAccount = false
     @State private var accountTick = 0
     @State private var confirmDeleteAll = false
@@ -192,12 +194,31 @@ struct LogView: View {
         .buttonStyle(.pressable).disabled(auto)
     }
 
+    /// 好みのジャンル(最初に聞いたもの)。記録がたまるまでの、最初の番組と並びに使う。
+    private var genreRow: some View {
+        let names = Discover.genreOrder.filter { model.preferredGenres.contains($0) }
+        return Button { editingGenres = true } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: NCSpace.s1) {
+                    Text("好みのジャンル").ncText(NCText.footnote, .textSub)
+                    Text(names.isEmpty ? "未設定" : names.joined(separator: "・")).ncText(NCText.body).lineLimit(1)
+                }
+                Spacer()
+                HStack(spacing: NCSpace.s1) { Text("変える"); Image(systemName: "chevron.right") }.ncText(NCText.footnote, .textSub)
+            }
+            .padding(NCSpace.s4)
+            .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+        }
+        .buttonStyle(.pressable)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: NCSpace.s3) {
                     AccountRow(tick: accountTick) { showingAccount = true }
                     bedtimeRow
+                    genreRow
                     if model.logs.isEmpty {
                         Text("まだ記録がありません。").ncText(NCText.footnote, .textSub)
                     } else {
@@ -210,6 +231,7 @@ struct LogView: View {
                 .padding(.horizontal, NCSpace.s5)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .refreshable { await model.refresh() }
             .background(Color.nc(.bgBase))
             .navigationTitle("自分")
             .toolbarTitleDisplayMode(.inlineLarge)
@@ -221,6 +243,7 @@ struct LogView: View {
                 }
             } message: { Text("この端末とサーバーの、寝落ちの記録がすべて消えます。元に戻せません。") }
             .sheet(isPresented: $showingAccount, onDismiss: { accountTick += 1 }) { AccountView() }
+            .sheet(isPresented: $editingGenres) { GenrePreferenceView(editing: true) }
             .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         }
     }

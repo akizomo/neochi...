@@ -47,6 +47,25 @@ final class AppModel {
     var bedtimeFallback: Date? = UserDefaults.standard.object(forKey: "bedtimeFallback") as? Date
     var bedtimeAsked = UserDefaults.standard.bool(forKey: "bedtimeAsked")
 
+    /// 最初に聞いた、好みのジャンル。記録がないうちの、最初の番組と並びに使う。聞いたかどうかも覚える。
+    var preferredGenres: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "preferredGenres") ?? [])
+    var genresAsked = UserDefaults.standard.bool(forKey: "genresAsked")
+
+    /// 就寝時刻の質問が済んだあとで、番組が読み込めたら、好みのジャンルを聞く(1度だけ)。
+    var needsGenreQuestion: Bool {
+        loadState == .ready && !shows.isEmpty && !genresAsked && healthChecked && !needsBedtimeQuestion
+    }
+
+    func savePreferredGenres(_ genres: Set<String>) {
+        preferredGenres = genres; genresAsked = true
+        UserDefaults.standard.set(Array(genres).sorted(), forKey: "preferredGenres")
+        UserDefaults.standard.set(true, forKey: "genresAsked")
+    }
+
+    /// 表示中のタブ。空の状態から「見つける」へ案内するために、画面の外から切り替える。
+    enum AppTab: Hashable { case tonight, discover, me }
+    var selectedTab: AppTab = .tonight
+
     /// ヘルスケアの履歴から読んだ、晩ごとの就寝時刻。確認が済んだら healthChecked。
     var healthStarts: [Date] = []
     var healthChecked = false
@@ -144,6 +163,13 @@ final class AppModel {
         await loadRemote()
     }
 
+    /// 引っぱって更新。番組・話・解析を読み直す。朝の結果が「確認中」なら、ヘルスケアの記録も読み直す。
+    /// 読み込めなかったときは、いまの内容のまま(画面は変えない)。
+    func refresh() async {
+        await loadRemote()
+        if pendingMorning { await refreshOnset() }
+    }
+
     private func loadFailed(_ status: String) {
         remoteStatus = status
         if loadState == .loading { loadState = .failed }
@@ -162,7 +188,8 @@ final class AppModel {
 
     var context: TonightContext {
         TonightContext(shows: shows, episodes: episodes, history: history, favorites: favorites, queue: queue,
-                       currentShowID: currentShowID, lastNight: lastNight, genreStreakNights: genreStreakNights)
+                       currentShowID: currentShowID, lastNight: lastNight, genreStreakNights: genreStreakNights,
+                       preferredGenres: preferredGenres)
     }
 
     /// 朝の振り返りに出す寝落ちまでの分。ヘルスケアから確認できなければ nil。

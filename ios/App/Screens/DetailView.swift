@@ -46,6 +46,7 @@ struct DetailView: View {
                 .padding(NCSpace.s4)
             }
         }
+        .refreshable { await model.refresh() }
         .background(Color.nc(.bgBase))
         .toolbar {
             // 右上: 元のPodcastへ(外部リンク)と、お気に入り。

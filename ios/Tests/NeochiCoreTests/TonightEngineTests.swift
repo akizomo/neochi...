@@ -25,6 +25,34 @@ final class TonightEngineTests: XCTestCase {
             lastNight: lastNight, genreStreakNights: streak)
     }
 
+    // 最初の番組は、好みのジャンルの中で評点がいちばん高い番組。理由は「好みの〜」
+    func testFirstRunStartsWithPreferredGenreBestShow() {
+        var c = ctx(favorites: [], current: "")
+        c.currentShowID = nil
+        c.preferredGenres = ["解説"]
+        let s = TonightEngine.slate(ctx: c)
+        XCTAssertEqual(s[0].show.id, "train")                       // 解説の中で評点が高い(4.1)。全体の最高は朗読の電話帳(4.9)
+        XCTAssertEqual(s[0].reason, .preferredGenre(genre: "解説"))
+        XCTAssertEqual(Reason.preferredGenre(genre: "朗読").text, "好みの朗読")
+    }
+
+    // 好みがなければ、全体で評点がいちばん高い番組から始める
+    func testFirstRunWithoutPreferenceStartsWithBestShow() {
+        var c = ctx(favorites: [], current: "")
+        c.currentShowID = nil
+        XCTAssertEqual(TonightEngine.slate(ctx: c)[0].show.id, "phonebook")
+    }
+
+    // 好みのジャンルの番組が、ほかより先に並ぶ。好みがなければ、ちがう系統(解説)が先になる
+    func testPreferredGenreIsOrderedBeforeOthers() {
+        var c = ctx(favorites: [], current: "phonebook")
+        XCTAssertEqual(TonightEngine.slate(ctx: c).last?.show.id, "train")
+        c.preferredGenres = ["朗読"]
+        let s = TonightEngine.slate(ctx: c)
+        XCTAssertEqual(s.last?.show.id, "plant")
+        XCTAssertEqual(s.last?.reason, .preferredGenre(genre: "朗読"))
+    }
+
     func play(_ show: String, _ n: Int, times: Int = 1, day: Int = 1) -> [PlayRecord] {
         (0..<times).map { PlayRecord(episodeID: "\(show)-\(n)", showID: show, playedAt: Date(timeIntervalSince1970: Double(day * 86400 + $0)) ) }
     }
