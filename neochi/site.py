@@ -356,7 +356,7 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 # ---------- トップとランキング ----------
 
 # 画面の系統(genre)を、2つのランキングに振り分ける。集めた目的(cohort)は使わない。
-GENRE_KIND = {"寝落ち用": "made", "朗読": "made", "環境音": "made", "雑談": "usual", "教養": "usual", "芸人ラジオ": "usual", "コメディ": "usual"}
+GENRE_KIND = {"寝落ち用": "made", "朗読": "made", "環境音": "made", "雑談": "usual", "教養": "usual", "コメディ": "usual"}
 KINDS = {
     "made": {"name": "寝落ち向きに作られた番組", "title": "寝落ち向きに作られた番組ランキング", "sub": "朗読、睡眠導入、環境音など"},
     "usual": {"name": "ふだんの番組", "title": "ふだんの番組で、寝落ち向きランキング", "sub": "雑談、教養、ラジオなど"},
