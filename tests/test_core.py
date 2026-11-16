@@ -113,15 +113,15 @@ def test_final_star_watch(cfg):
 
 def test_z_rank(zcfg):
     assert z_rank(None, zcfg) is None
-    assert z_rank(2.9, zcfg) is None              # 基準未満は掲載しない
-    assert z_rank(3.0, zcfg) == "Z"
-    assert z_rank(3.6, zcfg) == "ZZ"
-    assert z_rank(4.2, zcfg) == "ZZZ"             # AI解析だけでも付く(実測の件数は条件にしない)
+    assert z_rank(3.4, zcfg) is None              # 基準未満は掲載しない
+    assert z_rank(3.5, zcfg) == "Z"
+    assert z_rank(4.0, zcfg) == "ZZ"
+    assert z_rank(4.4, zcfg) == "ZZZ"             # AI解析だけでも付く(実測の件数は条件にしない)
 
 
 def test_z_rank_demote_needs_watch(zcfg):
-    assert z_rank(3.2, zcfg, current="ZZZ", watch_n=4) == "ZZZ"   # 実測5件未満は下げない
-    assert z_rank(3.2, zcfg, current="ZZZ", watch_n=5) == "Z"
+    assert z_rank(3.7, zcfg, current="ZZZ", watch_n=4) == "ZZZ"   # 実測5件未満は下げない
+    assert z_rank(3.7, zcfg, current="ZZZ", watch_n=5) == "Z"
     assert z_rank(2.0, zcfg, current="Z", watch_n=2) == "Z"
     assert z_rank(4.5, zcfg, current="Z", watch_n=0) == "ZZZ"      # 上がるのは、いつでも
 
@@ -215,7 +215,7 @@ def test_show_star_uses_judged_episodes_only(cfg, tmp_path):
     s.upsert("analysis", {"episode_id": "e2", "final_star": 3.7, "calm_star": 4.0, "interest_level": "mid"})
     cli._update_show_stars(s, ["sh"])
     cli.update_ratings(s, ["sh"], yaml_z())
-    assert s.get("show", "sh")["show_star"] == 3.7 and s.get("show", "sh")["z_rank"] == "ZZ"
+    assert s.get("show", "sh")["show_star"] == 3.7 and s.get("show", "sh")["z_rank"] == "Z"
 
 
 def yaml_z():

@@ -2,8 +2,8 @@ import Foundation
 
 /// ★の基準(`config/scoring.yaml` の `ear` と同じ値)。変えるときは、yaml と一緒に直す。
 public enum EarCriteria {
-    public static let rateBestMax = 290.0      // 字/分。これ以下は満点
-    public static let rateWorst = 450.0
+    public static let rateBestMax = 250.0      // 字/分。これ以下は満点
+    public static let rateWorst = 400.0
     public static let cvBest = 0.10, cvWorst = 0.40
     public static let volumeBest = 4.0, volumeWorst = 12.0   // 音量のばらつき(dB)
     public static let suddenBest = 0.0, suddenWorst = 10.0   // 突発音(回/10分)
@@ -18,7 +18,7 @@ public struct EarPartReport: Hashable, Identifiable, Sendable {
     public let measured: String
     /// 結果のひとこと。例「ゆったりです」
     public let verdict: String
-    /// 基準。例「290字/分までは満点、450字で最低」
+    /// 基準。例「250字/分までは満点、400字で最低」
     public let criterion: String
     public let good: Bool
     /// 行に出す、測った値の短い形。例「274字/分」
@@ -44,7 +44,7 @@ public enum Explain {
         let p = a.earParts
         let c = EarCriteria.self
         if let r = a.speechRate {
-            // 速さは台形: 290字/分以下は、遅くても満点。
+            // 速さは台形: 250字/分以下は、遅くても満点。
             let u = r <= c.rateBestMax ? 1 : unit(r, best: c.rateBestMax, worst: c.rateWorst)
             let (v, good) = pick(u, "寝落ちに向く速さです", "やや速めです", "かなり速いです")
             out.append(.init(title: "話す速さ", star: p?.rate, measured: "1分に\(Int(r.rounded()))字", verdict: v,

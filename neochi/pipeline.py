@@ -184,6 +184,21 @@ def remeasure_acoustics(row: dict, audio_url: str, lang: str, cfg: dict, store, 
     return out
 
 
+def reear(row: dict, lang: str, cfg: dict) -> dict:
+    """保存済みの特徴から、🎧★と内訳を計算し直す(🎧の基準や重みを変えたとき)。測り直しではない。"""
+    feat = dict(row.get("features") or {})
+    ear = scoring.ear_star(feat, lang, cfg)
+    if ear is not None:
+        feat["ear_parts"] = scoring.ear_parts(feat, lang, cfg)
+    return {**row, "features": feat, "ear_star": ear}
+
+
+def restar_ai(row: dict, cfg: dict) -> float | None:
+    """保存済みの解析から、AI解析だけの点(total_star)を計算し直す。"""
+    return scoring.total_star(row.get("calm_star"), row.get("ear_star"), row.get("interest_level"), cfg,
+                              row.get("interest_score"))
+
+
 def restar(row: dict, cfg: dict, store) -> tuple[float | None, str | None]:
     """保存済みの解析から、総合評点と final_reason を計算し直す(実測・みんなの評価が増えたとき、ルールを変えたとき)。"""
     _, final, reason = _stars(row.get("calm_star"), row.get("ear_star"), row.get("interest_level"),

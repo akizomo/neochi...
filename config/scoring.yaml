@@ -29,13 +29,13 @@ front_weight:
 
 # 🎧 耳のゆるさ: 各指標を 0〜1 にして重み付き平均 → ★1〜5
 ear:
-  weights: {rate: 0.3, rate_cv: 0.2, volume: 0.25, sudden: 0.25}
+  weights: {rate: 0.5, rate_cv: 0.1, volume: 0.2, sudden: 0.2}   # 2026-11-16: 対照群を分けられるのは話す速さ(音量・ばらつきは逆向き)。速さを重く
   # 話す速さ: 「遅いほど良い」ではなく、best_max 以下を満点にする(台形)。
   # 遅すぎ側の減点は根拠がないので、実測が溜まるまで入れない(slow_floor: null)。
   # best_max は基準データ48本の上位(★4以上)が収まった範囲から仮置き(Whisper base・無音除きの字/分)。
   rate:
-    ja: {best_max: 290, worst: 450, slow_floor: null}   # 字/分
-    en: {best_max: 130, worst: 200, slow_floor: null}   # 語/分
+    ja: {best_max: 250, worst: 400, slow_floor: null}   # 字/分(2026-11-16: 290/450 から厳しく。寝落ち用の番組の中央値が 270、対照群が 346)
+    en: {best_max: 112, worst: 178, slow_floor: null}   # 語/分(ja と同じ比で厳しく)
   # 速さのばらつき: 1分ごとの話す速さの変動係数。速さの変化が小さいほど聞き取りやすいという研究(睡眠ではない)に基づく仮説
   rate_cv: {best: 0.10, worst: 0.40}
   volume_std_db: {best: 4, worst: 12}

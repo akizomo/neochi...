@@ -140,7 +140,14 @@ def cmd_remeasure(a) -> int:
 def cmd_z_rank(a) -> int:
     """実測・みんなの評価が増えたあとに、総合評点・番組の評点・格付けを計算し直す。"""
     cfg, zcfg, store = load_config(), load_z_config(), open_store(a.store)
+    episodes = {e["id"]: e for e in store.rows("episode")}
+    shows = {s["id"]: s for s in store.rows("show")}
     for row in store.rows("analysis"):
+        if a.rules_changed and row.get("features"):  # 採点ルールが変わったときは、🎧も保存済みの特徴から計算し直す
+            lang = (shows.get((episodes.get(row["episode_id"]) or {}).get("show_id")) or {}).get("lang") or "ja"
+            row = pipeline.reear(row, lang, cfg)
+            ai_total = pipeline.restar_ai(row, cfg)
+            store.update("analysis", row["episode_id"], {"features": row["features"], "ear_star": row["ear_star"], "total_star": ai_total})
         final, reason = pipeline.restar(row, cfg, store)
         store.update("analysis", row["episode_id"], {"final_star": final, "final_reason": reason})
     ids = [s["id"] for s in store.rows("show")]

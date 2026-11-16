@@ -28,7 +28,7 @@ RANK_ORDER = {"ZZZ": 3, "ZZ": 2, "Z": 1}
 # 格付けのひとこと(Strings.swift の rankMeaning と同じ)
 RANK_MEANING = {"ZZZ": "眠りたい夜は、まずこの番組", "ZZ": "寝落ちのために選びたい番組", "Z": "寝落ちに向いた番組"}
 # 格付けの線(config/z_rank.yaml と同じ値)
-RANK_MIN = {"Z": 3.0, "ZZ": 3.6, "ZZZ": 4.2}
+RANK_MIN = {"Z": 3.5, "ZZ": 4.0, "ZZZ": 4.4}
 
 LEAD = "AI解析とウォッチの実測をもとに、Z・ZZ・ZZZ の3段階で格付けしています。"
 ENGLISH = "Neochi (n.) — Japanese for drifting off mid-episode. NeochiPickzz picks what to drift off to."

@@ -1,6 +1,6 @@
 # 寝落ち格付け Z / ZZ / ZZZ。番組の評点(show_star = 回ごとの総合評点の平均)だけで決める。docs/SCORE.md §3b。数値は仮。
 # 基準未満は掲載しない(listing_status = researching)。評点は DB に残す。
-z:   {min_star: 3.0}
-zz:  {min_star: 3.6}
-zzz: {min_star: 4.2}
+z:   {min_star: 3.5}
+zz:  {min_star: 4.0}
+zzz: {min_star: 4.4}
 demote_min_watch: 5   # すでに付いた格付けを下げるのは、実測がこの件数以上になってから

@@ -63,7 +63,7 @@ def test_show_page_matches_app_detail(tmp_path):
     assert "260字/分" in h and "15%" in h and "5.0dB" in h and "1.0回/10分" in h
     assert "この話の内容(AIの要約)" in h and "程よい" in h
     assert 'aria-label="寝落ちの実績 4件"' in h and "30分未満 3件" in h
-    assert "290字/分までは満点、450字で最低" in h
+    assert "250字/分までは満点、400字で最低" in h
 
 
 def test_logo_and_icons(tmp_path):
@@ -98,5 +98,5 @@ def test_index_has_rank_guide_and_no_star_on_total(tmp_path):
     """トップに格付けの見かたがあり、番組の総合の点に★を使わない(docs/VOICE.md)。"""
     site.build(DATA, tmp_path, cli.load_config())
     h = (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert strings.TAGLINE in h and "寝落ち格付けの見かた" in h and "ZZZ は4.2以上" in h
+    assert strings.TAGLINE in h and "寝落ち格付けの見かた" in h and "ZZZ は4.4以上" in h
     assert 'class="grp"' in h and "★" not in h[h.index("<main"):h.index("</main>")]

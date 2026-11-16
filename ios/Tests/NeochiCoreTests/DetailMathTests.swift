@@ -70,7 +70,7 @@ final class DetailMathTests: XCTestCase {
             }
         }
         XCTAssertEqual(NCString.rankMeaning(.zzz), "眠りたい夜は、まずこの番組")
-        XCTAssertTrue(NCString.rankCriteriaNote.contains("3.0") && NCString.rankCriteriaNote.contains("3.6") && NCString.rankCriteriaNote.contains("4.2"))
+        XCTAssertTrue(NCString.rankCriteriaNote.contains("3.5") && NCString.rankCriteriaNote.contains("4.0") && NCString.rankCriteriaNote.contains("4.4"))
     }
 
     func testDeltaTone() {
