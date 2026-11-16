@@ -231,3 +231,21 @@ svg text { font-family: var(--sans); }
 .grp-head .cap { margin-left: auto; font-weight: 400; }
 .grp .list { margin: 0; }
 @media (max-width: 640px) { .score.big { font-size: 30px; } }
+
+/* 番組ページ: 最新の話・話の一覧 / 話のページ */
+.ep-card { display: grid; gap: 6px; background: var(--surface); border-radius: 12px; padding: 14px 16px; text-decoration: none; }
+.ep-card:hover { background: var(--surface-pressed); }
+.ep-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ep-text { display: grid; gap: 2px; min-width: 0; }
+.ep-card b, .ep-name { font-weight: 600; font-size: 15px; line-height: 22px; display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden; }
+.eps, .ep-more ul { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: 12px; }
+.eps li + li, .ep-more li { border-top: 1px solid var(--line); }
+.eps a, .ep-more a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px;
+  padding: 8px 16px; text-decoration: none; }
+.eps a:hover, .ep-more a:hover { background: var(--surface-pressed); }
+.ep-name { -webkit-line-clamp: 1; font-weight: 500; }
+.ep-more { margin-top: 8px; }
+.ep-more summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--sub); font-size: 13px; }
+.ep-head { margin-top: 8px; }
+.ep-head h1 { margin: 0 0 4px; font-size: 22px; line-height: 30px; }

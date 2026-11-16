@@ -532,7 +532,7 @@ def evidence(e: dict, a: dict, cfg: dict, lang: str) -> str:
     else:
         rows.append(f'<div class="axis pending"><span>程よい興味</span><span class="cap">判定待ち</span></div>')
     n = episode_number(e.get("title") or "")
-    head = f"{n}話の解析" if n else "最新の話の解析"
+    head = f"{n}話の解析" if n else "この話の解析"
     return (f'<section class="sec"><div class="sec-head"><h2>観点ごとの根拠</h2><span class="cap">{head}</span></div>'
             f'<div class="axes-card">{"".join(rows)}</div></section>')
 
@@ -605,6 +605,77 @@ def recent(s: dict) -> str:
             f'<div class="bars" style="--avg:{avg / 5 * 88:.0f}px">{"".join(bars)}</div></div></section>')
 
 
+def ep_meta(e: dict) -> str:
+    """「11/12 · 42分」。あるものだけ。"""
+    parts = []
+    md = fmt_md(e.get("published_at"))
+    if md:
+        parts.append(md)
+    if e.get("duration_sec"):
+        parts.append(f"{max(1, round(e['duration_sec'] / 60))}分")
+    return " · ".join(parts)
+
+
+def ep_title(e: dict) -> str:
+    return escape(e.get("title") or "(題名なし)")
+
+
+def ep_url(s: dict, e: dict) -> str:
+    """番組のページから見た、話のページ。"""
+    return f"episodes/{e['id']}/"
+
+
+def latest_episode(s: dict) -> str:
+    """最新の話。押すと、その話のページへ(根拠はそこで見る)。"""
+    if not s["episodes"]:
+        return ""
+    e = s["episodes"][0]
+    a = dict((x["id"], y) for x, y in s["analyzed"]).get(e["id"])
+    star_html = star(float(a["final_star"]), "star big-s") if a and a.get("final_star") is not None else '<span class="cap">解析待ち</span>'
+    return (f'<section class="sec"><a class="ep-card" href="{ep_url(s, e)}">'
+            f'<span class="cap">最新の話</span>'
+            f'<span class="ep-line"><span class="ep-text"><b>{ep_title(e)}</b><span class="cap">{ep_meta(e)}</span></span>{star_html}</span></a></section>')
+
+
+def tendency(s: dict) -> str:
+    """この番組の傾向。話の平均(アプリの「この番組の傾向」と同じ)。"""
+    an = [a for _, a in s["analyzed"]]
+    calm = [float(a["calm_star"]) for a in an if a.get("calm_star") is not None]
+    ear = [float(a["ear_star"]) for a in an if a.get("ear_star") is not None]
+    level = next((a["interest_level"] for a in an if a.get("interest_level")), None)
+    line = next(((a.get("reasons") or {}).get("llm") for a in an if (a.get("reasons") or {}).get("llm")), None)
+    if not (line or calm or ear or level):
+        return ""
+    rows = []
+    if calm:
+        rows.append(f'<div class="row-between"><span>起伏の少なさ</span>{star(mean(calm), "star")}</div>')
+    if ear:
+        rows.append(f'<div class="row-between"><span>耳のゆるさ</span>{star(mean(ear), "star")}</div>')
+    if level:
+        rows.append(f'<div class="row-between"><span>程よい興味</span><span class="fac">{INTEREST_WORD.get(level, level)}</span></div>')
+    body = (f"<p>{escape(line)}</p>" if line else "") + "".join(rows)
+    return (f'<section class="sec"><div class="sec-head"><h2>この番組の傾向</h2><span class="cap">AI解析、話の平均</span></div>'
+            f'<div class="card">{body}</div></section>')
+
+
+def episode_list(s: dict) -> str:
+    """話の一覧(新しい順)。8話までを出し、残りは開いて見る。"""
+    if not s["episodes"]:
+        return ""
+    an = dict((x["id"], y) for x, y in s["analyzed"])
+
+    def row(e: dict) -> str:
+        a = an.get(e["id"])
+        right = star(float(a["final_star"]), "star") if a and a.get("final_star") is not None else '<span class="cap">解析待ち</span>'
+        return (f'<li><a href="{ep_url(s, e)}"><span class="ep-text"><span class="ep-name">{ep_title(e)}</span>'
+                f'<span class="cap">{ep_meta(e)}</span></span>{right}</a></li>')
+    rows = [row(e) for e in s["episodes"]]
+    more = (f'<details class="ep-more"><summary>すべての話を見る</summary><ul>{"".join(rows[8:])}</ul></details>'
+            if len(rows) > 8 else "")
+    return (f'<section class="sec"><div class="sec-head"><h2>話の一覧</h2><span class="cap num">{len(rows)}話</span></div>'
+            f'<ul class="eps">{"".join(rows[:8])}</ul>{more}</section>')
+
+
 def about_block(a: dict | None, cfg: dict, lang: str) -> str:
     if a is None:
         return '<p class="cap">この番組の解析は、まだありません。</p>'
@@ -623,7 +694,7 @@ def show_html(s: dict, base_url: str, cfg: dict) -> str:
     lang = s.get("lang") or "ja"
     latest = s["analyzed"][0] if s["analyzed"] else None
     st = s["stats"]
-    sub = escape(s["episodes"][0].get("title") or "") if s["episodes"] else ""
+    sub = escape(s.get("genre") or "")
     avg = (st or {}).get("avg_min") if (st or {}).get("n") else None
     duo = (f'<section class="duo"><div><p class="cap">評点</p>{score(s["show_star"], "big")}</div><span class="vr"></span>'
            f'<div><p class="cap">寝落ちまで(ウォッチの実測の平均)</p>'
@@ -652,16 +723,52 @@ def show_html(s: dict, base_url: str, cfg: dict) -> str:
 <button type="button" class="btn btn-ghost" id="copy" data-url="{escape(url)}">リンクをコピー</button>
 <span class="cap" id="copied" hidden>コピーしました</span>
 </section>"""]
-    if latest:
-        e, a = latest
+    parts.append(latest_episode(s))
+    parts.append(tendency(s))
+    parts.append(episode_list(s))
+    parts.append(record(s))
+    parts.append(recent(s))
+    parts.append(about_block(latest[1] if latest else None, cfg, lang))
+    parts.append(f"<script>{DETAIL_JS}</script>")
+    return "\n".join(p for p in parts if p)
+
+
+def episode_html(s: dict, e: dict, a: dict | None, base_url: str, cfg: dict) -> str:
+    """話のページ。「この話は、寝落ちに向くか」に答える。番組のページと違い、観点ごとの根拠はここで見せる。"""
+    lang = s.get("lang") or "ja"
+    meta = ep_meta(e)
+    score_html = ""
+    if a and a.get("final_star") is not None:
+        v = float(a["final_star"])
+        d = v - s["show_star"]
+        diff = ""
+        if abs(d) >= 0.1:
+            diff = delta_pill(d, True, lambda x: f"{x:.1f}", "番組の評点より")
+        score_html = (f'<section class="duo"><div><p class="cap">この話の評点</p>{score(v, "big")}</div><span class="vr"></span>'
+                      f'<div><p class="cap">番組の評点</p>{score(s["show_star"], "big")}</div></section>'
+                      + (f'<p>{diff}</p>' if diff else ""))
+    else:
+        score_html = (f'<section class="sec"><p class="cap">番組の評点(この話は、解析待ち)</p>{score(s["show_star"], "big")}</section>'
+                      '<p class="cap">この話は、まだ解析していません。</p>')
+    links = []
+    if e.get("link_url"):
+        links.append(f'<a class="btn" href="{escape(e["link_url"])}" rel="noopener" target="_blank">配信元で聴く</a>')
+    elif s.get("apple_url"):
+        links.append(f'<a class="btn" href="{escape(s["apple_url"])}" rel="noopener" target="_blank">Apple Podcasts で聴く</a>')
+    parts = [f"""<p class="back"><a href="../../">{escape(s['title'])}</a></p>
+<section class="detail-title ep-head">
+<h1>{ep_title(e)}</h1>
+<p class="cap">{meta}</p>
+</section>
+{score_html}
+<section class="actions">{''.join(links)}</section>"""]
+    if a:
         line = (a.get("reasons") or {}).get("llm")
         if line:
             parts.append(f'<section class="sec"><div class="card"><h2>AI解析</h2><p>{escape(line)}</p></div></section>')
         if any(a.get(k) is not None for k in ("calm_star", "ear_star", "interest_level")):
             parts.append(evidence(e, a, cfg, lang))
-    parts.append(record(s))
-    parts.append(recent(s))
-    parts.append(about_block(latest[1] if latest else None, cfg, lang))
+    parts.append(about_block(a, cfg, lang).replace("この番組の解析は、まだありません。", ""))
     parts.append(f"<script>{DETAIL_JS}</script>")
     return "\n".join(p for p in parts if p)
 
@@ -751,12 +858,30 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
                 {"@type": "ListItem", "position": 1, "name": strings.PRODUCT, "item": base_url},
                 {"@type": "ListItem", "position": 2, "name": s["title"], "item": f"{base_url}shows/{s['id']}/"}]} if base_url else None),
             encoding="utf-8")
+        an = dict((x["id"], y) for x, y in s["analyzed"])
+        for e in s["episodes"]:
+            ed = d / "episodes" / e["id"]
+            ed.mkdir(parents=True)
+            title = (e.get("title") or "").strip() or "(題名なし)"
+            a = an.get(e["id"])
+            edesc = (f"この話の評点 {float(a['final_star']):.1f}。" if a and a.get("final_star") is not None else "") + f"{s['title']}の1話です。"
+            ed.joinpath("index.html").write_text(page(
+                title=f"{title} | {s['title']} | {strings.PRODUCT}", desc=edesc, root="../../../../",
+                body=episode_html(s, e, a, base_url, cfg),
+                canonical=base_url and f"{base_url}shows/{s['id']}/episodes/{e['id']}/", og_image=s.get("artwork_url") or og,
+                og_type="article",
+                jsonld={"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+                    {"@type": "ListItem", "position": 1, "name": strings.PRODUCT, "item": base_url},
+                    {"@type": "ListItem", "position": 2, "name": s["title"], "item": f"{base_url}shows/{s['id']}/"},
+                    {"@type": "ListItem", "position": 3, "name": title, "item": f"{base_url}shows/{s['id']}/episodes/{e['id']}/"}]} if base_url else None),
+                encoding="utf-8")
 
     (out / "404.html").write_text(page(title=f"{EMPTY} | {strings.PRODUCT}", desc=LEAD, root="/",
                                        body=f'<section class="hero"><h1>{EMPTY}</h1><p><a href="/">一覧へ</a></p></section>'),
                                   encoding="utf-8")
     if base_url:
-        urls = [base_url, base_url + "about/"] + [f"{base_url}shows/{s['id']}/" for s in shows]
+        urls = [base_url, base_url + "about/"] + [f"{base_url}shows/{s['id']}/" for s in shows] \
+            + [f"{base_url}shows/{s['id']}/episodes/{e['id']}/" for s in shows for e in s["episodes"]]
         (out / "sitemap.xml").write_text(
             '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
             + "".join(f"<url><loc>{escape(u)}</loc></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")

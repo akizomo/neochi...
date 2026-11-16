@@ -52,18 +52,32 @@ def test_show_page_has_breakdown_and_ogp(tmp_path):
 
 
 def test_show_page_matches_app_detail(tmp_path):
-    """アプリの番組の詳細と同じ並び: AI解析 → 観点ごとの根拠 → 寝落ちの実績 → 解析について。"""
+    """アプリの番組の詳細と同じ並び: 最新の話 → この番組の傾向 → 話の一覧 → 寝落ちの実績 → 解析について。
+    観点ごとの根拠は、番組のページには出さない(話のページで見せる)。"""
     site.build(DATA, tmp_path, cli.load_config())
     h = (tmp_path / "shows" / "a" / "index.html").read_text(encoding="utf-8")
     h = h[h.index("<main"):h.index("</main>")]   # ヘッダーの「解析について」を除く
-    order =["穏やかな語りの回です。", "観点ごとの根拠", "起伏の少なさ", "耳のゆるさ", "程よい興味", "寝落ちの実績", "解析について"]
+    order = ["最新の話", "この番組の傾向", "穏やかな語りの回です。", "起伏の少なさ", "耳のゆるさ", "程よい興味",
+             "話の一覧", "寝落ちの実績", "解析について"]
+    pos = [h.index(t) for t in order]
+    assert pos == sorted(pos)
+    assert 'href="episodes/a1/"' in h and "解析待ち" not in h
+    assert "観点ごとの根拠" not in h and "珍しい花の話" not in h and "260字/分" not in h
+    assert 'aria-label="寝落ちの実績 4件"' in h and "30分未満 3件" in h
+
+
+def test_episode_page_has_evidence(tmp_path):
+    """話のページ: 番組へ戻る → この話の評点 → AI解析 → 観点ごとの根拠 → 解析について。"""
+    site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
+    h = (tmp_path / "shows" / "a" / "episodes" / "a1" / "index.html").read_text(encoding="utf-8")
+    h = h[h.index("<main"):h.index("</main>")]
+    order = ["深夜の植物図鑑", "この話の評点", "穏やかな語りの回です。", "観点ごとの根拠", "起伏の少なさ", "耳のゆるさ", "程よい興味", "解析について"]
     pos = [h.index(t) for t in order]
     assert pos == sorted(pos)
     assert "冒頭4分に、小さな山が1つだけです。" in h and "珍しい花の話" in h
     assert "260字/分" in h and "15%" in h and "5.0dB" in h and "1.0回/10分" in h
-    assert "この話の内容(AIの要約)" in h and "程よい" in h
-    assert 'aria-label="寝落ちの実績 4件"' in h and "30分未満 3件" in h
-    assert "250字/分までは満点、400字で最低" in h
+    assert "この話の内容(AIの要約)" in h and "290字/分までは満点、450字で最低" in h
+    assert "https://example.com/shows/a/episodes/a1/" in (tmp_path / "sitemap.xml").read_text()
 
 
 def test_logo_and_icons(tmp_path):
@@ -98,5 +112,5 @@ def test_index_has_rank_guide_and_no_star_on_total(tmp_path):
     """トップに格付けの見かたがあり、番組の総合の点に★を使わない(docs/VOICE.md)。"""
     site.build(DATA, tmp_path, cli.load_config())
     h = (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert strings.TAGLINE in h and "寝落ち格付けの見かた" in h and "ZZZ は4.4以上" in h
+    assert strings.TAGLINE in h and "寝落ち格付けの見かた" in h and "ZZZ は4.5以上" in h
     assert 'class="grp"' in h and "★" not in h[h.index("<main"):h.index("</main>")]
