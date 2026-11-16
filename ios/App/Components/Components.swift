@@ -229,7 +229,7 @@ struct ScoreRow: View {
         HStack(spacing: NCSpace.s3) {
             ArtworkView(show: show, showsRank: true)
             VStack(alignment: .leading, spacing: NCSpace.s1) {
-                MarqueeText(text: show.title, style: NCText.headline)
+                Text(show.title).ncText(NCText.headline).lineLimit(1).truncationMode(.tail)
                 if let line = show.oneLiner {
                     Text(line).ncText(NCText.footnote, .textSub).lineLimit(2)
                 }
