@@ -132,3 +132,15 @@ def test_tonight_picks_highest_recent_episode():
     top = site.episode_picks([a, b], date(2026, 11, 16))
     assert [p[0]["id"] for p in top] == ["y", "x"]                   # 30日より前の4.9は、直近に該当があるうちは選ばない
     assert site.episode_picks([a], date(2027, 6, 1))[0][2]["final_star"] == 4.9   # 直近になければ全期間から
+
+
+def test_every_page_leads_further(tmp_path):
+    """行き止まりを作らない: 棚・今夜の1本・格付けの見かたからランキングへ、番組ページから系統・ランキング・トップへ。"""
+    site.build(DATA, tmp_path, cli.load_config())
+    top = (tmp_path / "index.html").read_text(encoding="utf-8")
+    for href in ('href="ranking/?kind=made"', 'href="ranking/?rank=ZZZ"', 'href="shows/a/"', 'class="pcard pcard-more"'):
+        assert href in top, href
+    show = (tmp_path / "shows" / "a" / "index.html").read_text(encoding="utf-8")
+    for href in ('href="../../"', 'href="../../ranking/"', 'href="../../ranking/?genre=', 'href="../../#tonight"'):
+        assert href in show, href
+    assert 'class="foot-nav"' in show and 'href="../../ranking/"' in show

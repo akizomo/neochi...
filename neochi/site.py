@@ -300,6 +300,7 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 </main>
 <footer class="foot"><div class="wrap">
 {wordmark(root)}
+<nav class="foot-nav"><a href="{root}">トップ</a><a href="{root}ranking/">ランキング</a><a href="{root}about/">解析について</a></nav>
 <p>{FOOT_NOTE}</p>
 <p>{FOOT_RIGHTS}</p>
 </div></footer>
@@ -344,7 +345,7 @@ def episode_picks(shows: list[dict], today: date | None = None) -> list[tuple]:
 
 def rank_guide() -> str:
     """格付けの見かた。しきい値ではなく、どんな夜に向くかで伝える。基準の数字は「解析について」に置く。"""
-    rows = "".join(f"<li>{badge(r)}<span>{RANK_MEANING[r]}</span></li>" for r in ("ZZZ", "ZZ", "Z"))
+    rows = "".join(f'<li><a href="ranking/?rank={r}">{badge(r)}<span>{RANK_MEANING[r]}</span></a></li>' for r in ("ZZZ", "ZZ", "Z"))
     return (f'<section class="guide" aria-label="寝落ち格付けの見かた"><p class="cap">寝落ち格付けの見かた</p>'
             f'<ul>{rows}</ul><a href="about/">格付けの決め方</a></section>')
 
@@ -365,16 +366,17 @@ def tonight(pick: tuple) -> str:
     elif s.get("link_url"):
         links.append(f'<a class="btn btn-ghost" href="{escape(s["link_url"])}" rel="noopener" target="_blank">配信元で聴く</a>')
     return f"""<section class="tonight" id="tonight" aria-label="今夜の1本">
-{artwork(s.get('artwork_url'), 'art-xl')}
+<a class="tn-cover" href="shows/{s['id']}/" aria-label="{escape(s['title'])}のページへ">{artwork(s.get('artwork_url'), 'art-xl')}</a>
 <div class="tn-text">
 <p class="cap">今夜の1本</p>
 <p class="rank-line">{badge(s['z_rank'])}<span class="cap">{RANK_MEANING[s['z_rank']]}</span></p>
-<h2 class="tn-title">{escape(s['title'])}</h2>
+<h2 class="tn-title"><a href="shows/{s['id']}/">{escape(s['title'])}</a></h2>
 <p class="cap one-line">{escape(e.get('title') or '')}</p>
 <p class="tn-score">{score(float(a['final_star']), 'big')}<span class="cap">この回の評点。番組の評点は {n1(s['show_star'])}</span></p>
 <p class="cap">{breakdown(s['stats'])}</p>
 {f'<p class="tn-line">{escape(line)}</p>' if line else ''}
 <div class="actions">{''.join(links)}</div>
+<p class="cap"><a class="more" href="ranking/?rank={s['z_rank']}">同じ {s['z_rank']} の番組を見る</a></p>
 </div>
 </section>"""
 
@@ -385,8 +387,11 @@ def shelf(kind: str, shows: list[dict]) -> str:
         return ""
     k = KINDS[kind]
     cards = "".join(cover_card(s, i) for i, s in enumerate(items[:SHELF_MAX], 1))
+    href = f"ranking/?kind={kind}"
+    cards += (f'<li class="pcard pcard-more"><a href="{href}"><span class="more-tile"><b>すべて見る</b>'
+              f'<span class="cap">{len(items)}番組</span><span class="arrow" aria-hidden="true">→</span></span></a></li>')
     return (f'<section class="sec shelf"><div class="sec-head"><h2>{k["title"]}</h2>'
-            f'<a class="more" href="ranking/?kind={kind}">すべて見る</a></div><p class="cap">{k["sub"]}</p>'
+            f'<a class="more" href="{href}">すべて見る({len(items)}番組)</a></div><p class="cap">{k["sub"]}</p>'
             f'<ul class="shelf-row">{cards}</ul></section>')
 
 
@@ -715,7 +720,7 @@ def about_block(a: dict | None, cfg: dict, lang: str) -> str:
             f"<p>{RANK_CRITERIA}</p></div></details>")
 
 
-def show_html(s: dict, base_url: str, cfg: dict) -> str:
+def show_html(s: dict, base_url: str, cfg: dict, related: list[dict] | None = None) -> str:
     lang = s.get("lang") or "ja"
     latest = s["analyzed"][0] if s["analyzed"] else None
     st = s["stats"]
@@ -731,9 +736,11 @@ def show_html(s: dict, base_url: str, cfg: dict) -> str:
     if s.get("link_url"):
         links.append(f'<a class="btn{" btn-ghost" if links else ""}" href="{escape(s["link_url"])}" rel="noopener" target="_blank">配信元で聴く</a>')
     url = f"{base_url}shows/{s['id']}/" if base_url else ""
+    g = s.get("genre")
+    crumb = f'<span aria-hidden="true">/</span><a href="../../ranking/?genre={urllib.parse.quote(g)}">{escape(g)}</a>' if g else ""
     share_text = f"{s['title']}。評点 {s['show_star']:.1f}、寝落ち格付け {s['z_rank']}。"
     x_url = "https://x.com/intent/post?" + urllib.parse.urlencode({"text": share_text, **({"url": url} if url else {})})
-    parts = [f"""<p class="back"><a href="../../ranking/">ランキングへ</a></p>
+    parts = [f"""<p class="back crumbs"><a href="../../">トップ</a><span aria-hidden="true">/</span><a href="../../ranking/">ランキング</a>{crumb}</p>
 <section class="detail-head">
 {artwork(s.get('artwork_url'), 'art-l')}
 <div class="detail-title">
@@ -758,8 +765,21 @@ def show_html(s: dict, base_url: str, cfg: dict) -> str:
     parts.append(record(s))
     parts.append(recent(s))
     parts.append(about_block(latest[1] if latest else None, cfg, lang))
+    parts.append(related_block(s, related or []))
     parts.append(f"<script>{DETAIL_JS}</script>")
     return "\n".join(p for p in parts if p)
+
+
+def related_block(s: dict, related: list[dict]) -> str:
+    """番組ページの終わりに、同じ系統の番組と、ランキングへの入口を置く(行き止まりにしない)。"""
+    g = s.get("genre")
+    cards = "".join(cover_card(r, None, "../../") for r in related[:6])
+    head = f"同じ系統「{escape(g)}」の番組" if g else "ほかの番組"
+    more = f'<a class="more" href="../../ranking/?genre={urllib.parse.quote(g)}">{escape(g)}をすべて見る</a>' if g else ""
+    body = f'<ul class="shelf-row">{cards}</ul>' if cards else ""
+    return (f'<section class="sec"><div class="sec-head"><h2>{head}</h2>{more}</div>{body}'
+            f'<p class="actions"><a class="btn btn-ghost" href="../../ranking/">ランキングをすべて見る</a>'
+            f'<a class="btn btn-ghost" href="../../#tonight">今夜の1本へ</a></p></section>')
 
 
 def about_html() -> str:
@@ -842,7 +862,7 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
         d.mkdir(parents=True)
         desc = f"評点 {s['show_star']:.1f}、寝落ち格付け {s['z_rank']}。{RANK_MEANING[s['z_rank']]}です。"
         d.joinpath("index.html").write_text(page(
-            title=f"{s['title']} | {strings.PRODUCT}", desc=desc, root="../../", body=show_html(s, base_url, cfg),
+            title=f"{s['title']} | {strings.PRODUCT}", desc=desc, root="../../", body=show_html(s, base_url, cfg, [r for r in shows if r["id"] != s["id"] and r.get("genre") and r.get("genre") == s.get("genre")]),
             canonical=base_url and f"{base_url}shows/{s['id']}/", og_image=s.get("artwork_url") or og, og_type="article"),
             encoding="utf-8")
 

@@ -232,7 +232,7 @@ svg text { font-family: var(--sans); }
 .guide { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; margin: 20px 0 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; }
 .guide ul { display: flex; gap: 8px 20px; flex-wrap: wrap; list-style: none; margin: 0; padding: 0; }
 .guide li { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
-.guide a { margin-left: auto; font-size: 13px; }
+.guide > a { margin-left: auto; font-size: 13px; }
 .more { color: var(--result); font-size: 13px; text-decoration: none; }
 .shelf-row { list-style: none; margin: 12px -20px 0; padding: 0 20px 4px; display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
 .shelf-row::-webkit-scrollbar { display: none; }
@@ -267,3 +267,22 @@ svg text { font-family: var(--sans); }
   nav a + a { margin-left: 14px; }
 }
 @media (min-width: 721px) { nav a + a { margin-left: 20px; } }
+
+/* 下層への道: 棚の最後のカード、見出しのリンク、パンくず、フッターの道 */
+.more { display: inline-flex; align-items: center; min-height: 32px; font-weight: 600; }
+.more::after { content: "→"; margin-left: 6px; }
+.more-tile { display: grid; place-content: center; justify-items: center; gap: 4px; aspect-ratio: 1; border: 1px dashed var(--border); border-radius: 10px; color: var(--text); }
+.more-tile .arrow { font-size: 20px; color: var(--result); }
+.pcard-more a:hover .more-tile { background: var(--surface); }
+.tn-cover { flex: none; }
+.tn-title a { text-decoration: none; } .tn-title a:hover { text-decoration: underline; }
+.guide li a { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; margin: 0; padding: 4px 0; }
+.guide li a:hover span:last-child { text-decoration: underline; }
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; }
+.crumbs span { color: var(--sub); }
+.foot-nav { display: flex; gap: 20px; margin: 4px 0 12px; }
+.foot-nav a { color: var(--sub); font-size: 13px; text-decoration: none; padding: 8px 0; }
+.foot-nav a:hover { color: var(--text); }
+.sec > .actions { padding-top: 16px; }
+.sec .shelf-row { margin-top: 12px; }
+.guide li a { color: var(--text); }
