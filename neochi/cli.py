@@ -65,17 +65,16 @@ def _update_show_stars(store, show_ids) -> None:
         store.update("show", sid, {"show_star": round(sum(stars) / len(stars), 1) if stars else None})
 
 
-def update_ratings(store, show_ids, zcfg: dict, reset: bool = False) -> None:
+def update_ratings(store, show_ids, zcfg: dict) -> None:
     """番組の評点から寝落ち格付けを決める。基準未満は掲載しない(評点は残す)。
 
-    reset=True は、採点ルールや線を変えたとき。付いている格付けを引き継がず、全番組を計算し直す。
-    (引き継ぎ=格下げの保留は、実測が少ないうちの揺れを抑えるためだけ。ルールが変わったときには使わない)"""
+    格付けは、いつも評点だけで決める。評点が基準を下回ったら、すぐ下げる(格下げの保留はしない)。"""
     shows = {s["id"]: s for s in store.rows("show")}
     for sid in show_ids:
         s = shows.get(sid)
         if not s:
             continue
-        rank = z_rank.z_rank(s.get("show_star"), zcfg, None if reset else s.get("z_rank"), len(store.watch_latencies(sid)))
+        rank = z_rank.z_rank(s.get("show_star"), zcfg)
         store.update("show", sid, {"z_rank": rank, "listing_status": "listed" if rank else "researching"})
         logging.info("%s → %s", s["title"], rank or "掲載しない")
 
@@ -131,7 +130,7 @@ def cmd_remeasure(a) -> int:
         logging.info("%s → 🎧 %s / 総合評点 %s", e.get("title"), new["ear_star"], new["final_star"])
     ids = [s["id"] for s in store.rows("show")]
     _update_show_stars(store, ids)
-    update_ratings(store, ids, zcfg, reset=True)
+    update_ratings(store, ids, zcfg)
     store.save()
     logging.info("測り直し: %d 件", done)
     return 0
@@ -159,7 +158,7 @@ def cmd_z_rank(a) -> int:
         store.update("analysis", row["episode_id"], {"final_star": final, "final_reason": reason})
     ids = [s["id"] for s in store.rows("show")]
     _update_show_stars(store, ids)
-    update_ratings(store, ids, zcfg, reset=a.rules_changed)
+    update_ratings(store, ids, zcfg)
     if a.dry_run:
         _print_rank_shares(before, store.rows("show"))
         print("ドライランです。何も保存していません。")

@@ -102,6 +102,7 @@ final class TonightEngineTests: XCTestCase {
         XCTAssertEqual(Reason.favorite(genre: "とても長い分類の名前です").text, "お気に入りの番組")
         XCTAssertEqual(Reason.tookLong(minutes: 40).text, "昨夜は40分。次の話へ")
         XCTAssertEqual(GenreLabel.display("寝落ち・睡眠導入（海外基準）"), "寝落ち用")
+        XCTAssertEqual(GenreLabel.display("芸人ラジオ"), "コメディ")
         XCTAssertNil(GenreLabel.display("とても長い分類の名前です"))
         // どの理由も20字まで(カードの1行に収める)
         let all: [Reason] = [.sleptFast(minutes: 120), .tookLong(minutes: 120), .queued, .continuation, .unlistened,
