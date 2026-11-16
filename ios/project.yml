@@ -1,8 +1,8 @@
 # Xcode プロジェクトの定義(XcodeGen)。`xcodegen generate` で Neochi.xcodeproj を作る。
-# Bundle ID: com.akizomo.neochi(2026-11-16 に決めた。App Store Connect でアプリを作ったあとは変えられない)
+# Bundle ID は、あなたが決めたものに差し替える(docs/SETUP.md の A-2)。
 name: Neochi
 options:
-  bundleIdPrefix: com.akizomo
+  bundleIdPrefix: com.example
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
@@ -27,7 +27,7 @@ targets:
         product: NukeUI
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.akizomo.neochi
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.neochi
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"   # iPhone のみ。iPad の画面は、まだ確かめていない
         MARKETING_VERSION: "0.1.0"

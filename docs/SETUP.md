@@ -174,6 +174,4 @@ App Store の審査と、ヘルスケアのデータを扱うアプリに必要�
 
 ## bundle ID の決め直し(公開前に一度だけ)
 
-(経緯: 2026-11-16 に com.example.neochi から com.akizomo.neochi に変えた。)
-
 bundle ID は App Store Connect でアプリを作ったあとは変えられない。変えるなら、TestFlight のテスターとビルド履歴を引き継げず、Apple ログインの連携も切れる。自分のドメインがなくても、逆ドメイン形式は Apple が所有を確かめない(例: `com.<自分の名前>.neochi`)。変えるなら、App ID の再登録(Sign in with Apple と HealthKit)、`project.yml` の `PRODUCT_BUNDLE_IDENTIFIER` と `bundleIdPrefix`、Supabase の Apple の Client IDs、App Store Connect のアプリ作成を、やり直す。
