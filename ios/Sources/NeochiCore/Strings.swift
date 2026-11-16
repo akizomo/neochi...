@@ -4,7 +4,7 @@ import Foundation
 public enum NCString {
     /// 程よい興味の水準の言葉(番組の傾向と、話の根拠で同じ言葉を使う)。
     public static func interestWord(_ l: InterestLevel) -> String {
-        switch l { case .low: "静かめ"; case .mid: "程よい"; case .high: "強め" }
+        switch l { case .low: "引きが弱め"; case .mid: "ちょうどよい"; case .high: "引きが強め" }
     }
 
     /// 寝落ちまでの分数 → コメント。
