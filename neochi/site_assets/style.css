@@ -197,7 +197,9 @@ svg text { font-family: var(--sans); }
 .en { color: var(--sub); font-style: italic; font-size: 14px; }
 
 .foot { border-top: 1px solid var(--line); margin-top: 56px; padding: 28px 0 44px; }
-.foot .logo { font-size: 16px; margin-bottom: 12px; }
+.foot .logo { font-size: 16px; }
+.foot-brand { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 12px; }
+.foot .foot-made { color: var(--sub); font-size: 12px; line-height: 18px; }
 .foot p { margin: 4px 0; color: var(--sub); font-size: 12px; line-height: 18px; }
 
 @media (max-width: 480px) {
