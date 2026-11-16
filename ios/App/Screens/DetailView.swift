@@ -136,7 +136,7 @@ struct DetailView: View {
                                 Text(episodeMeta(ep)).ncText(NCText.footnote, .textSub)
                             }
                             Spacer(minLength: 0)
-                            if let star = model.analyses[ep.id]?.finalStar { StarScore(star: star, style: NCText.numMd) }
+                            if let star = model.analyses[ep.id]?.shownStar { StarScore(star: star, style: NCText.numMd) }
                             Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.nc(.textSub))
                                 .padding(.top, NCSpace.s1)
                         }
@@ -195,15 +195,16 @@ struct DetailView: View {
                 }.padding(.top, NCSpace.s2)
                 card {
                     if let line { Text(line).ncText(NCText.body) }
-                    if let v = a?.calmStar { tendencyRow("起伏の少なさ", star: v) }
-                    if let v = a?.earStar { tendencyRow("耳のゆるさ", star: v) }
-                    if let l = a?.interest { tendencyRow("程よい興味", text: NCString.interestWord(l)) }
+                    // 3つの観点は、いつも並べる。判定がまだの観点は「判定待ち」(1つだけ出すと、それが番組の評価に見える)。
+                    if let v = a?.calmStar { tendencyRow("起伏の少なさ", star: v) } else { tendencyRow("起伏の少なさ", pending: true) }
+                    if let v = a?.earStar { tendencyRow("耳のゆるさ", star: v) } else { tendencyRow("耳のゆるさ", pending: true) }
+                    if let l = a?.interest { tendencyRow("程よい興味", text: NCString.interestWord(l)) } else { tendencyRow("程よい興味", pending: true) }
                 }
             }
         }
     }
 
-    private func tendencyRow(_ title: String, star: Double? = nil, text: String? = nil) -> some View {
+    private func tendencyRow(_ title: String, star: Double? = nil, text: String? = nil, pending: Bool = false) -> some View {
         HStack {
             Text(title).ncText(NCText.body)
             Spacer()
@@ -212,6 +213,8 @@ struct DetailView: View {
                 Text(String(format: "%.1f", star)).ncText(NCText.numMd, .accentFactor)
             } else if let text {
                 Text(text).ncText(NCText.body, .accentFactor)
+            } else if pending {
+                Text(NCString.judgePending).ncText(NCText.footnote, .textSub)
             }
         }
         .accessibilityElement(children: .combine)
@@ -256,10 +259,10 @@ struct DetailView: View {
                     Text(episodeMeta(ep)).ncText(NCText.caption, .textSub)
                 }
                 Spacer(minLength: 0)
-                if let star = a?.finalStar {
+                if let star = a?.shownStar {
                     StarScore(star: star, style: NCText.headline)
                 } else {
-                    Text("解析待ち").ncText(NCText.caption, .textSub)
+                    Text(a == nil ? "解析待ち" : NCString.judgePending).ncText(NCText.caption, .textSub)
                 }
                 Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.nc(.textSub))
             }

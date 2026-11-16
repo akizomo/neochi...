@@ -121,6 +121,13 @@ final class PlayerService {
         player.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
     }
 
+    /// いまの位置から、指定の秒だけ戻る・進む(15秒の送り・戻し)。長さが分かっていれば、終わりの手前で止める。
+    func skip(by seconds: Double) {
+        var t = elapsedSec + seconds
+        if let d = loadedDurationSec, d > 1 { t = min(t, d - 1) }
+        seek(to: t)
+    }
+
     /// 失敗したあと、同じ回をもう一度。
     func retry() {
         guard state == .failed || state == .idle else { return }

@@ -1,8 +1,10 @@
 import SwiftUI
 import NeochiCore
 
-/// 夜の画面。ダーク固定(bg-night)。出るのは、番組名・回・時間(経過 / 長さ。文字だけ)と再生/一時停止、スリープタイマーの小さなピルだけ。
-/// 時間は文字だけ。シークバーや進捗のバーは出さない(目を覚まさないように)。
+/// 夜の画面。ダーク固定(bg-night)。上から、番組の画像(小さく、少し暗く)・番組名・話・時間、進捗の帯、
+/// 15秒戻る/再生・一時停止/15秒進む、波形、スリープタイマーのピル。
+/// 進捗の帯は大きく動かすとき、15秒のボタンは聞き逃した一言に戻るとき、と役割を分ける。
+/// 「寝落ちしやすいあたりへ移動」(プレミアム、docs/PREMIUM.md)は、進捗の帯の上の印と、タイマーの横のピルに置く予定。
 struct NightView: View {
     @Environment(AppModel.self) private var model
     @State private var timerOpen = false
@@ -52,6 +54,11 @@ struct NightView: View {
             Color.nc(.bgNight).ignoresSafeArea()
             VStack(spacing: NCSpace.s8) {
                 VStack(spacing: NCSpace.s2) {
+                    // 何を流しているかが、ひと目で分かるように。夜なので小さく、少し暗くする。
+                    if let show = shown?.show {
+                        ArtworkView(show: show, size: UIScreen.main.bounds.height < 700 ? NCSize.artworkS : NCSize.artworkL).opacity(0.8)  // 小さい画面(SE)では、操作が収まるように小さく.padding(.bottom, NCSpace.s3)
+                            .accessibilityHidden(true)
+                    }
                     MarqueeText(text: shown?.show.title ?? "", style: NCText.title, centered: true)
                     if let ep = shown?.episode {
                         MarqueeText(text: episodeHeading(ep), style: NCText.body, color: .textSub, centered: true)
@@ -64,6 +71,8 @@ struct NightView: View {
                 if let ep = shown?.episode, isCurrent(ep), let total = totalSec(ep), total > 0 {
                     PlaybackBar(elapsed: model.player.elapsedSec, total: total) { model.player.seek(to: $0) }
                 }
+                HStack(spacing: NCSpace.s6) {
+                skipButton("gobackward.15", label: "15秒戻る", by: -15)
                 Button {
                     if model.playing == nil, let c = shown { model.play(c) } else { model.player.toggle() }
                 } label: {
@@ -85,6 +94,8 @@ struct NightView: View {
                     .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: NCSize.borderW))
                 }
                 .accessibilityLabel(playLabel)
+                skipButton("goforward.15", label: "15秒進む", by: 15)
+                }
                 // 失敗したときだけ、理由と次の一手を出す(ふだんは、番組名とボタンだけ)。
                 if model.player.state == .failed {
                     Text("再生できませんでした。通信を確かめて、もう一度押してください")
@@ -116,6 +127,20 @@ struct NightView: View {
         .statusBarHidden(true)
         .persistentSystemOverlays(.hidden)
         .sheet(isPresented: $timerOpen) { TimerSheet().environment(model) }
+    }
+}
+
+extension NightView {
+    /// 15秒の送り・戻し。再生している話があるときだけ押せる。
+    fileprivate func skipButton(_ icon: String, label: String, by seconds: Double) -> some View {
+        let active = model.playing != nil && (model.player.state == .playing || model.player.state == .paused)
+        return Button { model.player.skip(by: seconds) } label: {
+            Image(systemName: icon).font(.system(size: NCSize.iconMd + NCSize.iconSm))
+                .frame(width: NCSize.tapMin, height: NCSize.tapMin)
+                .foregroundStyle(Color.nc(.textSub))
+        }
+        .disabled(!active).opacity(active ? 1 : 0.35)
+        .accessibilityLabel(label)
     }
 }
 

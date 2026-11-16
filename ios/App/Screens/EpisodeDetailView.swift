@@ -24,6 +24,8 @@ struct EpisodeDetailView: View {
                     if let a = analysis, a.hasAnyAspect { EvidenceView(episode: ep, analysis: a) }
                     if analysis == nil || analysis?.finalStar == nil {
                         Text("この話は、まだ解析していません。").ncText(NCText.footnote, .textSub)
+                    } else if analysis?.isJudged == false {
+                        Text("起伏と興味の判定を待っています。評点は、判定のあとに出ます。").ncText(NCText.footnote, .textSub)
                     }
                     myLogs(ep)
                     if let a = analysis { AboutAnalysis(analysis: a) }
@@ -85,7 +87,7 @@ struct EpisodeDetailView: View {
     // MARK: 評点
 
     @ViewBuilder private func scoreCard(_ show: Show, _ a: EpisodeAnalysis?) -> some View {
-        if let star = a?.finalStar {
+        if let star = a?.shownStar {
             VStack(alignment: .leading, spacing: NCSpace.s2) {
                 HStack(alignment: .top, spacing: NCSpace.s4) {
                     VStack(alignment: .leading, spacing: NCSpace.s1) {

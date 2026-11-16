@@ -196,7 +196,7 @@ actor SupabaseClient {
     func fetchShows() async throws -> [Show] {
         let data = try await request("show", query: [URLQueryItem(name: "select", value: "id,title,genre,show_star,z_rank,listing_status,artwork_url,link_url,apple_url")])
         return try Self.decoder.decode([ShowRow].self, from: data).filter { $0.listing_status == "listed" && $0.z_rank != nil }.map {
-            Show(id: $0.id, title: $0.title, genre: $0.genre ?? "",
+            Show(id: $0.id, title: $0.title, genre: GenreLabel.display($0.genre ?? "") ?? "",  // 古い分類名は、いまの系統に読み替える
                  artworkURL: $0.artwork_url.flatMap(URL.init(string:)), linkURL: $0.link_url.flatMap(URL.init(string:)),
                  appleURL: $0.apple_url.flatMap(URL.init(string:)), star: $0.show_star,
                  rank: $0.z_rank.flatMap(ZRank.init(rawValue:)))
