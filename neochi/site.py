@@ -34,6 +34,14 @@ LEAD = "AI解析とウォッチの実測をもとに、Z・ZZ・ZZZ の3段階�
 ENGLISH = "Neochi (n.) — Japanese for drifting off mid-episode. NeochiPickzz picks what to drift off to."
 FOOT_NOTE = "評点は推定です。睡眠の良し悪しは評価していません。"
 FOOT_RIGHTS = "番組名とカバー画像の権利は、各配信元にあります。音声は配信元で聴けます。"
+# 作った人と、応援(Buy Me a Coffee。リンクは AlterLens と同じアカウント)。応援はフッターだけに置く。絵文字は使わない(docs/VOICE.md)。
+SUPPORT_URL = "https://www.buymeacoffee.com/akizomo"
+GITHUB_URL = "https://github.com/akizomo"
+MAKER = "akihiro uezono"
+SUPPORT_LABEL = "コーヒーで応援する"
+# 公式のボタン(Buy Me a Coffee の画像)。黄色の地に黒い文字で、明るさに関わらず見える
+BMC_BUTTON = ("https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=akizomo"
+              "&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff")
 EMPTY = "まだ掲載していません"
 RANK_CRITERIA = ("寝落ち格付けは、番組の評点で決めます。"
                  + "、".join(f"{r} は{RANK_MIN[r]:.1f}以上" for r in ("Z", "ZZ", "ZZZ"))
@@ -303,6 +311,7 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 <nav class="foot-nav"><a href="{root}">トップ</a><a href="{root}ranking/">ランキング</a><a href="{root}episodes/">寝落ち向きの話</a><a href="{root}about/">解析について</a></nav>
 <p>{FOOT_NOTE}</p>
 <p>{FOOT_RIGHTS}</p>
+<p class="foot-made"><span>made by {MAKER}</span><a class="bmc" href="{SUPPORT_URL}" rel="noopener" target="_blank"><img src="{BMC_BUTTON}" alt="{SUPPORT_LABEL}(Buy Me a Coffee)" width="169" height="36" loading="lazy"></a></p>
 </div></footer>
 </body>
 </html>
@@ -411,15 +420,25 @@ def episode_rows(picks: list[tuple]) -> str:
             f'<ul class="eps">{rows}</ul></section>')
 
 
+def kind_switch(active: str, shows: list[dict]) -> str:
+    """ランキングの対象を切り替える。番組(/ranking/)と話(/episodes/)。どちらのページも、1つ下の階層にある。"""
+    n_eps = len(episode_picks(shows, fresh_only=False))
+    items = [("shows", "番組", "../ranking/", len(shows)), ("episodes", "話", "../episodes/", n_eps)]
+    links = "".join(f'<a href="{h}"{" aria-current=\"page\"" if k == active else ""}>{name} <span class="num">{n}</span></a>'
+                    for k, name, h, n in items)
+    return f'<nav class="seg" aria-label="ランキングの対象">{links}</nav>'
+
+
 def episodes_html(shows: list[dict]) -> str:
-    """判定済みの回すべて。評点の高い順(並びは切り替えられる)。回のページはないので、番組のページへつなぐ。"""
+    """判定済みの話すべて。評点の高い順(並びは切り替えられる)。話のページへつなぐ。"""
     rows = []
     for s, e, a, d in episode_picks(shows, fresh_only=False):
         search = f"{e.get('title') or ''} {s['title']} {s.get('genre') or ''}".lower()
         extra = f' data-kind="{kind_of(s)}" data-q="{escape(search)}" data-star="{float(a["final_star"]):.2f}" data-ts="{d}"'
         rows.append(episode_row(s, e, a, "../", extra))
     kinds = '<option value="">種類: すべて</option>' + "".join(f'<option value="{k}">{v["name"]}</option>' for k, v in KINDS.items())
-    return f"""<section class="intro"><h1>寝落ち向きの話</h1><p class="lead">解析した話を、評点の高い順に並べています。回を選ぶと、その番組のページへ移ります。</p></section>
+    return f"""<section class="intro"><h1>ランキング</h1><p class="lead">解析した話を、評点の高い順に並べています。話を選ぶと、その話のページへ移ります。</p></section>
+{kind_switch("episodes", shows)}
 <section class="filters" aria-label="絞り込み">
 <input id="q" type="search" placeholder="話の題名・番組名で探す" aria-label="話の題名・番組名で探す" autocomplete="off">
 <div class="selects"><select id="kind" aria-label="種類">{kinds}</select>
@@ -479,6 +498,7 @@ def ranking_html(shows: list[dict]) -> str:
                  f' data-q="{escape(search)}" data-star="{s["show_star"]:.2f}" data-ts="{ts}"')
         cards.append(cover_card(s, None, "../", extra))
     return f"""<section class="intro"><h1>ランキング</h1><p class="lead">評点の高い順に並べています。{rank_note()}</p></section>
+{kind_switch("shows", shows)}
 <div class="tabs" role="group" aria-label="寝落ち格付け">{tabs}</div>
 <section class="filters" aria-label="絞り込み">
 <input id="q" type="search" placeholder="番組名・配信者で探す" aria-label="番組名・配信者で探す" autocomplete="off">
@@ -802,6 +822,13 @@ def episode_list(s: dict) -> str:
             f'<ul class="show-eps">{"".join(rows[:8])}</ul>{more}</section>')
 
 
+def maker_block() -> str:
+    """作った人。解析についての末尾。"""
+    return (f'<h2>作った人</h2><p>{MAKER}。個人で作っています。番組の解析は、毎日、自動で増えています。</p>'
+            f'<p><a href="{GITHUB_URL}" rel="noopener" target="_blank">GitHub</a>'
+            f'<span aria-hidden="true"> / </span><a href="{SUPPORT_URL}" rel="noopener" target="_blank">Buy Me a Coffee</a></p>')
+
+
 def about_block(a: dict | None, cfg: dict, lang: str) -> str:
     if a is None:
         return '<p class="cap">この番組の解析は、まだありません。</p>'
@@ -932,6 +959,7 @@ def about_html() -> str:
 <p>再生を始めてから眠るまでの分数です。Apple Watch の記録から測ります。睡眠の良し悪しは評価しません。</p>
 <h2>音声の扱い</h2>
 <p>解析のために一時的に音声を読み込み、終わったら消します。音声は保存も配信もしません。</p>
+{maker_block()}
 </section>"""
 
 
