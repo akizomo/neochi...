@@ -66,7 +66,7 @@ final class AppModel {
         openNightIfBedtime()
     }
 
-    /// 記録タブに出す、ふだんの就寝時刻。履歴が十分なら自動(中央値)、足りなければ手で決めたもの。
+    /// 自分タブに出す、ふだんの就寝時刻。履歴が十分なら自動(中央値)、足りなければ手で決めたもの。
     var bedtimeIsAuto: Bool { BedtimeWindow.typicalMinute(starts: healthStarts, calendar: .current) != nil }
     var bedtimeMinute: Int? {
         if let m = BedtimeWindow.typicalMinute(starts: healthStarts, calendar: .current) { return m }

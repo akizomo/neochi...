@@ -197,7 +197,7 @@ struct LogView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(Color.nc(.bgBase))
-            .navigationTitle("記録")
+            .navigationTitle("自分")
             .toolbarTitleDisplayMode(.inlineLarge)
             .contentMargins(.top, NCSpace.s5, for: .scrollContent)
             .appDestinations()
