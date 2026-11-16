@@ -35,6 +35,7 @@ struct EpisodeDetailView: View {
                 Text("この話が見つかりません。").ncText(NCText.footnote, .textSub).padding(NCSpace.s4)
             }
         }
+        .refreshable { await model.refresh() }
         .background(Color.nc(.bgBase))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

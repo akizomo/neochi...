@@ -36,6 +36,7 @@ struct DiscoverView: View {
                     } header: { genreChips }
                 }
             }
+            .refreshable { await model.refresh() }
             .background(Color.nc(.bgBase))
             .modifier(SoftTopEdge())
             .appDestinations()
@@ -210,6 +211,7 @@ struct LogView: View {
                 .padding(.horizontal, NCSpace.s5)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .refreshable { await model.refresh() }
             .background(Color.nc(.bgBase))
             .navigationTitle("自分")
             .toolbarTitleDisplayMode(.inlineLarge)

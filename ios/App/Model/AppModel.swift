@@ -144,6 +144,13 @@ final class AppModel {
         await loadRemote()
     }
 
+    /// 引っぱって更新。番組・話・解析を読み直す。朝の結果が「確認中」なら、ヘルスケアの記録も読み直す。
+    /// 読み込めなかったときは、いまの内容のまま(画面は変えない)。
+    func refresh() async {
+        await loadRemote()
+        if pendingMorning { await refreshOnset() }
+    }
+
     private func loadFailed(_ status: String) {
         remoteStatus = status
         if loadState == .loading { loadState = .failed }

@@ -20,6 +20,7 @@ struct TonightView: View {
                 .padding(.horizontal, NCSpace.s5)
                 .padding(.bottom, NCSpace.s8)
             }
+            .refreshable { await model.refresh() }
             .background(Color.nc(.bgBase))
             // 横にスワイプでも晩を切り替える。候補カードの横スクロールの上では、カードが先に動く。
             .gesture(DragGesture(minimumDistance: 24).onEnded { v in
