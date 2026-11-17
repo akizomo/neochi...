@@ -1,0 +1,665 @@
+{
+ "saved_at": "2026-11-17",
+ "note": "英語ネイティブ向け番組を、日本ユーザーのみの間は掲載から外したときの保存。将来、英語に対応するときに、この内容を戻す(show→episode→analysis の順に upsert)。",
+ "show": [
+  {
+   "id": "4387c1b2-a788-5b7d-be9e-cbfc2324b611",
+   "title": "Sleep With Me",
+   "publisher": "Sleep With Me",
+   "rss_url": "https://rss.pdrl.fm/5d8327/feed.sleepwithmepodcast.com/",
+   "genre": "寝落ち用",
+   "lang": "en",
+   "show_star": 4.6,
+   "z_rank": "ZZZ",
+   "listing_status": "listed",
+   "artwork_url": "https://f.prxu.org/137/images/26ca2c4f-77db-4e8c-95cd-485f1d0e62df/SWM_Square_Logov2_emily.jpg",
+   "link_url": "http://www.sleepwithmepodcast.com",
+   "apple_url": null,
+   "cohort": "benchmark_en",
+   "apple_category": "Health & Fitness>Mental Health"
+  },
+  {
+   "id": "fff6ab26-1c60-579c-b523-1308a1de4b73",
+   "title": "Nothing Much Happens",
+   "publisher": "Kathryn Nicolai",
+   "rss_url": "https://feeds.megaphone.fm/SSM2868305742",
+   "genre": "寝落ち用",
+   "lang": "en",
+   "show_star": 4.5,
+   "z_rank": "ZZZ",
+   "listing_status": "listed",
+   "artwork_url": "https://megaphone.imgix.net/podcasts/b9613576-c92e-11ef-b24f-47750642b5c1/image/31338a0c042fa4d81e40b2eb4b15621e.jpg?ixlib=rails-4.3.1&max-w=3000&max-h=3000&fit=crop&auto=format,compress",
+   "link_url": "https://www.nothingmuchhappens.com",
+   "apple_url": null,
+   "cohort": "benchmark_en",
+   "apple_category": "Health & Fitness"
+  }
+ ],
+ "episode": [
+  {
+   "id": "e1fe89aa-9d0c-534d-82d1-a30386c5581e",
+   "show_id": "4387c1b2-a788-5b7d-be9e-cbfc2324b611",
+   "title": "The Brainy Bunch | Good Place S3 E3 (from the Vault #709)",
+   "audio_url": "https://dts.podtrac.com/redirect.mp3/pscrb.fm/rss/p/dovetail.prxu.org/137/55fa57df-ee27-4f0a-9fb0-c1485773ee42/SWMP_rp709_The_Brainy_rp709_11.12.26_PP-1.mp3",
+   "duration_sec": 3685,
+   "published_at": "2026-11-12T17:00:00+00:00",
+   "link_url": "https://play.prx.org/listen?ge=prx_137_55fa57df-ee27-4f0a-9fb0-c1485773ee42&uf=https%3A%2F%2Ffeed.sleepwithmepodcast.com%2F"
+  },
+  {
+   "id": "95bb8f77-f334-5a47-af37-76611a8915bd",
+   "show_id": "fff6ab26-1c60-579c-b523-1308a1de4b73",
+   "title": "Neighbor Mara Wilson reads Ship in a Bottle",
+   "audio_url": "https://pscrb.fm/rss/p/tracking.swap.fm/track/hQzRUk5FlBqiODHZblrZ/clrtpod.com/m/mgln.ai/e/137/traffic.megaphone.fm/SSM3240642856.mp3",
+   "duration_sec": 1306,
+   "published_at": "2026-11-13T05:00:00+00:00",
+   "link_url": null
+  },
+  {
+   "id": "bc29510c-46f7-5846-932a-dacbc8779156",
+   "show_id": "fff6ab26-1c60-579c-b523-1308a1de4b73",
+   "title": "Slightly More Happens - November Nocturnes",
+   "audio_url": "https://pscrb.fm/rss/p/tracking.swap.fm/track/hQzRUk5FlBqiODHZblrZ/clrtpod.com/m/mgln.ai/e/137/traffic.megaphone.fm/SSM8106580377.mp3",
+   "duration_sec": 6174,
+   "published_at": "2026-11-16T05:00:00+00:00",
+   "link_url": null
+  },
+  {
+   "id": "d0c04f4e-ce01-5a23-aae4-ccb40b3f2a94",
+   "show_id": "fff6ab26-1c60-579c-b523-1308a1de4b73",
+   "title": "Recipe Testing (Encore)",
+   "audio_url": "https://pscrb.fm/rss/p/tracking.swap.fm/track/hQzRUk5FlBqiODHZblrZ/clrtpod.com/m/mgln.ai/e/137/traffic.megaphone.fm/SSM1055176140.mp3",
+   "duration_sec": 2134,
+   "published_at": "2026-11-12T05:00:00+00:00",
+   "link_url": null
+  }
+ ],
+ "analysis": [
+  {
+   "episode_id": "e1fe89aa-9d0c-534d-82d1-a30386c5581e",
+   "input_depth": "transcript",
+   "interest_level": "low",
+   "calm_star": 5.0,
+   "ear_star": 4.1,
+   "total_star": 4.6,
+   "final_star": 4.6,
+   "final_reason": null,
+   "reasons": {
+    "llm": "冒頭は広告で、本編は番組紹介と脱線の雑談がゆるく続きます。",
+    "items": {
+     "calm": {
+      "A": {
+       "min": null,
+       "score": 0
+      },
+      "B": {
+       "min": null,
+       "score": 0
+      },
+      "C": {
+       "min": null,
+       "score": 0
+      },
+      "D": {
+       "min": null,
+       "score": 0
+      }
+     },
+     "interest": {
+      "A": {
+       "min": null,
+       "score": 0
+      },
+      "B": {
+       "min": null,
+       "score": 0
+      },
+      "C": {
+       "min": 18,
+       "score": 1
+      },
+      "D": {
+       "min": null,
+       "score": 0
+      },
+      "E": {
+       "min": 18,
+       "score": 1
+      }
+     }
+    },
+    "moments": []
+   },
+   "features": {
+    "timeline": {
+     "volume_db": [
+      0.0,
+      0.0,
+      0.0,
+      -0.1,
+      -0.1,
+      0.0,
+      0.1,
+      -0.4,
+      0.4,
+      0.3,
+      -0.1,
+      1.4,
+      0.2,
+      2.2,
+      -0.4,
+      1.0,
+      -0.1,
+      -0.5,
+      -0.3,
+      0.3,
+      -0.1,
+      -1.2,
+      -1.0,
+      -1.2,
+      0.2,
+      -0.5,
+      0.1,
+      -0.5,
+      0.4,
+      0.5
+     ],
+     "rate_per_min": [
+      169,
+      170,
+      199,
+      194,
+      178,
+      193,
+      176,
+      208,
+      185,
+      227,
+      225,
+      null,
+      191,
+      181,
+      234,
+      270,
+      248,
+      231,
+      243,
+      229
+     ],
+     "sudden_at_sec": []
+    },
+    "ear_parts": {
+     "rate": 1.0,
+     "sudden": 5.0,
+     "volume": 5.0,
+     "rate_cv": 4.5
+    },
+    "speech_rate": 203.01636050188927,
+    "duration_sec": 4993.381,
+    "volume_std_db": 3.3916430473327637,
+    "speech_rate_cv": 0.13886241562044993,
+    "speech_rate_unit": "words_per_min",
+    "sudden_per_10min": 0.0
+   },
+   "analyzed_at": "2026-11-15T08:19:03.661252+00:00",
+   "interest_score": 2,
+   "calm_per_min": null,
+   "content_summary": null,
+   "content_start_sec": null,
+   "content_start_anchor": null
+  },
+  {
+   "episode_id": "d0c04f4e-ce01-5a23-aae4-ccb40b3f2a94",
+   "input_depth": "transcript",
+   "interest_level": "low",
+   "calm_star": 5.0,
+   "ear_star": 4.4,
+   "total_star": 4.5,
+   "final_star": 4.5,
+   "final_reason": null,
+   "reasons": {
+    "llm": "冒頭の広告を除くと、動物との穏やかな日常だけが続く回です。",
+    "items": {
+     "calm": {
+      "A": {
+       "min": null,
+       "score": 0
+      },
+      "B": {
+       "min": null,
+       "score": 0
+      },
+      "C": {
+       "min": null,
+       "score": 0
+      },
+      "D": {
+       "min": null,
+       "score": 0
+      }
+     },
+     "interest": {
+      "A": {
+       "min": null,
+       "score": 0
+      },
+      "B": {
+       "min": null,
+       "score": 0
+      },
+      "C": {
+       "min": 11,
+       "score": 1
+      },
+      "D": {
+       "min": null,
+       "score": 0
+      },
+      "E": {
+       "min": null,
+       "score": 0
+      }
+     }
+    },
+    "moments": []
+   },
+   "features": {
+    "timeline": {
+     "volume_db": [
+      1.3,
+      0.4,
+      -0.1,
+      0.4,
+      -2.3,
+      -1.1,
+      0.1,
+      -0.7,
+      -1.5,
+      1.5,
+      0.9,
+      1.9,
+      -0.3,
+      0.7,
+      0.1,
+      0.8,
+      1.2,
+      -0.1,
+      0.4,
+      -2.3,
+      1.1,
+      -1.5,
+      -1.3,
+      -1.1,
+      -1.4,
+      0.2,
+      0.4,
+      1.0,
+      -0.1,
+      0.3
+     ],
+     "rate_per_min": [
+      82,
+      117,
+      97,
+      153,
+      81,
+      78,
+      78,
+      85,
+      86,
+      93,
+      88,
+      86,
+      78,
+      91,
+      78,
+      93,
+      88,
+      88,
+      80,
+      59
+     ],
+     "sudden_at_sec": []
+    },
+    "ear_parts": {
+     "rate": 5.0,
+     "sudden": 5.0,
+     "volume": 3.3,
+     "rate_cv": 3.6
+    },
+    "speech_rate": 90.31341921087329,
+    "duration_sec": 2147.474375,
+    "volume_std_db": 7.439744472503662,
+    "speech_rate_cv": 0.20497848859048587,
+    "speech_rate_unit": "words_per_min",
+    "sudden_per_10min": 0.0
+   },
+   "analyzed_at": "2026-11-16T07:22:37.046272+00:00",
+   "interest_score": 1,
+   "calm_per_min": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.2,
+    0.2,
+    0.3,
+    0.2,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "content_summary": "英語の就寝用朗読です。感謝祭の準備をする家の台所で、猫や犬たちと過ごす穏やかな午後を描きます。",
+   "content_start_sec": null,
+   "content_start_anchor": null
+  },
+  {
+   "episode_id": "95bb8f77-f334-5a47-af37-76611a8915bd",
+   "input_depth": "transcript",
+   "interest_level": "low",
+   "calm_star": 5.0,
+   "ear_star": 4.7,
+   "total_star": 4.5,
+   "final_star": 4.5,
+   "final_reason": null,
+   "reasons": {
+    "llm": "冒頭の広告を除くと、穏やかな描写が続く静かな回です。",
+    "items": {
+     "calm": {
+      "A": {
+       "min": null,
+       "score": 0
+      },
+      "B": {
+       "min": null,
+       "score": 0
+      },
+      "C": {
+       "min": null,
+       "score": 0
+      },
+      "D": {
+       "min": null,
+       "score": 0
+      }
+     },
+     "interest": {
+      "A": {
+       "min": 8,
+       "score": 1
+      },
+      "B": {
+       "min": null,
+       "score": 0
+      },
+      "C": {
+       "min": null,
+       "score": 0
+      },
+      "D": {
+       "min": null,
+       "score": 0
+      },
+      "E": {
+       "min": null,
+       "score": 0
+      }
+     }
+    },
+    "moments": []
+   },
+   "features": {
+    "timeline": {
+     "volume_db": [
+      2.1,
+      1.4,
+      -1.0,
+      -1.2,
+      1.5,
+      1.4,
+      0.9,
+      0.8,
+      0.6,
+      0.8,
+      0.5,
+      -0.4,
+      -0.2,
+      -1.0,
+      0.0,
+      -1.0,
+      0.3,
+      0.2,
+      -0.3,
+      0.0,
+      -1.6,
+      -3.2
+     ],
+     "rate_per_min": [
+      110,
+      137,
+      131,
+      114,
+      144,
+      159,
+      147,
+      163,
+      168,
+      155,
+      149,
+      153,
+      133,
+      151,
+      155,
+      146,
+      161,
+      164,
+      151,
+      140
+     ],
+     "sudden_at_sec": []
+    },
+    "ear_parts": {
+     "rate": 4.1,
+     "sudden": 5.0,
+     "volume": 4.3,
+     "rate_cv": 4.9
+    },
+    "speech_rate": 145.59464053996922,
+    "duration_sec": 1319.62775,
+    "volume_std_db": 5.303248882293701,
+    "speech_rate_cv": 0.10380520077073398,
+    "speech_rate_unit": "words_per_min",
+    "sudden_per_10min": 0.0
+   },
+   "analyzed_at": "2026-11-16T07:21:07.850672+00:00",
+   "interest_score": 1,
+   "calm_per_min": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.3,
+    0.3,
+    0.2,
+    0.1,
+    0.1,
+    0.1,
+    0.2,
+    0.2
+   ],
+   "content_summary": "英語の就寝用朗読です。秋の屋敷で受付を務める語り手が、遺贈品の木箱を同僚たちと開ける一日を描きます。",
+   "content_start_sec": null,
+   "content_start_anchor": null
+  },
+  {
+   "episode_id": "bc29510c-46f7-5846-932a-dacbc8779156",
+   "input_depth": "transcript",
+   "interest_level": "low",
+   "calm_star": 5.0,
+   "ear_star": 4.6,
+   "total_star": 4.5,
+   "final_star": 4.5,
+   "final_reason": null,
+   "reasons": {
+    "llm": "冒頭の広告を除くと、穏やかな日常の描写だけが続く回です。",
+    "items": {
+     "calm": {
+      "A": {
+       "min": null,
+       "score": 0
+      },
+      "B": {
+       "min": null,
+       "score": 0
+      },
+      "C": {
+       "min": null,
+       "score": 0
+      },
+      "D": {
+       "min": null,
+       "score": 0
+      }
+     },
+     "interest": {
+      "A": {
+       "min": 10,
+       "score": 1
+      },
+      "B": {
+       "min": null,
+       "score": 0
+      },
+      "C": {
+       "min": null,
+       "score": 0
+      },
+      "D": {
+       "min": null,
+       "score": 0
+      },
+      "E": {
+       "min": null,
+       "score": 0
+      }
+     }
+    },
+    "moments": []
+   },
+   "features": {
+    "timeline": {
+     "volume_db": [
+      0.4,
+      1.0,
+      0.8,
+      0.6,
+      2.0,
+      1.1,
+      -1.5,
+      -1.2,
+      0.2,
+      -0.1,
+      0.5,
+      -1.0,
+      0.8,
+      0.2,
+      0.0,
+      -1.1,
+      0.2,
+      -2.5,
+      0.0,
+      0.2,
+      -1.0,
+      -0.9,
+      -2.5,
+      -0.2,
+      -1.9,
+      1.5,
+      -0.6,
+      -0.1,
+      0.3,
+      0.7
+     ],
+     "rate_per_min": [
+      83,
+      116,
+      106,
+      152,
+      150,
+      97,
+      119,
+      101,
+      121,
+      113,
+      104,
+      96,
+      124,
+      104,
+      100,
+      95,
+      90,
+      87,
+      94,
+      91
+     ],
+     "sudden_at_sec": []
+    },
+    "ear_parts": {
+     "rate": 5.0,
+     "sudden": 5.0,
+     "volume": 3.8,
+     "rate_cv": 4.0
+    },
+    "speech_rate": 107.29405947733292,
+    "duration_sec": 6186.9715,
+    "volume_std_db": 6.410358428955078,
+    "speech_rate_cv": 0.17187474865894514,
+    "speech_rate_unit": "words_per_min",
+    "sudden_per_10min": 0.0
+   },
+   "analyzed_at": "2026-11-16T07:19:09.014855+00:00",
+   "interest_score": 1,
+   "calm_per_min": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.1,
+    0.1,
+    0.1,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.2,
+    0.1,
+    0.1
+   ],
+   "content_summary": "英語の就寝用朗読です。秋の庭で隣人と話すうちに、友人を招いて感謝祭の食事を開くことになり、その準備が描かれます。",
+   "content_start_sec": null,
+   "content_start_anchor": null
+  }
+ ]
+}
