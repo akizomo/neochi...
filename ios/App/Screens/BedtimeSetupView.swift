@@ -23,19 +23,26 @@ struct BedtimeSetupView: View {
                 .fixedSize(horizontal: false, vertical: true)
             DatePicker("就寝時刻", selection: $time, displayedComponents: .hourAndMinute)
                 .datePickerStyle(.wheel).labelsHidden().frame(maxWidth: .infinity)
-            Button { model.saveBedtime(time, openNight: !editing); if editing { dismiss() } } label: {
-                Text("決める").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                    .background(Capsule().fill(Color.nc(.textMain)))
-            }
-            .buttonStyle(.pressable)
-            Button { if editing { dismiss() } else { model.saveBedtime(nil) } } label: {
-                Text(editing ? "閉じる" : "あとで").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
-            }
-            .buttonStyle(.pressable)
         }
         .padding(NCSpace.s5)
         .frame(maxWidth: .infinity, alignment: .top) }
         .frame(maxHeight: .infinity)
+        // ボタンは下に固定。スクロールするのは、上の内容だけ。
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: NCSpace.s1) {
+                Button { model.saveBedtime(time, openNight: !editing); if editing { dismiss() } } label: {
+                    Text("決める").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                    .background(Capsule().fill(Color.nc(.textMain)))
+            }
+            .buttonStyle(.pressable)
+                Button { if editing { dismiss() } else { model.saveBedtime(nil) } } label: {
+                    Text(editing ? "閉じる" : "あとで").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
+            }
+            .buttonStyle(.pressable)
+            }
+            .padding(.horizontal, NCSpace.s5).padding(.top, NCSpace.s2)
+            .background(Color.nc(.bgBase))
+        }
         .background(Color.nc(.bgBase).ignoresSafeArea())
         // 親指が届くよう、ふつうは下半分。小さい画面(SE など)では、スクロールなしで全部見えるよう全面にする。
         .presentationDetents(UIScreen.main.bounds.height < 700 ? [.large] : [.medium, .large])

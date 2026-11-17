@@ -30,6 +30,7 @@ struct GenrePreferenceView: View {
         }
         .padding(NCSpace.s5)
         .frame(maxWidth: .infinity, alignment: .top) }
+        .safeAreaInset(edge: .bottom) { actions }
         .background(Color.nc(.bgBase).ignoresSafeArea())
         .presentationDetents([.large])
         .presentationDragIndicator(editing ? .visible : .hidden)
@@ -66,19 +67,6 @@ struct GenrePreferenceView: View {
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
         }
-        // 選んだときだけ、次のステップへ。選ばなかったときは、そのまま終える。
-        Button {
-            model.savePreferredGenres(selected)
-            if editing || selected.isEmpty { dismiss() } else { withAnimation { step = 2 } }
-        } label: {
-            Text(editing || selected.isEmpty ? "決める" : "次へ").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                .background(Capsule().fill(Color.nc(.textMain)))
-        }
-        .buttonStyle(.pressable)
-        Button { if editing { dismiss() } else { model.savePreferredGenres([]); dismiss() } } label: {
-            Text(editing ? "閉じる" : "あとで").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
-        }
-        .buttonStyle(.pressable)
     }
 
     // MARK: 2. お気に入り
@@ -92,10 +80,34 @@ struct GenrePreferenceView: View {
                 ScoreRow(show: show, isFavorite: model.favorites.contains(show.id)) { model.toggleFavorite(show) }
             }
         }
+    }
+
+    // MARK: 下部のボタン(固定。スクロールするのは、上の内容だけ)
+
+    @ViewBuilder private var actions: some View {
+        VStack(spacing: NCSpace.s1) {
+            if step == 1 {
+        Button {
+            model.savePreferredGenres(selected)
+            if editing || selected.isEmpty { dismiss() } else { withAnimation { step = 2 } }
+        } label: {
+            Text(editing || selected.isEmpty ? "決める" : "次へ").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                .background(Capsule().fill(Color.nc(.textMain)))
+        }
+        .buttonStyle(.pressable)
+        Button { if editing { dismiss() } else { model.savePreferredGenres([]); dismiss() } } label: {
+            Text(editing ? "閉じる" : "あとで").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
+        }
+        .buttonStyle(.pressable)
+            } else {
         Button { dismiss() } label: {
             Text(model.favorites.isEmpty ? "あとで選ぶ" : "はじめる").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
                 .background(Capsule().fill(Color.nc(.textMain)))
         }
         .buttonStyle(.pressable)
+            }
+        }
+        .padding(.horizontal, NCSpace.s5).padding(.top, NCSpace.s2)
+        .background(Color.nc(.bgBase))
     }
 }
