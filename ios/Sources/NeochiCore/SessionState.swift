@@ -1,7 +1,8 @@
 import Foundation
 
-/// 番組の一覧が差し替わったとき(見本 → 実データ)に、存在しない番組を指す状態を外すための状態。
-public struct SessionState: Equatable, Sendable {
+/// お気に入り・次に聴く・再生の記録など、アプリを閉じても残す状態(端末に保存する)。
+/// 番組の一覧が差し替わったとき(見本 → 実データ)に、存在しない番組を指す状態を外すためにも使う。
+public struct SessionState: Equatable, Sendable, Codable {
     public var history: [PlayRecord]
     public var favorites: Set<String>
     public var queue: [String]
