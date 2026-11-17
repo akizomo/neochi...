@@ -210,7 +210,14 @@ final class AppModel {
 
     /// ヘルスケアの許可の状態(設定で案内に使う)。
     var healthAccess: HealthService.Access = .asked
-    func refreshHealthAccess() async { healthAccess = await health.access() }
+    /// 過去30日に睡眠データを受け取れたか(nil = 確認前)。許可の「あるか」は分からないので、実際に読めたかで連携の状態とする。
+    var healthHasData: Bool?
+    func refreshHealthAccess() async {
+        healthAccess = await health.access()
+        if healthAccess == .asked {
+            healthHasData = ((try? await health.sleepStarts(days: 30)) ?? []).isEmpty == false
+        } else { healthHasData = nil }
+    }
 
     /// 「許可する」。まだ聞いていないときだけ、システムの許可画面が出る。聞いたあとは、ヘルスケアの設定でしか変えられない。
     func requestHealth() async {

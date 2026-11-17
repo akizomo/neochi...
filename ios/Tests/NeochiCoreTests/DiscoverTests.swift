@@ -30,4 +30,22 @@ final class DiscoverTests: XCTestCase {
         let s = [show("a", "教養", 4), show("b", "寝落ち用", 4), show("c", "コメディ", 4), show("d", "ふしぎ", 4), show("e", "", 4)]
         XCTAssertEqual(Discover.genres(in: s), ["寝落ち用", "コメディ", "教養", "ふしぎ"])
     }
+
+    // 上のカードは日替わり: 総合 → 寝落ち用 → 寝落ち用ではない。3つの番組は重ならない
+    func testSpotlightRotatesAndNeverRepeatsShows() {
+        let s = [show("read", "朗読", 4.9), show("sleep", "寝落ち用", 4.6), show("com", "コメディ", 4.7), show("edu", "教養", 4.5)]
+        let a = (0..<3).compactMap { Discover.spotlight(s, day: $0) }
+        XCTAssertEqual(a.map(\.kind), [.overall, .sleepMade, .notSleepMade])
+        XCTAssertEqual(a.map(\.show.id), ["read", "sleep", "com"])          // 寝落ち用の1位(read)は総合と重なるので、次点(sleep)
+        XCTAssertEqual(Set(a.map(\.show.id)).count, 3)
+        XCTAssertEqual(Discover.spotlight(s, day: 3)?.show.id, "read")        // 3日で一巡
+        XCTAssertEqual(Discover.spotlight(s, day: -1)?.kind, .notSleepMade)
+    }
+
+    // 種類の番組がなければ、次の種類へ回す。番組がなければ nil
+    func testSpotlightSkipsEmptyKinds() {
+        let onlySleep = [show("read", "朗読", 4.9)]
+        XCTAssertEqual(Discover.spotlight(onlySleep, day: 1)?.kind, .overall)
+        XCTAssertNil(Discover.spotlight([], day: 0))
+    }
 }

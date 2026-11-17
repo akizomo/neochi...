@@ -10,7 +10,7 @@ struct LogoAnimationView: View {
     @State private var finished = false
 
     private let unit: CGFloat = 0.14
-    private let lead = 0.4      // 出てすぐに倒れ始めないよう、起動画面の動きを先へ進めて始める
+    private let lead = 0.3      // 出てすぐに倒れ始めないよう、起動画面の動きを先へ進めて始める
 
     var body: some View {
         TimelineView(.animation(paused: finished)) { context in

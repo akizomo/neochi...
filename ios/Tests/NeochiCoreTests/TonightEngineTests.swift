@@ -46,11 +46,11 @@ final class TonightEngineTests: XCTestCase {
     // 好みのジャンルの番組が、ほかより先に並ぶ。好みがなければ、ちがう系統(解説)が先になる
     func testPreferredGenreIsOrderedBeforeOthers() {
         var c = ctx(favorites: [], current: "phonebook")
-        XCTAssertEqual(TonightEngine.slate(ctx: c).last?.show.id, "train")
+        XCTAssertEqual(TonightEngine.slate(ctx: c)[1].show.id, "train")
         c.preferredGenres = ["朗読"]
         let s = TonightEngine.slate(ctx: c)
-        XCTAssertEqual(s.last?.show.id, "plant")
-        XCTAssertEqual(s.last?.reason, .preferredGenre(genre: "朗読"))
+        XCTAssertEqual(s[1].show.id, "plant")
+        XCTAssertEqual(s[1].reason, .preferredGenre(genre: "朗読"))
     }
 
     func play(_ show: String, _ n: Int, times: Int = 1, day: Int = 1) -> [PlayRecord] {
@@ -64,8 +64,7 @@ final class TonightEngineTests: XCTestCase {
         XCTAssertEqual(s[0].episode?.id, "phonebook-7")
         XCTAssertEqual(s[0].playCount, 2)
         XCTAssertEqual(s[0].reason, .sleptFast(minutes: 18))
-        XCTAssertEqual(s[1].episode?.id, "phonebook-6")
-        XCTAssertEqual(s[1].reason, .unlistened)
+        XCTAssertNotEqual(s[1].show.id, "phonebook")                // 同じ番組は、3枚のうち1枚だけ
     }
 
     // 30分以上かかったら、次の回へ進める。同じ回は2番目に下がる
@@ -74,8 +73,25 @@ final class TonightEngineTests: XCTestCase {
         let s = TonightEngine.slate(ctx: c)
         XCTAssertEqual(s[0].episode?.id, "phonebook-6")
         XCTAssertEqual(s[0].reason, .tookLong(minutes: 40))
-        XCTAssertEqual(s[1].episode?.id, "phonebook-7")
-        XCTAssertEqual(s[1].reason, .sameAsLastNight)
+        XCTAssertNotEqual(s[1].show.id, "phonebook")                // 同じ回は、2枚目に下げず、別の番組を出す
+    }
+
+    // 3枚のカードに、同じ番組を出さない(番組が足りるとき)
+    func testNoDuplicateShowsAcrossCards() {
+        for hist in [[PlayRecord](), play("phonebook", 7)] {
+            let s = TonightEngine.slate(ctx: ctx(history: hist, lastNight: hist.isEmpty ? nil : LastNight(showID: "phonebook", episodeID: "phonebook-7", minutes: 12)))
+            XCTAssertEqual(Set(s.map(\.show.id)).count, s.count)
+        }
+    }
+
+    // 番組が足りないときだけ、いまの番組の、もう1つの回で埋める
+    func testFillsWithSecondEpisodeWhenFewShows() {
+        let c = TonightContext(shows: [phonebook], episodes: ["phonebook": eps("phonebook", top: 7)], history: [], favorites: [],
+                               queue: [], currentShowID: "phonebook", lastNight: nil, genreStreakNights: 0)
+        let s = TonightEngine.slate(ctx: c)
+        XCTAssertEqual(s.count, 2)
+        XCTAssertEqual(s.map(\.show.id), ["phonebook", "phonebook"])
+        XCTAssertNotEqual(s[0].episode?.id, s[1].episode?.id)
     }
 
     // 記録がない夜は、次の回へ進める
@@ -105,19 +121,21 @@ final class TonightEngineTests: XCTestCase {
     func testThirdFavoriteSaysFavorite() {
         let s = TonightEngine.slate(ctx: ctx())
         XCTAssertEqual(s.count, 3)
-        XCTAssertEqual(s[2].show.id, "train")
-        XCTAssertEqual(s[2].reason, .favorite(genre: "解説"))
-        XCTAssertEqual(s[2].reason.text, "お気に入りの解説")
+        XCTAssertEqual(s[1].show.id, "train")
+        XCTAssertEqual(s[1].reason, .favorite(genre: "解説"))
+        XCTAssertEqual(s[1].reason.text, "お気に入りの解説")
+        XCTAssertEqual(s[2].show.id, "plant")
+        XCTAssertEqual(s[2].reason.text, "お気に入りの朗読")
     }
 
     // 3本目は、別ジャンル(冒険)。晩数を数えていれば晩数を、なければ系統の移り変わりだけを出す
     func testThirdIsDifferentGenre() {
         let s = TonightEngine.slate(ctx: ctx(favorites: ["phonebook"]))
-        XCTAssertEqual(s[2].show.id, "train")
-        XCTAssertEqual(s[2].reason, .genreStreak(from: "朗読", to: "解説", nights: 3))
-        XCTAssertEqual(s[2].reason.text, "朗読が3晩。解説へ")
+        XCTAssertEqual(s[1].show.id, "train")
+        XCTAssertEqual(s[1].reason, .genreStreak(from: "朗読", to: "解説", nights: 3))
+        XCTAssertEqual(s[1].reason.text, "朗読が3晩。解説へ")
         let one = TonightEngine.slate(ctx: ctx(favorites: ["phonebook"], streak: 0))
-        XCTAssertEqual(one[2].reason.text, "朗読から、解説へ")
+        XCTAssertEqual(one[1].reason.text, "朗読から、解説へ")
     }
 
     // 理由の文: 内部の分類は系統名に直す。出せない分類は名前を出さない。「1晩続いた」とは書かない
@@ -140,11 +158,11 @@ final class TonightEngineTests: XCTestCase {
         for r in all { XCTAssertLessThanOrEqual(r.text.count, 20, r.text); XCTAssertFalse(r.text.contains("1晩")) }
     }
 
-    // 「次に聴く」の先頭は、3枚目に優先して出る
-    func testQueueHeadTakesThirdSlot() {
+    // 「次に聴く」の先頭は、いまの番組の次に、優先して出る
+    func testQueueHeadTakesSecondSlot() {
         let s = TonightEngine.slate(ctx: ctx(queue: ["weather"]))
-        XCTAssertEqual(s[2].show.id, "weather")
-        XCTAssertEqual(s[2].reason, .queued)
+        XCTAssertEqual(s[1].show.id, "weather")
+        XCTAssertEqual(s[1].reason, .queued)
     }
 
     // 同じ番組・同じ回を重複して出さない

@@ -156,11 +156,6 @@ public enum TonightEngine {
         let firstWhy: Reason = ctx.history.isEmpty && ctx.preferredGenres.contains(cur.genre) ? .preferredGenre(genre: cur.genre)
             : (repeatFirst ? whyRep : whyNext)
         if let first { items.append(make(cur, first, firstWhy)) }
-        if let second, second != first {
-            let why: Reason = repeatFirst ? .unlistened : (second == rep ? (cur.id == ctx.lastNight?.showID ? .sameAsLastNight : .heardBefore) : .previous)
-            items.append(make(cur, second, why))
-        }
-
         let queued = ctx.queue.filter { $0 != cur.id }.compactMap { id in ctx.shows.first(where: { $0.id == id }) }.first
         if let queued, items.count < 3, let p = pick(show: queued, ctx: ctx) {
             items.append(make(queued, p.episode, .queued))
@@ -175,6 +170,11 @@ public enum TonightEngine {
                 ? .genreStreak(from: cur.genre, to: o.genre, nights: max(ctx.genreStreakNights, 1))
                 : .sameGenreOther(genre: cur.genre)
             items.append(make(o, p.episode, why))
+        }
+        // 3枚のカードで、同じ番組を出さない。番組が足りないときだけ、いまの番組の、もう1つの回で埋める。
+        if items.count < 3, let second, second != first {
+            let why: Reason = repeatFirst ? .unlistened : (second == rep ? (cur.id == ctx.lastNight?.showID ? .sameAsLastNight : .heardBefore) : .previous)
+            items.insert(make(cur, second, why), at: min(1, items.count))
         }
         return Array(items.prefix(3))
     }
