@@ -260,3 +260,14 @@ def test_too_short_episodes_are_skipped():
     assert not cli._too_short(NS(duration_sec=None), cfg)
     assert not cli._too_short(NS(duration_sec=60), {})                      # 設定が無ければ何も除かない
     assert not cli._too_short(NS(duration_sec=60), {"episode": {"min_minutes": 0}})  # 0 = 無効
+
+
+def test_below_standard_shows_are_skipped_but_unrated_are_not():
+    """載せない番組は、新着の解析から外す。評点がまだない番組は、解析しないと評点がつかないので外さない。"""
+    from neochi import cli
+    from neochi.store import JsonStore
+    s = JsonStore("/nonexistent/x.json")
+    s.upsert("show", {"id": "low", "title": "基準未満", "show_star": 3.2, "z_rank": None, "listing_status": "researching"})
+    s.upsert("show", {"id": "new", "title": "評点なし", "show_star": None, "z_rank": None, "listing_status": "researching"})
+    s.upsert("show", {"id": "ok", "title": "掲載中", "show_star": 4.2, "z_rank": "ZZ", "listing_status": "listed"})
+    assert cli.below_standard_ids(s) == {"low"}
