@@ -209,3 +209,16 @@ def test_show_star_uses_judged_episodes_only(cfg, tmp_path):
 def yaml_z():
     from neochi import cli
     return cli.load_z_config()
+
+
+def test_too_short_episodes_are_skipped():
+    """入眠に必要な時間を確保できない短い回は解析しない。再生時間が不明な回は対象にする。"""
+    from types import SimpleNamespace as NS
+    from neochi import cli
+    cfg = {"episode": {"min_minutes": 10}}
+    assert cli._too_short(NS(duration_sec=4 * 60), cfg)
+    assert cli._too_short(NS(duration_sec=599), cfg)
+    assert not cli._too_short(NS(duration_sec=600), cfg)
+    assert not cli._too_short(NS(duration_sec=None), cfg)
+    assert not cli._too_short(NS(duration_sec=60), {})                      # 設定が無ければ何も除かない
+    assert not cli._too_short(NS(duration_sec=60), {"episode": {"min_minutes": 0}})  # 0 = 無効
