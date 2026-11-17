@@ -83,45 +83,39 @@ struct SettingsView: View {
         .buttonStyle(.pressable).disabled(auto)
     }
 
-    /// ヘルスケア(睡眠データ)の連携。状態を出し、許可していない人があとから変えられる入口。
-    /// 読み取りの許可が「あるか」は、アプリからは分からない。聞いていなければ許可画面を出す。聞いたあとは、実際に睡眠データを
-    /// 受け取れているか(過去30日)で「連携中」かを示し、受け取れないときは、設定アプリの NeochiPickzz の画面へ案内する。
+    /// ヘルスケア(睡眠データ)の連携。ほかの項目と同じ並びで、左に今の状態、右に変える入口を置く。
+    /// 読み取りの許可が「あるか」は、アプリからは分からない。聞いていなければ「連携」で許可画面を出す。聞いたあとは、実際に睡眠データを
+    /// 受け取れているか(過去30日)で状態を示し、「変える」で設定アプリの NeochiPickzz の画面(ヘルスケア → 睡眠)へ案内する
+    /// (連携を切る・つなぎ直すのは、iOS の設定でしかできない)。
     @ViewBuilder private var healthRow: some View {
         if model.healthAccess != .unavailable {
             let notAsked = model.healthAccess == .notAsked
             let linked = model.healthHasData == true
-            VStack(alignment: .leading, spacing: NCSpace.s2) {
-                HStack {
-                    Text("ヘルスケア(睡眠データ)").ncText(NCText.footnote, .textSub)
-                    Spacer()
-                    HStack(spacing: NCSpace.s1) {
-                        Image(systemName: linked ? "checkmark.circle.fill" : "circle.dashed")
-                        Text(notAsked ? "未連携" : linked ? "連携中" : "データなし")
+            Button {
+                if notAsked { Task { await model.requestHealth() } }
+                else if let u = URL(string: UIApplication.openSettingsURLString) { openURL(u) }
+            } label: {
+                VStack(alignment: .leading, spacing: NCSpace.s2) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: NCSpace.s1) {
+                            Text("ヘルスケア(睡眠データ)").ncText(NCText.footnote, .textSub)
+                            Text(notAsked ? "未連携" : linked ? "睡眠データを受け取れています" : "睡眠データを受け取れていません")
+                                .ncText(NCText.body).fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer()
+                        HStack(spacing: NCSpace.s1) { Text(notAsked ? "連携" : "変える"); Image(systemName: "chevron.right") }
+                            .ncText(NCText.footnote, .textSub)
                     }
-                    .ncText(NCText.footnote, linked ? .textMain : .textSub)
-                }
-                Text(notAsked ? "つなぐと、寝落ちまでの分数を自動で記録できます。"
-                     : linked ? "睡眠データを受け取れています。"
-                     : "睡眠データを受け取れていません。許可していないか、睡眠の記録がないためです。")
-                    .ncText(NCText.body).fixedSize(horizontal: false, vertical: true)
-                if !notAsked && !linked {
-                    Text("許可するには、「設定」アプリの NeochiPickzz →「ヘルスケア」→ 睡眠 をオンにします。")
-                        .ncText(NCText.footnote, .textSub).fixedSize(horizontal: false, vertical: true)
-                }
-                if notAsked || !linked {
-                    Button {
-                        if notAsked { Task { await model.requestHealth() } }
-                        else if let u = URL(string: UIApplication.openSettingsURLString) { openURL(u) }
-                    } label: {
-                        Text(notAsked ? "ヘルスケアとつなぐ" : "設定を開く").ncText(NCText.headline, .bgBase)
-                            .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                            .background(Capsule().fill(Color.nc(.textMain)))
+                    if !notAsked && !linked {
+                        Text("許可していないか、睡眠の記録がないためです。「変える」で設定アプリを開き、ヘルスケア → 睡眠 をオンにします。")
+                            .ncText(NCText.footnote, .textSub).fixedSize(horizontal: false, vertical: true)
                     }
-                    .buttonStyle(.pressable)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(NCSpace.s4)
+                .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
             }
-            .padding(NCSpace.s4)
-            .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+            .buttonStyle(.pressable)
         }
     }
 
