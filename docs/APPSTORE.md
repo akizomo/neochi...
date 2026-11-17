@@ -8,7 +8,7 @@ App Store Connect に貼る文面と、答えの一覧。2026-11-16 時点の 1.
 |---|---|
 | Bundle ID | `com.example.neochi`(変えない。`TESTFLIGHT.md`) |
 | バージョン | 1.0.0(`ios/project.yml` の `MARKETING_VERSION`) |
-| ビルド番号 | 10(`CURRENT_PROJECT_VERSION`。アップロードのたびに上げる。9 まで TestFlight に上げ済み) |
+| ビルド番号 | 11(`CURRENT_PROJECT_VERSION`。アップロードのたびに上げる。10 まで TestFlight に上げ済み) |
 | 対応 | iPhone のみ、iOS 17.0 以上 |
 | 書き出し | `ios/Scripts/release-testflight.sh`(アップロードは `--upload`) |
 
