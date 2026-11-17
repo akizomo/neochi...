@@ -33,6 +33,12 @@ def _shard(shows, spec: str | None):
     return [s for s in shows if uuid.UUID(s.id).int % n == i]
 
 
+def _too_short(ep, cfg: dict) -> bool:
+    """入眠に必要な時間を確保できない短い回は解析しない。再生時間が分からない回は、判断できないので対象にする。"""
+    m = (cfg.get("episode") or {}).get("min_minutes") or 0
+    return bool(m and ep.duration_sec and ep.duration_sec < m * 60)
+
+
 def cmd_run(a) -> int:
     cfg, store = load_config(), open_store(a.store)
     shows = _shard(feeds.load_shows(a.csv)[: a.limit], a.shard)  # 先に上限で絞ってから分割する
@@ -43,6 +49,9 @@ def cmd_run(a) -> int:
             break
         eps = feeds.fetch_episodes(show)[: a.per_show]
         for ep in eps:
+            if _too_short(ep, cfg):
+                logging.info("短すぎるためスキップ(%.1f分): %s / %s", ep.duration_sec / 60, show.title, ep.title)
+                continue
             if not a.force and store.get("analysis", ep.id):
                 logging.info("解析済みのためスキップ: %s / %s", show.title, ep.title)
                 continue
