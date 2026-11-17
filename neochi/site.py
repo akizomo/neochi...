@@ -299,7 +299,7 @@ def delta_pill(d: float, higher_is_better: bool, fmt, caption: str) -> str:
 
 
 def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og_image: str = "",
-         og_type: str = "website", large_card: bool = False, wide: bool = False, jsonld: dict | None = None) -> str:
+         og_type: str = "website", large_card: bool = False, wide: bool = False, nofab: bool = False, jsonld: dict | None = None) -> str:
     meta = [
         f'<meta name="description" content="{escape(desc)}">',
         f'<meta property="og:title" content="{escape(title)}">',
@@ -331,7 +331,7 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 <link rel="apple-touch-icon" href="{root}apple-touch-icon.png">
 <link rel="stylesheet" href="{root}style.css">
 </head>
-<body{' class="wide"' if wide else ''}>
+<body class="{" ".join(c for c in ("wide" if wide else "", "nofab" if nofab else "") if c)}">
 <a class="skip" href="#main">本文へ</a>
 <header class="top"><div class="wrap">{wordmark(root)}<nav aria-label="メニュー"><a href="{root}#tonight">今夜の1本</a><a href="{root}ranking/">ランキング</a><a href="{root}about/">スコアと根拠</a></nav></div></header>
 <main class="wrap" id="main" tabindex="-1">
@@ -343,7 +343,7 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 <p>{FOOT_NOTE}</p>
 <p>{FOOT_RIGHTS}</p>
 </div></footer>
-<a class="bmc-fab" href="{SUPPORT_URL}" rel="noopener" target="_blank"><img src="{BMC_BUTTON}" alt="{SUPPORT_LABEL}(Buy Me a Coffee)" width="169" height="36" loading="lazy"></a>
+{"" if nofab else f'<a class="bmc-fab" href="{SUPPORT_URL}" rel="noopener" target="_blank"><img src="{BMC_BUTTON}" alt="{SUPPORT_LABEL}(Buy Me a Coffee)" width="169" height="36" loading="lazy"></a>'}
 <a class="to-top" href="#" id="top-btn" aria-label="ページの先頭へ" hidden><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5L6 4l3.5 3.5"/></svg></a>
 <script>{TOP_JS}</script>
 </body>
@@ -1052,11 +1052,11 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
                                                       og_image=og, large_card=True, wide=True), encoding="utf-8")
     from .privacy import PRIVACY_BODY
     (out / "privacy.html").write_text(page(title=f"プライバシーポリシー | {strings.PRODUCT}", desc="NeochiPickzz が扱う情報と、その使いみち、削除のしかた。",
-                                           root="./", body=PRIVACY_BODY, canonical=base_url and base_url + "privacy.html"), encoding="utf-8")
+                                           root="./", body=PRIVACY_BODY, canonical=base_url and base_url + "privacy.html", nofab=True), encoding="utf-8")
     (out / "about").mkdir()
     (out / "about" / "index.html").write_text(page(title=f"スコアと根拠 | {strings.PRODUCT}", desc=FOOT_NOTE, root="../",
                                                    body=about_html(cfg), canonical=base_url and base_url + "about/",
-                                                   og_image=og, large_card=True), encoding="utf-8")
+                                                   og_image=og, large_card=True, nofab=True), encoding="utf-8")
     for s in shows:
         d = out / "shows" / slug(s)
         d.mkdir(parents=True)
