@@ -107,7 +107,7 @@ struct OnboardingView: View {
             .ncText(NCText.body, .textSub).fixedSize(horizontal: false, vertical: true)
         VStack(alignment: .leading, spacing: NCSpace.s4) {
             point("waveform", "音声を解析", "話す速さ、音量、起伏、興味の度合いを調べます。")
-            point("chart.bar", "評点と格付け", "起伏が少なく、耳にゆるく、程よく興味が続く番組ほど高くなります。基準に届かない番組は載せません。")
+            point("chart.bar", "評点と格付け", "起伏が少なく、耳にゆるく、つまらなすぎず面白すぎない番組ほど高くなります。基準に届かない番組は載せません。")
             point("person.2", "使うほど合っていく", "あなたの寝落ちの記録と、みんなの評価が集まるほど、評点と提案に反映されます。")
         }
         Text("評点は推定で、眠れることを保証するものではありません。医療機器ではありません。")
@@ -147,10 +147,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: NCSpace.s4) {
             point("bed.double", "読むのは睡眠の記録だけ", "書き込みはしません。")
             point("clock", "ふだんの就寝時刻も自動で", "就寝の時間帯にアプリを開くと、夜の画面を出します。")
-            point("lock", "外には出しません", "広告や、第三者への提供には使いません。")
         }
-        Text("許可しなくても使えます。そのときは、朝に選択肢で答えて記録できます。あとから設定で変えられます。")
-            .ncText(NCText.footnote, .textSub).fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: 下部のボタン(固定)
