@@ -39,9 +39,21 @@ def _too_short(ep, cfg: dict) -> bool:
     return bool(m and ep.duration_sec and ep.duration_sec < m * 60)
 
 
+def below_standard_ids(store) -> set[str]:
+    """評点がついたうえで、格付けの基準に届かなかった番組(載せない番組)のID。新着の解析の対象から外す。
+    評点がまだない番組(判定済みの回がない)は含めない。解析しないと評点がつかないため。"""
+    return {s["id"] for s in store.rows("show") if s.get("show_star") is not None and not s.get("z_rank")}
+
+
 def cmd_run(a) -> int:
     cfg, store = load_config(), open_store(a.store)
     shows = _shard(feeds.load_shows(a.csv)[: a.limit], a.shard)  # 先に上限で絞ってから分割する
+    if not a.include_unlisted:
+        skip = below_standard_ids(store)
+        for sh in shows:
+            if sh.id in skip:
+                logging.info("基準未満の番組のため解析しない: %s", sh.title)
+        shows = [sh for sh in shows if sh.id not in skip]
     deps = pipeline.Deps(judge=None) if a.judge == "session" else pipeline.Deps()
     done = 0
     for show in shows:
@@ -251,6 +263,7 @@ def main(argv=None) -> int:
     r.add_argument("--per-show", type=int, default=1, help="番組あたり最新何回を見るか")
     r.add_argument("--shard", default=None, help="並列実行用。例: 0/3 は番組を3分割した最初の1つ")
     r.add_argument("--force", action="store_true", help="解析済みの回も再解析する")
+    r.add_argument("--include-unlisted", action="store_true", help="基準未満(載せない)の番組も解析する。ふだんは外す")
     r.add_argument("--max-new", type=int, default=0, help="1回の実行で新しく解析する件数の上限(0 = 無制限)")
     r.add_argument("--judge", choices=["api", "session"], default="session",
                    help="🌊🎯の判定。session = APIを使わず work/pending に書き出し、Claude のセッションで判定する")
