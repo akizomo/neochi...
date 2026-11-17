@@ -7,6 +7,11 @@ struct DiscoverView: View {
     @Environment(AppModel.self) private var model
     @State private var genre: String?
 
+    /// 日付の通し番号(上のカードを日替わりにする。日付が変わる時刻は端末の暦で決まる)。
+    private static func dayNumber(_ date: Date) -> Int {
+        Calendar.current.dateComponents([.day], from: Date(timeIntervalSince1970: 0), to: Calendar.current.startOfDay(for: date)).day ?? 0
+    }
+
     private var genres: [String] { Discover.genres(in: model.shows) }
     private var list: [Show] {
         Discover.ranked(model.shows.filter { genre == nil || $0.genre == genre })
@@ -18,7 +23,7 @@ struct DiscoverView: View {
                 // 系統のチップは、一覧まで来たら画面の上に固定する(絞り込みを、どこからでも変えられる)。
                 LazyVStack(alignment: .leading, spacing: NCSpace.s6, pinnedViews: [.sectionHeaders]) {
                     VStack(alignment: .leading, spacing: NCSpace.s6) {
-                        if let best = Discover.best(model.shows) { BestCard(show: best) }
+                        if let spot = Discover.spotlight(model.shows, day: Self.dayNumber(model.now())) { BestCard(show: spot.show, kind: spot.kind) }
                         shelf("寝落ち用の、上位", note: "寝落ち用・朗読・環境音の中から", Discover.sleepMade(model.shows))
                         shelf("寝落ち用ではないのに、寝落ちできる番組", note: "コメディ・雑談・教養の中から", Discover.notSleepMade(model.shows))
                         Text("系統で探す").ncText(NCText.headline)
@@ -109,6 +114,15 @@ struct DiscoverView: View {
 private struct BestCard: View {
     @Environment(AppModel.self) private var model
     let show: Show
+    var kind: Discover.SpotlightKind = .overall
+
+    private var caption: String {
+        switch kind {
+        case .overall: return "いま、総合でいちばん"
+        case .sleepMade: return "寝落ち用で、いちばん"
+        case .notSleepMade: return "寝落ち用ではないのに、いちばん"
+        }
+    }
 
     var body: some View {
         let reserved = model.isReservedTonight(show)
@@ -121,7 +135,7 @@ private struct BestCard: View {
             .buttonStyle(CardPressStyle())
             VStack(spacing: NCSpace.s2) {
                 Group {
-                    Text("いま、総合でいちばん").ncText(NCText.footnote, .textSub)
+                    Text(caption).ncText(NCText.footnote, .textSub)
                     ArtworkView(show: show, size: NCSize.artworkXl, radius: NCRadius.lg, showsRank: true)
                     Text(show.title).ncText(NCText.title).lineLimit(2).multilineTextAlignment(.center)
                     if let r = show.rank { Text(NCString.rankMeaning(r)).ncText(NCText.footnote, .textSub) }

@@ -39,6 +39,27 @@ public enum Discover {
     /// 総合でいちばん評点の高い番組。
     public static func best(_ shows: [Show]) -> Show? { ranked(shows).first }
 
+    /// 上の大きなカード。毎日同じにならないよう、日替わりで「総合」「寝落ち用の上位」「寝落ち用ではない上位」を回す。
+    public enum SpotlightKind: Int, CaseIterable, Sendable { case overall, sleepMade, notSleepMade }
+    public struct Spotlight: Equatable, Sendable { public let kind: SpotlightKind; public let show: Show }
+
+    /// その日のカード。`day` は日付の通し番号。3つの番組は重ならない(同じ番組が総合と寝落ち用の両方で1位でも、次点を出す)。
+    /// ある種類の番組がなければ、次の種類へ回す。
+    public static func spotlight(_ shows: [Show], day: Int) -> Spotlight? {
+        guard let overall = best(shows) else { return nil }
+        var picks: [SpotlightKind: Show] = [.overall: overall]
+        if let s = ranked(shows.filter { sleepMadeGenres.contains($0.genre) && $0.id != overall.id }).first { picks[.sleepMade] = s }
+        let used = Set(picks.values.map(\.id))
+        if let n = ranked(shows.filter { notSleepMadeGenres.contains($0.genre) && !used.contains($0.id) }).first { picks[.notSleepMade] = n }
+        let kinds = SpotlightKind.allCases
+        let start = ((day % kinds.count) + kinds.count) % kinds.count
+        for i in 0..<kinds.count {
+            let k = kinds[(start + i) % kinds.count]
+            if let s = picks[k] { return Spotlight(kind: k, show: s) }
+        }
+        return nil
+    }
+
     public static func sleepMade(_ shows: [Show], limit: Int = 10) -> [Show] {
         Array(ranked(shows.filter { sleepMadeGenres.contains($0.genre) }).prefix(limit))
     }
