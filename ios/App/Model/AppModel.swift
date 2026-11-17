@@ -56,6 +56,10 @@ final class AppModel {
         loadState == .ready && !shows.isEmpty && !genresAsked && healthChecked && !needsBedtimeQuestion
     }
 
+    /// 好みのジャンルの画面を出しているか。ジャンルを保存した(= 聞いた)あとも、次のステップ(お気に入り)まで開いたままにするため、
+    /// 「聞いたか」(genresAsked)とは別に持つ。
+    var genreSheetOpen = false
+
     func savePreferredGenres(_ genres: Set<String>) {
         preferredGenres = genres; genresAsked = true
         UserDefaults.standard.set(Array(genres).sorted(), forKey: "preferredGenres")
@@ -63,7 +67,7 @@ final class AppModel {
     }
 
     /// 表示中のタブ。空の状態から「見つける」へ案内するために、画面の外から切り替える。
-    enum AppTab: Hashable { case tonight, discover, log }
+    enum AppTab: Hashable { case tonight, discover, log, settings }
     var selectedTab: AppTab = .tonight
 
     /// ヘルスケアの履歴から読んだ、晩ごとの就寝時刻。確認が済んだら healthChecked。

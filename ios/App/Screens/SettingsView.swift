@@ -1,16 +1,19 @@
 import SwiftUI
 import NeochiCore
 
-/// 設定。記録タブの記録と分けて、アプリの設定だけを置く。どのタブでも、右上の人型のボタン(`settingsEntry`)から、シートで開く。
+/// 設定タブ。記録タブの記録と分けて、アプリの設定だけを置く。項目は、ダイアログではなく、押すと下層のページへ進む(戻るボタン・スワイプで戻れる)。
+/// 1.1 でログインと契約を足すときは、アカウントの欄に状態(契約中の印など)を出せる。
 /// 上から: 睡眠(就寝時刻・ヘルスケア)、好み、アカウント(1.0 は出さない)、データ、このアプリについて。
+struct SettingsTab: View {
+    var body: some View {
+        NavigationStack { SettingsView() }
+    }
+}
+
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openURL) private var openURL
 
-    @State private var editingBedtime = false
-    @State private var editingGenres = false
-    @State private var showingAccount = false
-    @State private var accountTick = 0
     @State private var confirmDeleteAll = false
     @State private var deleteError = false
 
@@ -33,7 +36,7 @@ struct SettingsView: View {
                 genreRow
                 if AccountFeature.enabled {
                     header("アカウント")
-                    AccountRow(tick: accountTick) { showingAccount = true }
+                    AccountRow()
                 }
                 header("データ")
                 dataRow
@@ -46,15 +49,13 @@ struct SettingsView: View {
         }
         .background(Color.nc(.bgBase))
         .navigationTitle("設定")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbarTitleDisplayMode(.inlineLarge)
+        .contentMargins(.top, NCSpace.s5, for: .scrollContent)
         .confirmationDialog("記録をすべて削除しますか", isPresented: $confirmDeleteAll, titleVisibility: .visible) {
             Button("削除する", role: .destructive) {
                 Task { do { try await model.deleteAllRecords(); deleteError = false } catch { deleteError = true } }
             }
         } message: { Text("この端末とサーバーの、寝落ちの記録がすべて消えます。元に戻せません。") }
-        .sheet(isPresented: $showingAccount, onDismiss: { accountTick += 1 }) { AccountView() }
-        .sheet(isPresented: $editingGenres) { GenrePreferenceView(editing: true) }
-        .sheet(isPresented: $editingBedtime) { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) }
         .task { await model.refreshHealthAccess() }
     }
 
@@ -66,7 +67,7 @@ struct SettingsView: View {
     private var bedtimeRow: some View {
         let auto = model.bedtimeIsAuto
         let text = model.bedtimeMinute.map { String(format: "%d:%02d", $0 / 60, $0 % 60) } ?? "未設定"
-        return Button { editingBedtime = true } label: {
+        return NavigationLink { BedtimeSetupView(editing: true, initial: model.bedtimeMinute) } label: {
             HStack {
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
                     Text("ふだんの就寝時刻").ncText(NCText.footnote, .textSub)
@@ -110,7 +111,7 @@ struct SettingsView: View {
     /// 好みのジャンル(最初に聞いたもの)。記録がたまるまでの、最初の番組と並びに使う。
     private var genreRow: some View {
         let names = Discover.genreOrder.filter { model.preferredGenres.contains($0) }
-        return Button { editingGenres = true } label: {
+        return NavigationLink { GenrePreferenceView(editing: true) } label: {
             HStack {
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
                     Text("好みのジャンル").ncText(NCText.footnote, .textSub)
@@ -169,30 +170,4 @@ struct SettingsView: View {
         }
         .buttonStyle(.pressable)
     }
-}
-
-/// どのタブでも、右上に出す設定とアカウントの入口。設定は毎日は開かないので、タブにはせず、ここから開く。
-/// 1.1 でログインと契約を足すときは、この入口に状態(契約中の印など)を出せる。
-private struct SettingsEntry: ViewModifier {
-    @State private var open = false
-
-    func body(content: Content) -> some View {
-        content
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { open = true } label: { Image(systemName: "person.crop.circle") }
-                        .accessibilityLabel("設定とアカウント")
-                }
-            }
-            .sheet(isPresented: $open) {
-                NavigationStack {
-                    SettingsView()
-                        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("閉じる") { open = false } } }
-                }
-            }
-    }
-}
-
-extension View {
-    func settingsEntry() -> some View { modifier(SettingsEntry()) }
 }

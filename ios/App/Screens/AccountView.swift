@@ -8,7 +8,6 @@ enum AccountFeature { static let enabled = false }
 
 /// アカウント。匿名のまま使い始め、Apple に連携すると、機種変更でも記録を引き継げる。
 struct AccountView: View {
-    @Environment(\.dismiss) private var dismiss
     @State private var info: SupabaseClient.AccountInfo?
     @State private var nonce = AppleNonce.random()
     @State private var message: String?
@@ -19,7 +18,7 @@ struct AccountView: View {
     private var linked: Bool { info?.providers.contains("apple") == true }
 
     var body: some View {
-        NavigationStack {
+        do {
             ScrollView {
                 VStack(alignment: .leading, spacing: NCSpace.s4) {
                     if !SupabaseClient.shared.isConfigured {
@@ -39,7 +38,6 @@ struct AccountView: View {
             .background(Color.nc(.bgBase))
             .navigationTitle("アカウント")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("閉じる") { dismiss() } } }
             .task { await reload() }
             .confirmationDialog("ログアウトしますか", isPresented: $confirmSignOut, titleVisibility: .visible) {
                 Button("ログアウト", role: .destructive) { Task { await signOut() } }
@@ -121,15 +119,13 @@ struct AccountView: View {
 
 /// 設定のアカウントの欄に置くカード。匿名のあいだは、連携をすすめる言葉を出す。
 struct AccountRow: View {
-    var tick = 0   // 画面を閉じたあとに増やすと、状態を読み直す
-    let action: () -> Void
     @State private var info: SupabaseClient.AccountInfo?
 
     private var linked: Bool { info?.providers.contains("apple") == true }
 
     var body: some View {
         if AccountFeature.enabled, SupabaseClient.shared.isConfigured {
-            Button(action: action) {
+            NavigationLink { AccountView() } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: NCSpace.s1) {
                         Text("アカウント").ncText(NCText.footnote, .textSub)
@@ -145,7 +141,7 @@ struct AccountRow: View {
                 .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
             }
             .buttonStyle(.pressable)
-            .task(id: tick) { info = try? await SupabaseClient.shared.account() }
+            .task { info = try? await SupabaseClient.shared.account() }
         }
     }
 }
