@@ -114,10 +114,37 @@ final class AppModel {
     /// 就寝の時間帯にアプリを開いたら、昼の画面ではなく夜の画面を出す。
     func openNightIfBedtime() {
         guard nightScreen == nil, inBedtimeWindow else { return }
+        nightScreenNight = nightDay(0)
         nightScreen = playing == nil ? .ready : .playing
     }
 
     enum NightScreen: String, Identifiable { case ready, playing; var id: String { rawValue } }
+
+    /// 夜の画面を出した晩(`nightDay(0)`)。朝になって、その晩が明けたかを見る。
+    private var nightScreenNight: Date?
+
+    /// アプリを開いたとき(起動・前に戻したとき)に、晩が明けていたら切り替える。
+    /// - 夜の画面が出たままなら閉じて、再生を止める(夜のうちに眠って、そのままになっていた分)
+    /// - 聴いた晩の振り返りが残っていれば、朝の振り返りを自動で出す
+    /// - 過ぎた晩の予約を捨てる
+    func refreshForNewDay() {
+        let tonight = nightDay(0)
+        if reservations.keys.contains(where: { $0 < tonight }) {
+            reservations = reservations.filter { $0.key >= tonight }
+            persistSession()
+        }
+        let nightOver = nightScreenNight.map { $0 < tonight } ?? false
+        if nightScreen != nil && nightOver && !inBedtimeWindow { endPlayback() }
+        if morningDue && !morningOpen && !onboardingOpen {
+            let wasOpen = nightScreen != nil
+            if wasOpen { endPlayback() }
+            // 全画面の画面は、同時に2つ出せない。夜の画面が閉じてから出す。
+            Task { @MainActor in
+                if wasOpen { try? await Task.sleep(for: .milliseconds(600)) }
+                if morningDue && !morningOpen { morningOpen = true }
+            }
+        }
+    }
 
     init(shows: [Show], episodes: [String: [Episode]], history: [PlayRecord] = [], favorites: Set<String> = [],
          queue: [String] = [], currentShowID: String? = nil, lastNight: LastNight? = nil,
@@ -525,6 +552,6 @@ final class AppModel {
         } else {
             player.start(url: nil, title: candidate.show.title)
         }
-        if nightScreen == nil { nightScreen = .playing }
+        if nightScreen == nil { nightScreenNight = nightDay(0); nightScreen = .playing }
     }
 }
