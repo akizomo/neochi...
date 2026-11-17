@@ -56,6 +56,10 @@ final class AppModel {
         loadState == .ready && !shows.isEmpty && !genresAsked && healthChecked && !needsBedtimeQuestion
     }
 
+    /// 好みのジャンルの画面を出しているか。ジャンルを保存した(= 聞いた)あとも、次のステップ(お気に入り)まで開いたままにするため、
+    /// 「聞いたか」(genresAsked)とは別に持つ。
+    var genreSheetOpen = false
+
     func savePreferredGenres(_ genres: Set<String>) {
         preferredGenres = genres; genresAsked = true
         UserDefaults.standard.set(Array(genres).sorted(), forKey: "preferredGenres")
@@ -63,7 +67,7 @@ final class AppModel {
     }
 
     /// 表示中のタブ。空の状態から「見つける」へ案内するために、画面の外から切り替える。
-    enum AppTab: Hashable { case tonight, discover, me }
+    enum AppTab: Hashable { case tonight, discover, log, settings }
     var selectedTab: AppTab = .tonight
 
     /// ヘルスケアの履歴から読んだ、晩ごとの就寝時刻。確認が済んだら healthChecked。
@@ -85,7 +89,7 @@ final class AppModel {
         openNightIfBedtime()
     }
 
-    /// 自分タブに出す、ふだんの就寝時刻。履歴が十分なら自動(中央値)、足りなければ手で決めたもの。
+    /// 設定に出す、ふだんの就寝時刻。履歴が十分なら自動(中央値)、足りなければ手で決めたもの。
     var bedtimeIsAuto: Bool { BedtimeWindow.typicalMinute(starts: healthStarts, calendar: .current) != nil }
     var bedtimeMinute: Int? {
         if let m = BedtimeWindow.typicalMinute(starts: healthStarts, calendar: .current) { return m }
@@ -198,7 +202,7 @@ final class AppModel {
         return max(0, Int((o.timeIntervalSince(s) / 60).rounded()))
     }
 
-    /// ヘルスケアの許可の状態(自分タブで案内に使う)。
+    /// ヘルスケアの許可の状態(設定で案内に使う)。
     var healthAccess: HealthService.Access = .asked
     func refreshHealthAccess() async { healthAccess = await health.access() }
 

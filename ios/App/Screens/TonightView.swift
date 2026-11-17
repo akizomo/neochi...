@@ -39,6 +39,7 @@ struct TonightView: View {
                     stepButton("arrow.right", label: "次の晩", enabled: night < labels.count - 1) { night += 1 }
                 }
             }
+
         }
     }
 
@@ -97,8 +98,8 @@ struct TonightView: View {
             Text("お気に入りは、まだありません。").ncText(NCText.body)
             Text("気になる番組のしおりを押すと、ここに並びます。").ncText(NCText.footnote, .textSub).multilineTextAlignment(.center)
             Button { model.selectedTab = .discover } label: {
-                Text("見つけるで探す").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                    .background(Capsule().fill(Color.nc(.textMain)))
+                Text("見つける").ncText(NCText.body).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                    .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
             }
             .buttonStyle(.pressable)
         }

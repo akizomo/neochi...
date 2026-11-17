@@ -23,7 +23,8 @@ struct RootView: View {
         TabView(selection: $model.selectedTab) {
             TonightView().tabItem { Label("今夜", systemImage: "moon") }.tag(AppModel.AppTab.tonight)
             DiscoverView().tabItem { Label("見つける", systemImage: "magnifyingglass") }.tag(AppModel.AppTab.discover)
-            LogView().tabItem { Label("自分", systemImage: "person.crop.circle") }.tag(AppModel.AppTab.me)
+            LogView().tabItem { Label("記録", systemImage: "clock") }.tag(AppModel.AppTab.log)
+            SettingsTab().tabItem { Label("設定", systemImage: "gearshape") }.tag(AppModel.AppTab.settings)
         }
         .tint(Color.nc(.textMain))
         // 番組を読み込めるまで(Release)。読み込めなかったときは、見本の番組を出さず、やり直しを出す。
@@ -44,7 +45,8 @@ struct RootView: View {
         .onAppear { model.openNightIfBedtime() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime(); Task { await model.refreshHealthAccess() } } }
         .sheet(isPresented: Binding(get: { model.needsBedtimeQuestion }, set: { _ in })) { BedtimeSetupView().interactiveDismissDisabled() }
-        .sheet(isPresented: Binding(get: { model.needsGenreQuestion }, set: { _ in })) { GenrePreferenceView().interactiveDismissDisabled() }
+        .sheet(isPresented: $model.genreSheetOpen) { GenrePreferenceView().interactiveDismissDisabled() }
+        .onChange(of: model.needsGenreQuestion) { _, needs in if needs { model.genreSheetOpen = true } }
         .fullScreenCover(isPresented: $model.morningOpen) { MorningView() }
     }
 }
