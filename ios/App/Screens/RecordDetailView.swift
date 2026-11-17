@@ -9,6 +9,9 @@ struct RecordDetailView: View {
     @State private var note = ""
     @State private var noteOpen = false
     @State private var loaded = false
+    @State private var editingRatings = false
+    @State private var interest: Int?
+    @State private var calm: Int?
 
     private var log: SleepLog? { model.logs.first { $0.id == logID } }
     private static let dayFormat: DateFormatter = {
@@ -27,7 +30,7 @@ struct RecordDetailView: View {
                     result(log)
                     showRow(show, log)
                     if log.source == .watch, let m = log.latencyMinutes { sleepCard(log, minutes: m) }
-                    if log.interestRating != nil || log.calmVote != nil { ratings(log) }
+                    ratings(log)
                     memo(log)
                 }
                 .padding(NCSpace.s4)
@@ -47,6 +50,11 @@ struct RecordDetailView: View {
                     Text("分").ncText(NCText.title, .accentResult)
                 }
                 Text(NCString.comment(minutes: m)).ncText(NCText.body)
+                if log.source == .watch {
+                    LatencyGauge(minutes: m).padding(.top, NCSpace.s2)
+                    let recent = model.recentNights(upTo: log.startedAt, currentLogID: log.id)
+                    if recent.count >= 2 { RecentNightsChart(nights: recent).padding(.top, NCSpace.s2) }
+                }
             } else if let r = log.selfReport {
                 Text(r.label).ncText(NCText.title, .accentResult)
                 Text(r.hint).ncText(NCText.body, .textSub)
@@ -108,35 +116,57 @@ struct RecordDetailView: View {
         }
     }
 
+    /// つけた評価。あとから変えられる(「変更」で入力に切り替え、「完了」で保存する)。
     private func ratings(_ log: SleepLog) -> some View {
         VStack(alignment: .leading, spacing: NCSpace.s3) {
-            Text("つけた評価").ncText(NCText.headline)
-            if let v = log.interestRating {
-                let z = NCString.interestZone(v)
-                VStack(alignment: .leading, spacing: NCSpace.s2) {
-                    HStack {
-                        Text("引き込み力").ncText(NCText.footnote, .textSub)
-                        Spacer()
-                        Text("\(v) / 10 ・ \(NCString.interestZoneName(z))").ncText(NCText.footnote)
-                    }
-                    HStack(spacing: 3) {
-                        ForEach(1...10, id: \.self) { i in
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(i == v ? Color.nc(.accentFactor) : Color.nc(.line)).frame(height: 8)
-                        }
-                    }
-                    Text(NCString.interestZoneNote(z)).ncText(NCText.caption, .textSub)
+            HStack {
+                Text("つけた評価").ncText(NCText.headline)
+                Spacer()
+                Button {
+                    if editingRatings { model.updateRatings(logID: log.id, interest: interest, calm: calm) }
+                    else { interest = log.interestRating; calm = log.calmVote }
+                    withAnimation { editingRatings.toggle() }
+                } label: {
+                    Text(editingRatings ? "完了" : (log.interestRating == nil && log.calmVote == nil ? "つける" : "変更"))
+                        .ncText(NCText.footnote, .textSub).frame(minHeight: NCSize.tapMin)
                 }
+                .buttonStyle(.pressable)
             }
-            if let c = log.calmVote {
-                HStack {
-                    Text("起伏").ncText(NCText.footnote, .textSub)
-                    Spacer()
-                    HStack(spacing: 0) {
-                        ForEach(1...5, id: \.self) { n in
-                            Text("★").ncText(NCText.numMd, n <= c ? .accentFactor : .borderControl)
+            if editingRatings {
+                InterestRatingPicker(selection: $interest)
+                ChoiceScale(question: NCString.calmQuestion, info: NCString.infoCalm, count: 5, selection: $calm,
+                            leading: NCString.calmLow, trailing: NCString.calmHigh)
+            } else {
+                if let v = log.interestRating {
+                    let z = NCString.interestZone(v)
+                    VStack(alignment: .leading, spacing: NCSpace.s2) {
+                        HStack {
+                            Text("引き込み力").ncText(NCText.footnote, .textSub)
+                            Spacer()
+                            Text("\(v) / 10 ・ \(NCString.interestZoneName(z))").ncText(NCText.footnote)
+                        }
+                        HStack(spacing: 3) {
+                            ForEach(1...10, id: \.self) { i in
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(i == v ? Color.nc(.accentFactor) : Color.nc(.line)).frame(height: 8)
+                            }
+                        }
+                        Text(NCString.interestZoneNote(z)).ncText(NCText.caption, .textSub)
+                    }
+                }
+                if let c = log.calmVote {
+                    HStack {
+                        Text("起伏").ncText(NCText.footnote, .textSub)
+                        Spacer()
+                        HStack(spacing: 0) {
+                            ForEach(1...5, id: \.self) { n in
+                                Text("★").ncText(NCText.numMd, n <= c ? .accentFactor : .borderControl)
+                            }
                         }
                     }
+                }
+                if log.interestRating == nil && log.calmVote == nil {
+                    Text("まだ評価していません").ncText(NCText.footnote, .textSub)
                 }
             }
         }

@@ -193,6 +193,17 @@ final class AppModel {
                  genreStreakNights: 3, pendingMorning: true)
         m.analyses = SampleData.analyses
         m.sleepPoints = SampleData.sleepPoints
+        #if DEBUG
+        // 見本: 最近の夜の記録(寝落ちまでの分のグラフを確かめる用)。端末には保存しない。
+        if m.logs.isEmpty {
+            for (i, mins) in [34, 22, 14, 41, 9].enumerated() {
+                let start = Date().addingTimeInterval(-Double(6 - i) * 86400)
+                m.logs.append(SleepLog(id: "sample-\(i)", episodeID: "phonebook-\(7 - i)", showID: "phonebook", startedAt: start,
+                                      sleepOnsetAt: start.addingTimeInterval(Double(mins) * 60), source: .watch,
+                                      interestRating: 6, calmVote: 4))
+            }
+        }
+        #endif
         return m
     }
 
@@ -273,6 +284,33 @@ final class AppModel {
         LogStore.save(logs)
         let log = logs[i]
         Task { try? await SupabaseClient.shared.upload(log) }
+    }
+
+    /// 評価(引き込み力・起伏)をあとから直す。空にもできる。サーバーにも反映する。
+    func updateRatings(logID: String, interest: Int?, calm: Int?) {
+        guard let i = logs.firstIndex(where: { $0.id == logID }) else { return }
+        guard logs[i].interestRating != interest || logs[i].calmVote != calm else { return }
+        logs[i].interestRating = interest
+        logs[i].interestVote = nil          // 古い3択は、10段階に置き換わる
+        logs[i].calmVote = calm
+        LogStore.save(logs)
+        let log = logs[i]
+        Task { try? await SupabaseClient.shared.upload(log) }
+    }
+
+    /// 最近の夜の、寝落ちまでの分数(実測だけ。古い順)。`including` は、まだ保存していない今夜の分。
+    func recentNights(upTo date: Date? = nil, limit: Int = 7, including current: (date: Date, minutes: Int)? = nil,
+                      currentLogID: String? = nil) -> [RecentNightsChart.Night] {
+        var out: [RecentNightsChart.Night] = logs.compactMap { l in
+            guard l.source == .watch, let m = l.latencyMinutes, date.map({ l.startedAt <= $0 }) ?? true else { return nil }
+            return .init(id: l.id, date: l.startedAt, minutes: m, current: l.id == currentLogID)
+        }
+        if let c = current { out.append(.init(id: "current", date: c.date, minutes: c.minutes, current: true)) }
+        out.sort { $0.date < $1.date }
+        // 同じ日に何本かあるときは、日ごとに最後の1本にする(棒が重ならないように)
+        var byDay: [Date: RecentNightsChart.Night] = [:]
+        for n in out { byDay[Calendar.current.startOfDay(for: n.date)] = n }
+        return Array(byDay.values.sorted { $0.date < $1.date }.suffix(limit))
     }
 
     /// 読み込みの結果(確認用)。どこで失敗したかをここに残す。
