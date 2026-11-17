@@ -51,14 +51,18 @@ final class AppModel {
     var preferredGenres: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "preferredGenres") ?? [])
     var genresAsked = UserDefaults.standard.bool(forKey: "genresAsked")
 
-    /// 就寝時刻の質問が済んだあとで、番組が読み込めたら、好みのジャンルを聞く(1度だけ)。
-    var needsGenreQuestion: Bool {
-        loadState == .ready && !shows.isEmpty && !genresAsked && healthChecked && !needsBedtimeQuestion
-    }
+    /// 初回のオンボーディング(OnboardingView)が済んだか。前の版でジャンルを答えた人は、済んだものとする。
+    var onboardingDone = UserDefaults.standard.bool(forKey: "onboardingDone") || UserDefaults.standard.bool(forKey: "genresAsked")
+    /// 番組が読み込めたら、オンボーディングを出す(1度だけ)。
+    var needsOnboarding: Bool { loadState == .ready && !shows.isEmpty && !onboardingDone && healthChecked }
+    var onboardingOpen = false
 
-    /// 好みのジャンルの画面を出しているか。ジャンルを保存した(= 聞いた)あとも、次のステップ(お気に入り)まで開いたままにするため、
-    /// 「聞いたか」(genresAsked)とは別に持つ。
-    var genreSheetOpen = false
+    func finishOnboarding() {
+        onboardingDone = true; UserDefaults.standard.set(true, forKey: "onboardingDone")
+        if !genresAsked { savePreferredGenres(preferredGenres) }
+        onboardingOpen = false
+        openNightIfBedtime()
+    }
 
     func savePreferredGenres(_ genres: Set<String>) {
         preferredGenres = genres; genresAsked = true
@@ -74,19 +78,19 @@ final class AppModel {
     var healthStarts: [Date] = []
     var healthChecked = false
 
-    /// 履歴が足りないときだけ、就寝時刻を聞く。
-    var needsBedtimeQuestion: Bool {
-        healthChecked && !bedtimeAsked && healthStarts.count < BedtimeWindow.minimumSamples
-    }
-
+    /// 起動時。許可は求めない(求めるのは、オンボーディングの説明のあとと、設定から)。許可を聞いたあとなら、履歴を読む。
+    /// 就寝時刻は聞かない。ヘルスケアの履歴か、聴いた記録がたまると自動で決まり、設定から手でも決められる。
     func loadHealthBedtimes() async {
-        do {
-            try await health.requestAuthorization()
-            let raw = try await health.sleepStarts()
-            healthStarts = BedtimeWindow.nightlyStarts(from: raw, calendar: .current)
-        } catch { healthStarts = [] }
+        let access = await health.access()
+        healthAccess = access
+        if access == .asked {
+            do {
+                let raw = try await health.sleepStarts()
+                healthStarts = BedtimeWindow.nightlyStarts(from: raw, calendar: .current)
+            } catch { healthStarts = [] }
+        } else { healthStarts = [] }
         healthChecked = true
-        openNightIfBedtime()
+        if onboardingDone { openNightIfBedtime() }
     }
 
     /// 設定に出す、ふだんの就寝時刻。履歴が十分なら自動(中央値)、足りなければ手で決めたもの。
@@ -216,7 +220,6 @@ final class AppModel {
     func refreshOnset() async {
         guard let s = playStartedAt else { return }
         do {
-            try await health.requestAuthorization()
             onsetAt = try await health.sleepOnset(after: s)
         } catch { onsetAt = nil }
     }

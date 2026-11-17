@@ -44,9 +44,8 @@ struct RootView: View {
         .task { await model.refreshHealthAccess() }
         .onAppear { model.openNightIfBedtime() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime(); Task { await model.refreshHealthAccess() } } }
-        .sheet(isPresented: Binding(get: { model.needsBedtimeQuestion }, set: { _ in })) { BedtimeSetupView().interactiveDismissDisabled() }
-        .sheet(isPresented: $model.genreSheetOpen) { GenrePreferenceView().interactiveDismissDisabled() }
-        .onChange(of: model.needsGenreQuestion) { _, needs in if needs { model.genreSheetOpen = true } }
+        .sheet(isPresented: $model.onboardingOpen) { OnboardingView().interactiveDismissDisabled() }
+        .onChange(of: model.needsOnboarding, initial: true) { _, needs in if needs { model.onboardingOpen = true } }
         .fullScreenCover(isPresented: $model.morningOpen) { MorningView() }
     }
 }

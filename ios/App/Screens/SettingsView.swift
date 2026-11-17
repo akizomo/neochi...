@@ -97,7 +97,7 @@ struct SettingsView: View {
                     if notAsked { Task { await model.requestHealth() } }
                     else if let u = URL(string: "x-apple-health://") { openURL(u) }
                 } label: {
-                    Text(notAsked ? "許可する" : "ヘルスケアを開く").ncText(NCText.headline, .bgBase)
+                    Text(notAsked ? "ヘルスケアとつなぐ" : "ヘルスケアを開く").ncText(NCText.headline, .bgBase)
                         .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
                         .background(Capsule().fill(Color.nc(.textMain)))
                 }
@@ -111,7 +111,7 @@ struct SettingsView: View {
     /// 好みのジャンル(最初に聞いたもの)。記録がたまるまでの、最初の番組と並びに使う。
     private var genreRow: some View {
         let names = Discover.genreOrder.filter { model.preferredGenres.contains($0) }
-        return NavigationLink { GenrePreferenceView(editing: true) } label: {
+        return NavigationLink { GenrePreferenceView() } label: {
             HStack {
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
                     Text("好みのジャンル").ncText(NCText.footnote, .textSub)
