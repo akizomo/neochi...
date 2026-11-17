@@ -61,6 +61,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
         (d / f"{_safe(ep.id)}.json").write_text(json.dumps({
             "episode_id": ep.id, "show": show.title, "title": ep.title,
             "transcript": with_minute_marks(spans) if spans else text,
+            "opening": with_second_marks(spans) if spans else "",   # 本編の開始を秒で答えるための、冒頭5分
         }, ensure_ascii=False, indent=1), encoding="utf-8")
     elif input_depth == "transcript":
         try:
@@ -77,7 +78,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
     total, final, final_reason = _stars(calm, ear, level, ep.id, cfg, store, interest_score)
 
     store.upsert("show", {"id": show.id, "title": show.title, "publisher": show.publisher,
-                          "rss_url": show.rss_url, "genre": show.genre, "cohort": show.cohort, "lang": show.lang,
+                          "rss_url": show.rss_url, "genre": show.genre, "cohort": show.cohort, "apple_category": show.apple_category, "lang": show.lang,
                           "artwork_url": show.artwork_url, "link_url": show.link_url})
     store.upsert("episode", {"id": ep.id, "show_id": show.id, "title": ep.title, "audio_url": ep.audio_url,
                              "duration_sec": ep.duration_sec or (int(feat["duration_sec"]) if feat.get("duration_sec") else None),
@@ -112,7 +113,11 @@ def _new_outputs(v: dict | None) -> dict:
     """1分ごとの起伏と内容の要約(列)。無いときは書かない(古い回は null のまま、画面はその図と箱を出さない)。"""
     if not v:
         return {}
-    return {k: v[k] for k in ("calm_per_min", "content_summary") if v.get(k) is not None}
+    out = {k: v[k] for k in ("calm_per_min", "content_summary") if v.get(k) is not None}
+    cs = v.get("content_start")
+    if cs:  # 本編の開始(秒と、最初の一言)。解析時の音声での位置。アプリは一言で位置を合わせ直す
+        out["content_start_sec"], out["content_start_anchor"] = cs["sec"], cs["anchor"]
+    return out
 
 
 def with_minute_marks(spans) -> str:
@@ -127,6 +132,16 @@ def with_minute_marks(spans) -> str:
     return "".join(out).strip()
 
 
+def with_second_marks(spans, until_sec: int = llm.CONTENT_START_MAX_SEC + 60) -> str:
+    """冒頭の文字起こしに、[m:ss] の目印を行ごとに入れる(本編が始まる秒を、判定で答えられるように)。"""
+    lines = []
+    for a, _b, t in spans:
+        if a > until_sec:
+            break
+        lines.append(f"[{int(a // 60)}:{int(a % 60):02d}] {t.strip()}")
+    return "\n".join(lines)
+
+
 def _safe(eid: str) -> str:
     return "".join(c if c.isalnum() or c in "-_" else "_" for c in eid)[:120]
 
@@ -134,7 +149,8 @@ def _safe(eid: str) -> str:
 def _stars(calm, ear, level, episode_id: str, cfg: dict, store, interest_score=None):
     """(AI解析だけの点, 総合評点, final_reason)。総合評点 = みんなの評価を🌊🎯に足した点に、実測を足したもの。"""
     total = scoring.total_star(calm, ear, level, cfg, interest_score)
-    calm_votes, interest_votes = store.votes(episode_id)
+    calm_votes, interest_votes, legacy_votes = store.votes(episode_id)
+    interest_votes = interest_votes + [scoring.interest_rating_from_vote(v, cfg) for v in legacy_votes]
     with_crowd = scoring.total_star(calm, ear, level, cfg, interest_score, calm_votes, interest_votes)
     watch = store.episode_watch_latencies(episode_id)
     median = statistics.median(watch) if watch else None
@@ -169,6 +185,31 @@ def remeasure_acoustics(row: dict, audio_url: str, lang: str, cfg: dict, store, 
     return out
 
 
+def recalm(row: dict, cfg: dict) -> dict:
+    """保存済みの項目の点から、🌊★を計算し直す(calm_slope を変えたとき)。項目がない古い解析は、そのまま。"""
+    items = ((row.get("reasons") or {}).get("items") or {}).get("calm")
+    if not items:
+        return row
+    return {**row, "calm_star": scoring.calm_star(sum(v["score"] for v in items.values()), cfg)}
+
+
+def reear(row: dict, lang: str, cfg: dict) -> dict:
+    """保存済みの特徴から、🎧★と内訳を計算し直す(🎧の基準や重みを変えたとき)。測り直しではない。"""
+    if not row.get("features"):
+        return row
+    feat = dict(row["features"])
+    ear = scoring.ear_star(feat, lang, cfg)
+    if ear is not None:
+        feat["ear_parts"] = scoring.ear_parts(feat, lang, cfg)
+    return {**row, "features": feat, "ear_star": ear}
+
+
+def restar_ai(row: dict, cfg: dict) -> float | None:
+    """保存済みの解析から、AI解析だけの点(total_star)を計算し直す。"""
+    return scoring.total_star(row.get("calm_star"), row.get("ear_star"), row.get("interest_level"), cfg,
+                              row.get("interest_score"))
+
+
 def restar(row: dict, cfg: dict, store) -> tuple[float | None, str | None]:
     """保存済みの解析から、総合評点と final_reason を計算し直す(実測・みんなの評価が増えたとき、ルールを変えたとき)。"""
     _, final, reason = _stars(row.get("calm_star"), row.get("ear_star"), row.get("interest_level"),
@@ -181,7 +222,7 @@ def apply_judgement(j: dict, cfg: dict, store) -> dict:
 
     j は config/rubric.md の出力形式(項目ごとの 0/1/2)に episode_id を足したもの。値の検証は llm.parse_judgement。
     """
-    v = llm.parse_judgement(json.dumps(j, ensure_ascii=False))
+    v = llm.parse_judgement(json.dumps(j, ensure_ascii=False), cfg)
     row = store.get("analysis", j["episode_id"])
     if row is None:
         raise KeyError(f"解析が見つかりません: {j['episode_id']}")

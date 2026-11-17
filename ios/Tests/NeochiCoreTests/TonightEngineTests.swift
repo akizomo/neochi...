@@ -11,7 +11,7 @@ final class TonightEngineTests: XCTestCase {
     func eps(_ show: String, top: Int) -> [Episode] {
         (0..<5).compactMap { i in
             let n = top - i
-            return n >= 1 ? Episode(id: "\(show)-\(n)", showID: show, title: "第\(n)回", number: n) : nil
+            return n >= 1 ? Episode(id: "\(show)-\(n)", showID: show, title: "第\(n)話", number: n) : nil
         }
     }
 
@@ -23,6 +23,34 @@ final class TonightEngineTests: XCTestCase {
                        "train": eps("train", top: 31), "weather": eps("weather", top: 88)],
             history: history, favorites: favorites, queue: queue, currentShowID: current,
             lastNight: lastNight, genreStreakNights: streak)
+    }
+
+    // 最初の番組は、好みのジャンルの中で評点がいちばん高い番組。理由は「好みの〜」
+    func testFirstRunStartsWithPreferredGenreBestShow() {
+        var c = ctx(favorites: [], current: "")
+        c.currentShowID = nil
+        c.preferredGenres = ["解説"]
+        let s = TonightEngine.slate(ctx: c)
+        XCTAssertEqual(s[0].show.id, "train")                       // 解説の中で評点が高い(4.1)。全体の最高は朗読の電話帳(4.9)
+        XCTAssertEqual(s[0].reason, .preferredGenre(genre: "解説"))
+        XCTAssertEqual(Reason.preferredGenre(genre: "朗読").text, "好みの朗読")
+    }
+
+    // 好みがなければ、全体で評点がいちばん高い番組から始める
+    func testFirstRunWithoutPreferenceStartsWithBestShow() {
+        var c = ctx(favorites: [], current: "")
+        c.currentShowID = nil
+        XCTAssertEqual(TonightEngine.slate(ctx: c)[0].show.id, "phonebook")
+    }
+
+    // 好みのジャンルの番組が、ほかより先に並ぶ。好みがなければ、ちがう系統(解説)が先になる
+    func testPreferredGenreIsOrderedBeforeOthers() {
+        var c = ctx(favorites: [], current: "phonebook")
+        XCTAssertEqual(TonightEngine.slate(ctx: c).last?.show.id, "train")
+        c.preferredGenres = ["朗読"]
+        let s = TonightEngine.slate(ctx: c)
+        XCTAssertEqual(s.last?.show.id, "plant")
+        XCTAssertEqual(s.last?.reason, .preferredGenre(genre: "朗読"))
     }
 
     func play(_ show: String, _ n: Int, times: Int = 1, day: Int = 1) -> [PlayRecord] {
@@ -94,14 +122,15 @@ final class TonightEngineTests: XCTestCase {
 
     // 理由の文: 内部の分類は系統名に直す。出せない分類は名前を出さない。「1晩続いた」とは書かない
     func testReasonCopy() {
-        XCTAssertEqual(Reason.genreStreak(from: "寝落ち・睡眠導入", to: "芸人ラジオ・バラエティ", nights: 1).text, "寝落ち用から、芸人ラジオへ")
-        XCTAssertEqual(Reason.genreStreak(from: "寝落ち・睡眠導入", to: "人気番組（一般）", nights: 1).text, "ちがう系統の番組")
+        XCTAssertEqual(Reason.genreStreak(from: "寝落ち・睡眠導入", to: "芸人ラジオ・バラエティ", nights: 1).text, "寝落ち用から、コメディへ")
+        XCTAssertEqual(Reason.genreStreak(from: "寝落ち・睡眠導入", to: "とても長い分類の名前です", nights: 1).text, "ちがう系統の番組")
         XCTAssertEqual(Reason.genreContinues(from: "朗読", to: "朗読").text, "ちがう系統の番組")
         XCTAssertEqual(Reason.sameGenreOther(genre: "教養（比較用含む）").text, "同じ教養の、別の番組")
-        XCTAssertEqual(Reason.sameGenreOther(genre: "人気番組（一般）").text, "同じ系統の、別の番組")
-        XCTAssertEqual(Reason.favorite(genre: "人気番組（一般）").text, "お気に入りの番組")
-        XCTAssertEqual(Reason.tookLong(minutes: 40).text, "昨夜は40分。次の回へ")
+        XCTAssertEqual(Reason.sameGenreOther(genre: "とても長い分類の名前です").text, "同じ系統の、別の番組")
+        XCTAssertEqual(Reason.favorite(genre: "とても長い分類の名前です").text, "お気に入りの番組")
+        XCTAssertEqual(Reason.tookLong(minutes: 40).text, "昨夜は40分。次の話へ")
         XCTAssertEqual(GenreLabel.display("寝落ち・睡眠導入（海外基準）"), "寝落ち用")
+        XCTAssertEqual(GenreLabel.display("芸人ラジオ"), "コメディ")
         XCTAssertNil(GenreLabel.display("とても長い分類の名前です"))
         // どの理由も20字まで(カードの1行に収める)
         let all: [Reason] = [.sleptFast(minutes: 120), .tookLong(minutes: 120), .queued, .continuation, .unlistened,
@@ -182,9 +211,19 @@ final class TonightEngineTests: XCTestCase {
         XCTAssertNil(TonightEngine.listenNow(show: weather, ctx: empty))
     }
 
-    // 興味の3択の値は、DB の interest_vote の制約(-1, 0, 1)と同じ
-    func testInterestAnswerValuesMatchDatabase() {
-        XCTAssertEqual(InterestAnswer.allCases.map(\.rawValue), [-1, 0, 1])
-        XCTAssertEqual(NCString.interestLabel(.justRight), "ちょうどよかった")
+    // 🎯 の10段階のゾーンは、AIの採点(config/scoring.yaml の interest_zone 4〜6)と同じ区切り
+    func testInterestZonesMatchScoring() {
+        XCTAssertEqual((1...10).map { NCString.interestZone($0) },
+                       [.bored, .bored, .bored, .justRight, .justRight, .justRight, .absorbed, .absorbed, .absorbed, .absorbed])
+        XCTAssertEqual(NCString.interestZoneName(.justRight), "ちょうどよい")
+    }
+
+    // 話を指定した候補。聴いた回数から、何回目かと理由を決める
+    func testCandidateForEpisode() {
+        let c = ctx(history: play("phonebook", 7, times: 2))
+        let heard = TonightEngine.candidate(show: phonebook, episode: eps("phonebook", top: 7)[0], ctx: c)
+        XCTAssertEqual(heard.playCount, 3); XCTAssertEqual(heard.reason, .heardBefore)
+        let fresh = TonightEngine.candidate(show: phonebook, episode: eps("phonebook", top: 7)[1], ctx: c)
+        XCTAssertEqual(fresh.playCount, 1); XCTAssertEqual(fresh.reason, .unlistened)
     }
 }

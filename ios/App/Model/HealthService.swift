@@ -14,8 +14,18 @@ final class HealthService {
         try await store.requestAuthorization(toShare: [], read: [HKCategoryType(.sleepAnalysis)])
     }
 
+    /// 許可を聞いたことがあるか。読み取りの許可が「あるか・ないか」は、プライバシーのため、アプリからは分からない
+    /// (分かるのは、聞く画面を出す必要があるか = まだ聞いていないか、だけ)。
+    enum Access { case unavailable, notAsked, asked }
+
+    func access() async -> Access {
+        guard isAvailable else { return .unavailable }
+        let s = try? await store.statusForAuthorizationRequest(toShare: [], read: [HKCategoryType(.sleepAnalysis)])
+        return s == .shouldRequest ? .notAsked : .asked
+    }
+
     /// 再生を始めた時刻 `start` 以降で、最初に「眠っている」と記録された時刻。なければ nil(確認中)。
-    /// ウォッチの推定は数分ずれることがある。分単位までにとどめる。
+    /// 睡眠の推定は数分ずれることがある。分単位までにとどめる。
     func sleepOnset(after start: Date, withinHours hours: Double = 6) async throws -> Date? {
         guard isAvailable else { return nil }
         let type = HKCategoryType(.sleepAnalysis)

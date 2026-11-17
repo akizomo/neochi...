@@ -20,10 +20,10 @@ struct RootView: View {
 
     var body: some View {
         @Bindable var model = model
-        TabView {
-            TonightView().tabItem { Label("今夜", systemImage: "moon") }
-            DiscoverView().tabItem { Label("見つける", systemImage: "magnifyingglass") }
-            LogView().tabItem { Label("記録", systemImage: "clock") }
+        TabView(selection: $model.selectedTab) {
+            TonightView().tabItem { Label("今夜", systemImage: "moon") }.tag(AppModel.AppTab.tonight)
+            DiscoverView().tabItem { Label("見つける", systemImage: "magnifyingglass") }.tag(AppModel.AppTab.discover)
+            LogView().tabItem { Label("自分", systemImage: "person.crop.circle") }.tag(AppModel.AppTab.me)
         }
         .tint(Color.nc(.textMain))
         // 番組を読み込めるまで(Release)。読み込めなかったときは、見本の番組を出さず、やり直しを出す。
@@ -40,9 +40,11 @@ struct RootView: View {
         .fullScreenCover(item: $model.nightScreen) { _ in NightView() }
         .task { await model.loadRemote() }
         .task { await model.loadHealthBedtimes() }
+        .task { await model.refreshHealthAccess() }
         .onAppear { model.openNightIfBedtime() }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime() } }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime(); Task { await model.refreshHealthAccess() } } }
         .sheet(isPresented: Binding(get: { model.needsBedtimeQuestion }, set: { _ in })) { BedtimeSetupView().interactiveDismissDisabled() }
+        .sheet(isPresented: Binding(get: { model.needsGenreQuestion }, set: { _ in })) { GenrePreferenceView().interactiveDismissDisabled() }
         .fullScreenCover(isPresented: $model.morningOpen) { MorningView() }
     }
 }

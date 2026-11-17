@@ -75,10 +75,10 @@ def test_crowd_blends_into_content_axes_only(cfg):
     base = scoring.total_star(5.0, 4.0, None, cfg, 2)
     # みんなの評価は10件未満なら入れない
     assert scoring.total_star(5.0, 4.0, None, cfg, 2, calm_votes=[1] * 9) == base
-    assert scoring.total_star(5.0, 4.0, None, cfg, 2, interest_votes=[0] * 9) == base
-    # 🌊: みんなが低く付けると、総合が下がる。🎯: 「ちょうどよかった」が多いと、上がる
+    assert scoring.total_star(5.0, 4.0, None, cfg, 2, interest_votes=[5] * 9) == base
+    # 🌊: みんなが低く付けると、総合が下がる。🎯: 10段階の4〜6(ゾーン)が多いと、上がる
     assert scoring.total_star(5.0, 4.0, None, cfg, 2, calm_votes=[1] * 20) < base
-    assert scoring.total_star(5.0, 4.0, None, cfg, 2, interest_votes=[0] * 20) > base
+    assert scoring.total_star(5.0, 4.0, None, cfg, 2, interest_votes=[5] * 20) > base
     # 🎧 には、みんなの評価を足さない(votes を渡しても、🎧の点は計算値のまま)
     assert scoring.blend_axis(4.0, 1.0, 5, cfg) == 4.0
 
@@ -90,10 +90,17 @@ def test_crowd_weight_is_capped_per_axis(cfg):
     assert abs(w_big - (5.0 * 0.5 + 1.0 * 0.5)) < 0.05   # 上限 0.5
 
 
-def test_interest_vote_star_matches_zone_ends(cfg):
-    assert scoring.interest_vote_star(0, cfg) == 5.0   # ちょうどよかった
-    assert scoring.interest_vote_star(-1, cfg) == 3.0  # 退屈だった(ゾーンの低い側の端)
-    assert scoring.interest_vote_star(1, cfg) == 1.0   # 聴き入った(引き込まれすぎの端)
+def test_interest_rating_uses_the_same_zone_as_ai(cfg):
+    # みんなの10段階は、AIの🎯と同じゾーンの式に通す
+    base = scoring.total_star(5.0, 4.0, None, cfg, 5)
+    assert scoring.total_star(5.0, 4.0, None, cfg, 5, interest_votes=[5] * 20) == base
+    assert scoring.total_star(5.0, 4.0, None, cfg, 5, interest_votes=[10] * 20) < base   # 引き込まれすぎ
+    assert scoring.total_star(5.0, 4.0, None, cfg, 5, interest_votes=[1] * 20) < base    # 退屈
+
+
+def test_legacy_three_choice_keeps_the_same_stars(cfg):
+    f = scoring.interest_rating_from_vote
+    assert [scoring.interest_star(f(v, cfg), cfg) for v in (-1, 0, 1)] == [3.0, 5.0, 1.0]
 
 
 def test_final_star_watch(cfg):
@@ -103,8 +110,8 @@ def test_final_star_watch(cfg):
     f, reason = scoring.final_star(4.5, cfg, 40, 3)
     assert f < 4.5 and reason and "実測" in reason
     # 実測が短いほど高い。10分以下は 5.0、40分以上は 1.0
-    assert scoring.watch_star(5, cfg) == 5.0 and scoring.watch_star(45, cfg) == 1.0
-    assert scoring.watch_star(25, cfg) == 3.0
+    assert scoring.watch_star(5, cfg) == 5.0 and scoring.watch_star(60, cfg) == 1.0
+    assert scoring.watch_star(37.5, cfg) == 3.0
     # 件数が増えるほど実測に寄る(上限 0.6)
     f3, _ = scoring.final_star(4.5, cfg, 40, 3)
     f50, _ = scoring.final_star(4.5, cfg, 40, 50)
@@ -113,17 +120,16 @@ def test_final_star_watch(cfg):
 
 def test_z_rank(zcfg):
     assert z_rank(None, zcfg) is None
-    assert z_rank(2.9, zcfg) is None              # 基準未満は掲載しない
-    assert z_rank(3.0, zcfg) == "Z"
-    assert z_rank(3.6, zcfg) == "ZZ"
-    assert z_rank(4.2, zcfg) == "ZZZ"             # AI解析だけでも付く(実測の件数は条件にしない)
+    assert z_rank(3.5, zcfg) is None              # 基準未満は掲載しない
+    assert z_rank(3.6, zcfg) == "Z"
+    assert z_rank(4.1, zcfg) == "ZZ"
+    assert z_rank(4.5, zcfg) == "ZZZ"             # AI解析だけでも付く(実測の件数は条件にしない)
 
 
-def test_z_rank_demote_needs_watch(zcfg):
-    assert z_rank(3.2, zcfg, current="ZZZ", watch_n=4) == "ZZZ"   # 実測5件未満は下げない
-    assert z_rank(3.2, zcfg, current="ZZZ", watch_n=5) == "Z"
-    assert z_rank(2.0, zcfg, current="Z", watch_n=2) == "Z"
-    assert z_rank(4.5, zcfg, current="Z", watch_n=0) == "ZZZ"      # 上がるのは、いつでも
+def test_z_rank_follows_star_both_ways(zcfg):
+    assert z_rank(3.7, zcfg) == "Z"      # 評点が下がれば、格付けもすぐ下がる(格下げの保留はしない)
+    assert z_rank(3.5, zcfg) is None
+    assert z_rank(4.5, zcfg) == "ZZZ"    # 上がるのも、いつでも
 
 
 def _judgement(**extra):
@@ -164,6 +170,18 @@ def test_flat_peak_counts_once():
     assert [m["min"] for m in llm.calm_peaks([0, 1.5, 1.5, 0], [{"min": 1, "note": "a"}, {"min": 2, "note": "b"}])] == [1]
 
 
+def test_content_start_validation():
+    ok = llm.parse_judgement(_judgement(content_start={"sec": 94.6, "anchor": "  こんばんは、\n今夜は  "}))["content_start"]
+    assert ok == {"sec": 95, "anchor": "こんばんは、 今夜は"}
+    assert llm.parse_judgement(_judgement(content_start={"sec": 0}))["content_start"] == {"sec": 0, "anchor": None}
+    long = llm.parse_judgement(_judgement(content_start={"sec": 10, "anchor": "あ" * 60}))["content_start"]
+    assert len(long["anchor"]) == 40
+    # 一言のない秒、冒頭5分より後、負、真偽値、形が違うものは保存しない(飛ばさないほうが安全)
+    for bad in ({"sec": 30}, {"sec": 301, "anchor": "x"}, {"sec": -1, "anchor": "x"}, {"sec": True, "anchor": "x"}, "95", [95]):
+        assert llm.parse_judgement(_judgement(content_start=bad))["content_start"] is None
+    assert llm.parse_judgement(_judgement())["content_start"] is None
+
+
 def test_content_summary_limits():
     ok = "冬に布団を買い替えた話から、実家の毛布の思い出へ移ります。後半はお便りを2通読みます。"
     assert llm.parse_judgement(_judgement(content_summary=ok))["content_summary"] == ok
@@ -186,7 +204,7 @@ def test_curve_that_contradicts_items_is_dropped():
 
 
 def test_z_rank_cleared_when_not_judged(zcfg):
-    assert z_rank(None, zcfg, current="ZZZ", watch_n=0) is None   # 判定待ちは、格付けを引き継がない
+    assert z_rank(None, zcfg) is None   # 判定待ちは、格付けを付けない
 
 
 def test_show_star_uses_judged_episodes_only(cfg, tmp_path):
@@ -203,12 +221,32 @@ def test_show_star_uses_judged_episodes_only(cfg, tmp_path):
     s.upsert("analysis", {"episode_id": "e2", "final_star": 3.7, "calm_star": 4.0, "interest_level": "mid"})
     cli._update_show_stars(s, ["sh"])
     cli.update_ratings(s, ["sh"], yaml_z())
-    assert s.get("show", "sh")["show_star"] == 3.7 and s.get("show", "sh")["z_rank"] == "ZZ"
+    assert s.get("show", "sh")["show_star"] == 3.7 and s.get("show", "sh")["z_rank"] == "Z"
 
 
 def yaml_z():
     from neochi import cli
     return cli.load_z_config()
+
+
+def test_z_rank_dry_run_saves_nothing(tmp_path, capsys, cfg):
+    """z-rank --dry-run: 割合を表示するだけで、保存先は変えない。"""
+    import argparse
+
+    from neochi import cli
+    from neochi.store import JsonStore
+    p = tmp_path / "s.json"
+    s = JsonStore(p)
+    s.upsert("show", {"id": "sh", "title": "t", "show_star": 4.8, "z_rank": "ZZZ", "listing_status": "listed"})
+    s.upsert("episode", {"id": "e1", "show_id": "sh"})
+    s.upsert("analysis", {"episode_id": "e1", "calm_star": 3.0, "interest_level": "mid", "interest_score": 5, "ear_star": 3.0,
+                          "final_star": 4.8})
+    s.save()
+    before = p.read_text(encoding="utf-8")
+    assert cli.cmd_z_rank(argparse.Namespace(store=str(p), rules_changed=True, dry_run=True)) == 0
+    out = capsys.readouterr().out
+    assert "ドライラン" in out and "ZZZ" in out and "格付けが変わる番組 1 件" in out
+    assert p.read_text(encoding="utf-8") == before
 
 
 def test_too_short_episodes_are_skipped():

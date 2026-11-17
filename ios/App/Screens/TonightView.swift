@@ -13,13 +13,14 @@ struct TonightView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: NCSpace.s5) {
-                    if model.pendingMorning { recap }
+                    if model.morningDue { recap }
                     candidates
                     favorites
                 }
                 .padding(.horizontal, NCSpace.s5)
                 .padding(.bottom, NCSpace.s8)
             }
+            .refreshable { await model.refresh() }
             .background(Color.nc(.bgBase))
             // 横にスワイプでも晩を切り替える。候補カードの横スクロールの上では、カードが先に動く。
             .gesture(DragGesture(minimumDistance: 24).onEnded { v in
@@ -28,7 +29,7 @@ struct TonightView: View {
                 let next = night + (dx < 0 ? 1 : -1)
                 if labels.indices.contains(next) { withAnimation { night = next } }
             })
-            .navigationDestination(for: String.self) { DetailView(showID: $0) }
+            .appDestinations()
             .navigationTitle(labels[night])
             .toolbarTitleDisplayMode(.inlineLarge)
             .contentMargins(.top, NCSpace.s5, for: .scrollContent)
@@ -75,7 +76,7 @@ struct TonightView: View {
             let cards = Array(model.slate(night: night).enumerated())
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: NCSpace.s3) {
-                    ForEach(cards, id: \.offset) { _, c in
+                    ForEach(cards, id: \.element.stableID) { _, c in
                         TonightCard(candidate: c, primaryTitle: night == 0 ? "今夜聴く" : verbs[night], primaryIcon: "moon") {
                             model.reserve(night: night, c)
                         }
@@ -90,13 +91,30 @@ struct TonightView: View {
         }
     }
 
+    /// お気に入りが空のとき。見つけるへ案内する。
+    private var emptyFavorites: some View {
+        VStack(spacing: NCSpace.s3) {
+            Text("お気に入りは、まだありません。").ncText(NCText.body)
+            Text("気になる番組のしおりを押すと、ここに並びます。").ncText(NCText.footnote, .textSub).multilineTextAlignment(.center)
+            Button { model.selectedTab = .discover } label: {
+                Text("見つけるで探す").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                    .background(Capsule().fill(Color.nc(.textMain)))
+            }
+            .buttonStyle(.pressable)
+        }
+        .padding(NCSpace.s5)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+    }
+
     private var favorites: some View {
         VStack(alignment: .leading, spacing: NCSpace.s3) {
             HStack {
                 Text("お気に入り").ncText(NCText.headline)
                 Spacer()
-                Text("\(model.favorites.count)番組").ncText(NCText.footnote, .textSub)
+                if !model.favorites.isEmpty { Text("\(model.favorites.count)番組").ncText(NCText.footnote, .textSub) }
             }.padding(.top, NCSpace.s3)
+            if model.favorites.isEmpty { emptyFavorites }
             ForEach(model.shows.filter { model.favorites.contains($0.id) }) { show in
                 NavigationLink(value: show.id) {
                     ScoreRow(show: show, isFavorite: true) { model.toggleFavorite(show) }
@@ -104,4 +122,9 @@ struct TonightView: View {
             }
         }
     }
+}
+
+private extension Candidate {
+    /// 並びが入れ替わっても、カードが同じ候補を指し続けるための識別子。
+    var stableID: String { "\(show.id)/\(episode?.id ?? "-")" }
 }

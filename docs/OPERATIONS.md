@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | 1 | `supabase/migrations/0005_interest_score.sql` を実行 | Supabase の SQL Editor | `analysis` に `interest_score` 列がある |
 | 1b | `supabase/migrations/0007_detail_viz.sql` を実行(2026-11-15 実行済み) | Supabase の SQL Editor | `analysis` に `calm_per_min`・`content_summary` 列、view `show_sleep_points` がある |
-| 1c | `supabase/migrations/0008_show_cohort.sql` を実行し、続けて `python -m neochi sync-shows` を1回流す(2026-11-15 追加。**次の解析より前に**。未実行だと解析が `cohort` 列で失敗する) | Supabase の SQL Editor と、手元のターミナル(service key を入れて) | `show` に `cohort` 列があり、`genre` が 寝落ち用・朗読・芸人ラジオ・雑談・教養・環境音 だけ |
+| 1c | `supabase/migrations/0008_show_cohort.sql` を実行し、続けて `python -m neochi sync-shows` を1回流す(2026-11-15 追加。**次の解析より前に**。未実行だと解析が `cohort` 列で失敗する) | Supabase の SQL Editor と、手元のターミナル(service key を入れて) | `show` に `cohort` 列があり、`cohort`・`apple_category` 列があり、`genre` が 寝落ち用・朗読・環境音・コメディ・雑談・教養 だけ |
 | 2 | 環境変数 `SUPABASE_URL` と `SUPABASE_SERVICE_KEY` を入れる | claude.ai/code → 環境の設定（歯車） | 名前は大文字小文字まで一致。引用符・`export`・前後の空白なし |
 | 3 | 手順2で変数を入れた**同じ環境**を選んでタスクを作る | claude.ai/code → スケジュールタスク → 新規 | タスクの詳細に環境名が出る |
 | 4 | 「今すぐ実行」で1回動かす | 同上 | 報告の「保存先」が Supabase |
@@ -65,3 +65,15 @@
 ## 6. 基準を変えるとき
 
 採点基準は `config/rubric.md` だけを直す（プロンプトは「rubric.md を読んで採点」なので変更不要）。スコアの式やゾーンは `config/scoring.yaml`、定義の説明は `docs/SCORE.md`。変更後は `python -m pytest -q` を通す。
+
+### 採点ルールや格付けの線を変えたあと(本番に反映する)
+
+1. 環境変数 `SUPABASE_URL` と `SUPABASE_SERVICE_KEY` を入れる(値は表示しない。`set -a; source .env.local; set +a`)。
+2. 先にドライラン。何も保存せず、格付けの割合(変更前 → 変更後)と、変わる番組の件数だけが出る。
+   `python -m neochi z-rank --rules-changed --dry-run`
+3. 割合が方針(ZZZ 約15%、ZZ 約30%、Z 約35%、載せない 約2割。`docs/SCORE.md` §3c)から大きく外れていたら、本番に書かずに、線を直す。
+4. 反映する。🌊(項目の点から)と🎧(特徴から)も計算し直し、格付けを付け直す。
+   `python -m neochi z-rank --rules-changed`
+5. サイトは毎朝つくり直される(`.github/workflows/site.yml`)。すぐ見るときは Vercel で再デプロイする。
+
+戻すときは、設定を元に戻して、4 をもう一度流す(評点の元は保存済みの項目と特徴なので、計算し直せる)。項目の点を持たない古い解析は、🌊の幅が旧式のまま。

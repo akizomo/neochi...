@@ -25,7 +25,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 15px/24px
 a { color: inherit; }
 img { display: block; }
 p { margin: 0; }
-.wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 max(20px, env(safe-area-inset-left)) 0 max(20px, env(safe-area-inset-right)); }
 .cap { color: var(--sub); font-size: 12px; line-height: 18px; }
 .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .big { font-size: 28px; line-height: 34px; font-weight: 600; }
@@ -36,12 +36,29 @@ h2 { font-size: 17px; line-height: 24px; font-weight: 600; margin: 0; }
 :focus-visible { outline: 2px solid var(--result); outline-offset: 2px; }
 
 /* ロゴ: 記号 N + eochiPick + z(1) + z(0.28)。濃さは opacity-logo-1〜3 */
-.top { border-bottom: 1px solid var(--line); }
+/* ヘッダーは固定。スクロールしても、ロゴと「解析について」がいつも見える */
+html { scroll-padding-top: 76px; scroll-behavior: smooth; }
+.top { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--line);
+  padding-top: env(safe-area-inset-top); background: var(--bg); }
+@supports (backdrop-filter: blur(1px)) {
+  .top { background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px); }
+}
 .top .wrap { display: flex; align-items: center; justify-content: space-between; min-height: 60px; }
+.skip { position: absolute; left: 12px; top: -48px; z-index: 30; padding: 10px 14px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 13px; text-decoration: none; }
+.skip:focus { top: calc(8px + env(safe-area-inset-top)); }
+main:focus { outline: none; }
+.to-top { position: fixed; right: calc(16px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 20; width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+.to-top[hidden] { display: none; }
+/* 右下は、応援ボタン(.bmc-fab、高さ36px)が使う。その上に置く */
+.to-top { bottom: calc(16px + 36px + 12px + env(safe-area-inset-bottom)); }
+@media (max-width: 480px) { .to-top { bottom: calc(16px + 32px + 12px + env(safe-area-inset-bottom)); } }
+.to-top svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
 .logo { display: inline-flex; align-items: baseline; color: var(--logo); text-decoration: none;
   font: 600 20px/1 var(--sans); letter-spacing: 0.01em; }
-.logo-n { width: 0.62em; height: 0.72em; margin-right: 0.05em; overflow: visible; }
-.logo .z2 { opacity: 0.28; }
+.logo-w { display: block; height: 20px; width: auto; }   /* ワードマーク(輪郭の svg)。高さは最小 16px */
+.foot .logo-w { height: 16px; }
 .mark { width: 40%; height: 40%; color: var(--sub); }
 nav a { color: var(--sub); text-decoration: none; font-size: 13px; padding: 12px 0; display: inline-block; }
 nav a:hover { color: var(--text); }
@@ -195,6 +212,14 @@ svg text { font-family: var(--sans); }
 .prose dt { font-weight: 600; margin-top: 16px; }
 .prose dd { margin-left: 0; color: var(--sub); }
 .en { color: var(--sub); font-style: italic; font-size: 14px; }
+.prose ol { margin: 8px 0 0 20px; padding: 0; }
+.prose li { margin-top: 4px; }
+.prose dt .tag { margin-left: 8px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 400; line-height: 16px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--sub); white-space: nowrap; vertical-align: 1px; }
+.tag.study { color: var(--text); }
+.ref { font-size: 11px; margin-left: 2px; text-decoration: none; }
+.refs { font-size: 12px; line-height: 18px; color: var(--sub); }
+.refs a { color: inherit; }
 
 .foot { border-top: 1px solid var(--line); margin-top: 56px; padding: 28px 0 44px; }
 .foot .logo { font-size: 16px; }

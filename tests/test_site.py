@@ -45,7 +45,7 @@ def test_show_page_has_breakdown_and_ogp(tmp_path):
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     h = (tmp_path / "shows" / "a" / "index.html").read_text(encoding="utf-8")
     assert "評点 4.4" in h and "★ 4.4" not in h and "眠りたい夜は、まずこの番組" in h
-    assert "AI解析・寝落ちまで 平均14分(ウォッチの実測 4件)" in h
+    assert "AI解析・寝落ちまで 平均14分(ヘルスケアの実測 4件)" in h
     assert 'property="og:image" content="https://img/a.jpg"' in h
     assert 'href="https://example.com/shows/a/"' in h
     assert "https://example.com/sitemap.xml" in (tmp_path / "robots.txt").read_text()
@@ -83,7 +83,7 @@ def test_episode_page_has_evidence(tmp_path):
 def test_logo_and_icons(tmp_path):
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     h = (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert 'class="logo-n"' in h and 'og:image" content="https://example.com/og.png"' in h
+    assert 'class="logo-w"' in h and 'og:image" content="https://example.com/og.png"' in h
     for f in ("og.png", "apple-touch-icon.png", "favicon.svg", "style.css"):
         assert (tmp_path / f).exists()
 
@@ -118,8 +118,8 @@ def test_index_has_tonight_rankings_and_no_star_on_total(tmp_path):
     pos = [h.index(t) for t in order]
     assert pos == sorted(pos)
     assert "ふだんの番組で、寝落ち向きランキング" not in h      # その種類の番組がなければ、棚ごと出さない
-    assert "★" not in h and "ZZZ は4.2以上" not in h            # 基準の数字は「解析について」に置く
-    assert "ZZZ は4.2以上" in (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
+    assert "★" not in h and "ZZZ は4.5以上" not in h            # 基準の数字は「スコアと根拠」に置く
+    assert "ZZZ 4.5" in (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
 
 
 def test_usual_shows_get_their_own_ranking(tmp_path):
@@ -221,3 +221,41 @@ def test_short_slugs_stay_unique():
     ids = ["aaaaaaaa-1111-0000-0000-000000000001", "aaaaaaaa-2222-0000-0000-000000000002", "bbbbbbbb-0000-0000-0000-000000000003"]
     sl = site.short_slugs(ids)
     assert len(set(sl.values())) == 3 and sl[ids[2]] == "bbbbbbbb" and len(sl[ids[0]]) > 8
+
+
+def test_explainer_page_cites_every_source_and_marks_strength(tmp_path):
+    """スコアと根拠のページ: 本文の [n] がすべて出典に対応し、各項目に根拠の強さ(◯ 関連研究 / △ 仮説)が付く。数値は config から出る。"""
+    import re
+
+    cfg = cli.load_config()
+    site.build(DATA, tmp_path, cfg)
+    h = (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
+    cited = set(re.findall(r'href="#ref(\d+)"', h))
+    listed = set(re.findall(r'<li id="ref(\d+)">', h))
+    assert cited and cited <= listed and len(listed) == 8
+    items = re.findall(r"<dt>(.*?)</dt>", h)
+    scored = [i for i in items if 'class="tag' in i]
+    assert len(scored) >= 10 and all(("◯ 関連研究" in i) or ("△ 仮説" in i) for i in scored)
+    w = cfg["total"]["weights"]
+    assert f"起伏の少なさ {w['calm']:.1f}、程よい興味 {w['interest']:.1f}、耳のゆるさ {w['ear']:.1f}" in h
+    assert "眠れることの約束ではありません" in h
+    assert "スコアと根拠" in (tmp_path / "index.html").read_text(encoding="utf-8")
+
+
+def test_brand_matches_tokens_and_exports():
+    """ロゴの色と濃さは design/tokens.json と同じ。書き出したアセットが揃っている。"""
+    import json
+    from pathlib import Path
+
+    from neochi import brand
+    root = Path(__file__).resolve().parent.parent
+    tk = json.loads((root / "design/tokens.json").read_text(encoding="utf-8"))
+    logo = {t["name"]: t["value"] for t in tk["logo"]["tokens"]}
+    op = {t["name"]: float(t["value"]) for t in tk["opacity"]["tokens"] if t["name"].startswith("opacity-logo")}
+    assert (brand.BG, brand.FG) == (logo["logo-bg"], logo["logo-fg"])
+    assert (brand.O1, brand.O2, brand.O3) == (op["opacity-logo-1"], op["opacity-logo-2"], op["opacity-logo-3"])
+    for f in ("svg/wordmark-on-dark.svg", "svg/wordmark-on-light.svg", "svg/symbol-on-dark.svg", "svg/app-icon.svg", "svg/favicon.svg",
+              "png/app-icon-1024.png", "png/og-1200x630.png", "png/x-profile-400.png"):
+        assert (root / "design/brand" / f).exists(), f
+    # 同じページにワードマークを2つ置いても、clipPath の名前が重ならない
+    assert brand.wordmark("#fff", uid="a") .count('id="a0"') == 1 and 'id="b0"' in brand.wordmark("#fff", uid="b")

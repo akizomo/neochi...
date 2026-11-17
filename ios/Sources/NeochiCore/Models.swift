@@ -43,12 +43,6 @@ public struct ShowAspects: Hashable, Codable, Sendable {
 
 public enum InterestLevel: String, Codable, Sendable { case low, mid, high }
 
-/// 朝の振り返りの「この回の話は、どうでしたか」(3択)。値は DB の `interest_vote`(-1 / 0 / 1)と同じ。
-public enum InterestAnswer: Int, CaseIterable, Identifiable, Sendable {
-    case bored = -1, justRight = 0, absorbed = 1
-    public var id: Int { rawValue }
-}
-
 public enum ZRank: String, Codable, Sendable { case z = "Z", zz = "ZZ", zzz = "ZZZ" }
 
 /// 回。`number` は「第N回」の N。なければ公開日の順で並べる。
@@ -71,6 +65,36 @@ public struct Episode: Identifiable, Hashable, Codable, Sendable {
 
 public enum SleepSource: String, Codable, Sendable { case watch, selfReport = "self" }
 
+/// 自己申告の答え。ヘルスケアに睡眠の記録がない朝に、分数ではなく4つの選択肢で聞く。
+/// 内部では、おおよその分数(`minutes`)に直して保存する。自己申告は実測とは別の行(source = self)で、
+/// 番組の評点・格付けの集計には入れない(Z ランクは source = watch だけで集計する)。
+public enum SelfReportLatency: String, Codable, CaseIterable, Sendable {
+    case quick, short, long, never
+
+    /// 選択肢の言葉。
+    public var label: String {
+        switch self {
+        case .quick: return "すぐ寝た"
+        case .short: return "少し起きていた"
+        case .long: return "なかなか寝つけなかった"
+        case .never: return "最後まで聴いた"
+        }
+    }
+    /// 選択肢の下の目安。
+    public var hint: String {
+        switch self {
+        case .quick: return "10分くらいまで"
+        case .short: return "10〜20分くらい"
+        case .long: return "20〜30分くらい"
+        case .never: return "30分以上"
+        }
+    }
+    /// 保存する、おおよその分数(帯の真ん中あたり。最後の帯は 40)。
+    public var minutes: Int {
+        switch self { case .quick: return 5; case .short: return 15; case .long: return 25; case .never: return 40 }
+    }
+}
+
 /// 1晩の記録。実測(watch)と自己申告(self)は別の行で保存する。
 public struct SleepLog: Identifiable, Hashable, Codable, Sendable {
     public let id: String
@@ -79,21 +103,28 @@ public struct SleepLog: Identifiable, Hashable, Codable, Sendable {
     public var startedAt: Date
     public var sleepOnsetAt: Date?
     public var source: SleepSource
-    /// 程よい興味の3択。-1 = 退屈だった、0 = ちょうどよかった、1 = 聴き入った(`InterestAnswer`)。
+    /// 引き込み力の10段階(1〜10。DB の `interest_rating`)。意味とゾーンは `NCString.interestZone`。
+    public var interestRating: Int?
+    /// 10段階の導入前の3択(-1 退屈だった / 0 ちょうどよかった / 1 聴き入った)。端末に残る古い記録の読み込み用で、新しくは書かない。
     public var interestVote: Int?
     /// 起伏の少なさ。1〜5。
     public var calmVote: Int?
     public var note: String?
+    /// 自己申告の答え(source = self のときだけ)。
+    public var selfReport: SelfReportLatency?
     /// その回を何回目に聴いたか。番組の実績は1回目だけで集計する。
     public var listenNo: Int
 
     public init(id: String, episodeID: String, showID: String, startedAt: Date, sleepOnsetAt: Date? = nil,
-                source: SleepSource = .watch, interestVote: Int? = nil, calmVote: Int? = nil,
-                note: String? = nil, listenNo: Int = 1) {
+                source: SleepSource = .watch, interestRating: Int? = nil, interestVote: Int? = nil, calmVote: Int? = nil,
+                note: String? = nil, listenNo: Int = 1, selfReport: SelfReportLatency? = nil) {
         self.id = id; self.episodeID = episodeID; self.showID = showID; self.startedAt = startedAt
-        self.sleepOnsetAt = sleepOnsetAt; self.source = source; self.interestVote = interestVote
-        self.calmVote = calmVote; self.note = note; self.listenNo = listenNo
+        self.sleepOnsetAt = sleepOnsetAt; self.source = source; self.interestRating = interestRating; self.interestVote = interestVote
+        self.calmVote = calmVote; self.note = note; self.listenNo = listenNo; self.selfReport = selfReport
     }
+
+    /// 送信する、寝落ちまでの分。実測はそのまま、自己申告は選択肢のおおよその分数。
+    public var uploadLatencyMinutes: Int? { latencyMinutes ?? selfReport?.minutes }
 
     /// 寝落ちまでの分(整数)。入眠が不明なら nil。
     public var latencyMinutes: Int? {

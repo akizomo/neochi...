@@ -27,7 +27,7 @@ struct RecordDetailView: View {
                     result(log)
                     showRow(show, log)
                     if log.source == .watch, let m = log.latencyMinutes { sleepCard(log, minutes: m) }
-                    if log.interestVote != nil || log.calmVote != nil { ratings(log) }
+                    if log.interestRating != nil || log.calmVote != nil { ratings(log) }
                     memo(log)
                 }
                 .padding(NCSpace.s4)
@@ -47,6 +47,9 @@ struct RecordDetailView: View {
                     Text("分").ncText(NCText.title, .accentResult)
                 }
                 Text(NCString.comment(minutes: m)).ncText(NCText.body)
+            } else if let r = log.selfReport {
+                Text(r.label).ncText(NCText.title, .accentResult)
+                Text(r.hint).ncText(NCText.body, .textSub)
             } else {
                 Text("―").ncText(NCText.numHero, .textSub)
                 Text("寝落ちの記録を確認中です").ncText(NCText.title)
@@ -60,8 +63,8 @@ struct RecordDetailView: View {
             HStack(spacing: NCSpace.s3) {
                 ArtworkView(show: show)
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
-                    Text(show.title).ncText(NCText.headline).lineLimit(1)
-                    if let ep, !ep.isEmpty { Text(ep).ncText(NCText.footnote, .textSub).lineLimit(1) }
+                    MarqueeText(text: show.title, style: NCText.headline)
+                    if let ep, !ep.isEmpty { MarqueeText(text: ep, style: NCText.footnote, color: .textSub) }
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").ncText(NCText.footnote, .textSub)
@@ -77,7 +80,7 @@ struct RecordDetailView: View {
             HStack {
                 Text("睡眠データ").ncText(NCText.headline)
                 Spacer()
-                Text("ウォッチの実測").ncText(NCText.caption, .textSub)
+                Text("ヘルスケアの実測").ncText(NCText.caption, .textSub)
             }
             GeometryReader { g in
                 let x = g.size.width * CGFloat(m) / CGFloat(max(endMin, 1))
@@ -108,15 +111,21 @@ struct RecordDetailView: View {
     private func ratings(_ log: SleepLog) -> some View {
         VStack(alignment: .leading, spacing: NCSpace.s3) {
             Text("つけた評価").ncText(NCText.headline)
-            if let v = log.interestVote {
+            if let v = log.interestRating {
+                let z = NCString.interestZone(v)
                 VStack(alignment: .leading, spacing: NCSpace.s2) {
-                    Text("興味").ncText(NCText.footnote, .textSub)
+                    HStack {
+                        Text("引き込み力").ncText(NCText.footnote, .textSub)
+                        Spacer()
+                        Text("\(v) / 10 ・ \(NCString.interestZoneName(z))").ncText(NCText.footnote)
+                    }
                     HStack(spacing: 3) {
-                        ForEach(0...10, id: \.self) { i in
+                        ForEach(1...10, id: \.self) { i in
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(i * 10 == v ? Color.nc(.accentFactor) : Color.nc(.line)).frame(height: 8)
+                                .fill(i == v ? Color.nc(.accentFactor) : Color.nc(.line)).frame(height: 8)
                         }
                     }
+                    Text(NCString.interestZoneNote(z)).ncText(NCText.caption, .textSub)
                 }
             }
             if let c = log.calmVote {
