@@ -75,7 +75,7 @@ struct SettingsView: View {
                 }
                 Spacer()
                 if auto { Text("ヘルスケアの記録から").ncText(NCText.footnote, .textSub) }
-                else { HStack(spacing: NCSpace.s1) { Text("変える"); Image(systemName: "chevron.right") }.ncText(NCText.footnote, .textSub) }
+                else { HStack(spacing: NCSpace.s1) { Text("変更"); Image(systemName: "chevron.right") }.ncText(NCText.footnote, .textSub) }
             }
             .padding(NCSpace.s4)
             .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
@@ -83,7 +83,7 @@ struct SettingsView: View {
         .buttonStyle(.pressable).disabled(auto)
     }
 
-    /// ヘルスケア(睡眠データ)の連携。ほかの項目と同じ並びで、左に今の状態(未連携 / 連携中)、右に入口(連携 / 変える)。
+    /// ヘルスケア(睡眠データ)の連携。ほかの項目と同じ並びで、左に今の状態(未連携 / 連携中)、右に入口(連携 / 変更)。
     /// 読み取りの許可が「あるか」は、アプリからは分からない。聞いていなければ許可画面を出す。聞いたあとは、実際に睡眠データを
     /// 受け取れているか(過去30日)で連携中かを決め、入口は設定アプリのこのアプリの画面(ヘルスケア → 睡眠)へ
     /// (許可をつなぎ直す・切るのは、iOS の設定でしかできない)。
@@ -104,7 +104,7 @@ struct SettingsView: View {
                     }
                     Spacer()
                     if linked {
-                        HStack(spacing: NCSpace.s1) { Text("変える"); Image(systemName: "chevron.right") }
+                        HStack(spacing: NCSpace.s1) { Text("変更"); Image(systemName: "chevron.right") }
                             .ncText(NCText.footnote, .textSub)
                     } else {
                         // 未連携は、目立たせる(主ボタンの色)。
@@ -130,7 +130,7 @@ struct SettingsView: View {
                     Text(names.isEmpty ? "未設定" : names.joined(separator: "・")).ncText(NCText.body).lineLimit(1)
                 }
                 Spacer()
-                HStack(spacing: NCSpace.s1) { Text("変える"); Image(systemName: "chevron.right") }.ncText(NCText.footnote, .textSub)
+                HStack(spacing: NCSpace.s1) { Text("変更"); Image(systemName: "chevron.right") }.ncText(NCText.footnote, .textSub)
             }
             .padding(NCSpace.s4)
             .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
