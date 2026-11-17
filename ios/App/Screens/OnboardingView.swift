@@ -88,10 +88,9 @@ struct OnboardingView: View {
     // MARK: 1. 魅力
 
     @ViewBuilder private var appeal: some View {
-        Image("LaunchSymbol").resizable().scaledToFit().frame(width: 72, height: 72)
-            .padding(.top, NCSpace.s4).accessibilityHidden(true)
+        LogoAnimationView().padding(.leading, -34).padding(.bottom, -NCSpace.s5)
         Text("眠りたい夜に、\nちょうどいい番組を").ncText(NCText.title).fixedSize(horizontal: false, vertical: true)
-        Text("NeochiPickzz は、ポッドキャストを解析して、寝落ちに向く番組を選べるようにするアプリです。")
+        Text("ポッドキャストの音声を解析して、寝落ちに向くかを評点にします。話す速さ、音量、起伏、興味の度合いを、番組ごとに調べています。")
             .ncText(NCText.body, .textSub).fixedSize(horizontal: false, vertical: true)
         VStack(alignment: .leading, spacing: NCSpace.s4) {
             point("moon.zzz", "寝落ちに向く番組だけ", "評点で Z・ZZ・ZZZ の3段階に分けて並べます。")
@@ -157,7 +156,18 @@ struct OnboardingView: View {
     // MARK: 下部のボタン(固定)
 
     @ViewBuilder private var actions: some View {
-        VStack(spacing: NCSpace.s1) {
+        HStack(spacing: NCSpace.s3) {
+            // 戻るは左下の矢印。許可の前の説明(ヘルスケア)には、システムの画面を出さずに離れる手段を置かない。
+            if position > 0 && step != .health {
+                Button { back() } label: {
+                    Image(systemName: "arrow.left").font(.system(size: NCSize.iconMd, weight: .semibold))
+                        .foregroundStyle(Color.nc(.textMain))
+                        .frame(width: NCSize.buttonH, height: NCSize.buttonH)
+                        .overlay(Circle().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
+                }
+                .buttonStyle(.pressable)
+                .accessibilityLabel("戻る")
+            }
             if step == .shows && model.favorites.isEmpty {
                 // 1つも選んでいないときは副ボタン(枠線)。
                 Button { next() } label: {
@@ -174,15 +184,8 @@ struct OnboardingView: View {
                 .buttonStyle(.pressable)
                 .disabled(requesting)
             }
-            // 許可の前の説明には、システムの画面を出さずに離れる手段を置かない(戻るも出さない)。
-            if position > 0 && step != .health {
-                Button { back() } label: {
-                    Text("戻る").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
-                }
-                .buttonStyle(.pressable)
-            }
         }
-        .padding(.horizontal, NCSpace.s5).padding(.top, NCSpace.s2)
+        .padding(.horizontal, NCSpace.s5).padding(.vertical, NCSpace.s2)
         .background(Color.nc(.bgBase))
     }
 

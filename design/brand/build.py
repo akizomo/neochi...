@@ -21,6 +21,7 @@ SVG, PNG = HERE / "svg", HERE / "png"
 PNG_ICONS = [1024, 512, 192, 180, 120, 60]
 IOS_ICON = ROOT / "ios/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png"
 SITE_ASSETS = ROOT / "neochi/site_assets"
+IOS_ASSETS = ROOT / "ios/App/Assets.xcassets"
 FONT = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 
 FILES = {
@@ -46,6 +47,16 @@ def render(svg: Path, png: Path, width: int, height: int | None = None) -> None:
     if height:
         cmd += ["-h", str(height)]
     subprocess.run(cmd, check=True)
+
+
+def ios_splash_wordmark() -> None:
+    """起動画面の下に置くワードマーク(幅 180pt。1x/2x/3x)。"""
+    d = IOS_ASSETS / "SplashWordmark.imageset"
+    d.mkdir(exist_ok=True)
+    for s in (1, 2, 3):
+        render(SVG / "wordmark-on-dark.svg", d / f"wordmark@{s}x.png", 180 * s)
+    images = [{"idiom": "universal", "filename": f"wordmark@{s}x.png", "scale": f"{s}x"} for s in (1, 2, 3)]
+    (d / "Contents.json").write_text(json.dumps({"images": images, "info": {"author": "xcode", "version": 1}}, indent=2) + "\n", encoding="utf-8")
 
 
 def og_image(out: Path) -> bool:
@@ -99,6 +110,7 @@ def main() -> int:
     # 使う場所へ: アプリアイコン(角丸なし1024)、サイトの共有カードと apple-touch-icon
     shutil.copy(PNG / "app-icon-1024.png", IOS_ICON)
     shutil.copy(PNG / "app-icon-180.png", SITE_ASSETS / "apple-touch-icon.png")
+    ios_splash_wordmark()
     if made_og:
         shutil.copy(PNG / "og-1200x630.png", SITE_ASSETS / "og.png")
     print(f"svg {len(list(SVG.iterdir()))} 点、png {len(list(PNG.iterdir()))} 点を書き出しました(OG {'更新' if made_og else '未更新'})")

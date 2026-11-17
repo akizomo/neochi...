@@ -47,10 +47,8 @@ targets:
       path: App/Info.plist
       properties:
         UIBackgroundModes: [audio]
-        # 起動画面: 背景色と記号 N だけ(ライト・ダークで切り替わる。App/Assets.xcassets の LaunchBackground・LaunchSymbol)
         UILaunchScreen:
-          UIColorName: LaunchBackground
-          UIImageName: LaunchSymbol
+          UIColorName: LaunchBackground   # 紺の地(logo-bg)。起動画面(SplashView)へ白い画面を挟まない
         SupabaseHost: $(SUPABASE_HOST)
         SupabaseAnonKey: $(SUPABASE_ANON_KEY)
     entitlements:
