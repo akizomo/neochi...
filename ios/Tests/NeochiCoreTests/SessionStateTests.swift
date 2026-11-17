@@ -29,3 +29,18 @@ final class SessionStateTests: XCTestCase {
         XCTAssertEqual(r.reservedShowIDs, [1: "b"]); XCTAssertNil(r.currentShowID)
     }
 }
+import XCTest
+@testable import NeochiCore
+
+final class SessionStateCodableTests: XCTestCase {
+    /// お気に入り・次に聴く・再生の記録は、保存して読み直しても同じになる(アプリを閉じても残す)。
+    func testRoundTrip() throws {
+        let s = SessionState(history: [PlayRecord(episodeID: "e1", showID: "a", playedAt: Date(timeIntervalSince1970: 1_700_000_000))],
+                             favorites: ["a", "b"], queue: ["b"], currentShowID: "a",
+                             lastNight: LastNight(showID: "a", episodeID: "e1", minutes: 12), genreStreakNights: 2,
+                             pendingMorning: false, reservedShowIDs: [0: "a"])
+        let e = JSONEncoder(); e.dateEncodingStrategy = .iso8601
+        let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601
+        XCTAssertEqual(try d.decode(SessionState.self, from: e.encode(s)), s)
+    }
+}

@@ -160,6 +160,8 @@ final class AppModel {
         #else
         guard SupabaseClient.shared.isConfigured else { return sample() }
         let m = AppModel(shows: [], episodes: [:])
+        m.restoreSession()
+        m.persistsSession = true
         m.loadState = .loading
         return m
         #endif
@@ -241,6 +243,7 @@ final class AppModel {
         playStartedAt = nil; onsetAt = nil
         savePendingNight()
         LogStore.save(logs)
+        persistSession()
         Task { try? await SupabaseClient.shared.upload(log) }
     }
 
@@ -250,6 +253,7 @@ final class AppModel {
         logs = []
         LogStore.save(logs)
         lastNight = nil
+        persistSession()
     }
 
     /// 記録のメモをあとから直す(空にすると消す)。
@@ -307,6 +311,22 @@ final class AppModel {
         history = r.history; favorites = r.favorites; queue = r.queue; currentShowID = r.currentShowID
         lastNight = r.lastNight; genreStreakNights = r.genreStreakNights; pendingMorning = r.pendingMorning
         reservations = reservations.filter { entry in s.contains(where: { $0.id == entry.value.show.id }) }
+        persistSession()
+    }
+
+    /// 端末に保存した状態(お気に入り・次に聴く・再生の記録)。実データで動くときだけ保存する(見本の状態は保存しない)。
+    var persistsSession = false
+
+    func restoreSession() {
+        guard let r = SessionStore.load() else { return }
+        history = r.history; favorites = r.favorites; queue = r.queue; currentShowID = r.currentShowID
+        lastNight = r.lastNight; genreStreakNights = r.genreStreakNights
+    }
+
+    func persistSession() {
+        guard persistsSession else { return }
+        SessionStore.save(SessionState(history: history, favorites: favorites, queue: queue, currentShowID: currentShowID,
+                                       lastNight: lastNight, genreStreakNights: genreStreakNights, pendingMorning: pendingMorning))
     }
 
     func slate(night: Int) -> [Candidate] { TonightEngine.slate(night: night, ctx: context) }
@@ -331,6 +351,7 @@ final class AppModel {
         } else {
             favorites.insert(show.id); showToast("お気に入りに追加しました")
         }
+        persistSession()
     }
 
     func toggleQueue(_ show: Show) {
@@ -339,6 +360,7 @@ final class AppModel {
         } else {
             queue.append(show.id); showToast("「次に聴く」に入れました")
         }
+        persistSession()
     }
 
     /// night(0 = 今夜、1 = 明日)の晩の日付。午前4時までは、まだ前の日の晩とみなす。
@@ -428,6 +450,7 @@ final class AppModel {
         playEpisodeID = candidate.episode?.id; playShowID = candidate.show.id
         pendingMorning = true
         savePendingNight()
+        persistSession()
         playing = candidate
         if let ep = candidate.episode {
             player.start(url: ep.audioURL, title: ep.title, subtitle: candidate.show.title)
