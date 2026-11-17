@@ -173,12 +173,15 @@ def test_episodes_page_and_links_have_arrows(tmp_path):
 
 
 def test_maker_and_support_links(tmp_path):
-    """応援(Buy Me a Coffee)は、全ページの右下に固定の公式ボタンだけ。フッターは「made by」の文字。「解析について」の作った人にも、リンクがある。外へのリンクは noopener。"""
+    """応援(Buy Me a Coffee)の固定ボタンは、読み物のページ(スコアと根拠・プライバシー)以外の右下に出す。フッターは「made by」の文字。「解析について」の作った人にも、リンクがある。外へのリンクは noopener。"""
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     for path in ("index.html", "about/index.html", "shows/a/index.html", "shows/a/episodes/a1/index.html"):
         h = (tmp_path / path).read_text(encoding="utf-8")
-        assert h.count("buymeacoffee.com/akizomo") == (2 if path == "about/index.html" else 1), path
-        assert 'class="bmc-fab"' in h and "img.buymeacoffee.com/button-api" in h and "コーヒーで応援する" in h, path
+        if path == "about/index.html":   # 固定ボタンは出さない。作った人の文字リンクだけ
+            assert h.count("buymeacoffee.com/akizomo") == 1 and 'class="bmc-fab"' not in h, path
+        else:
+            assert h.count("buymeacoffee.com/akizomo") == 1, path
+            assert 'class="bmc-fab"' in h and "img.buymeacoffee.com/button-api" in h and "コーヒーで応援する" in h, path
         assert re.search(r'class="foot-brand">.*?</a><span class="foot-made">made by akihiro uezono</span>', h), path
         assert "作った人" not in h or path == "about/index.html"
     about = (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
@@ -186,6 +189,24 @@ def test_maker_and_support_links(tmp_path):
     for path in ("index.html", "about/index.html", "shows/a/index.html"):
         for m in re.finditer(r'<a [^>]*href="https://(?:www\.buymeacoffee\.com|github\.com)[^>]*>', (tmp_path / path).read_text(encoding="utf-8")):
             assert 'rel="noopener"' in m.group(0), m.group(0)
+
+
+def test_reading_pages_have_no_support_button(tmp_path):
+    """スコアと根拠・プライバシーには、本文に重なる固定の応援ボタンを出さない。"""
+    site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
+    for path in ("about/index.html", "privacy.html"):
+        h = (tmp_path / path).read_text(encoding="utf-8")
+        assert "bmc-fab" not in h and 'class="nofab"' in h, path
+
+
+def test_header_menu_collapses_on_narrow_screens(tmp_path):
+    """ヘッダーのメニューは、細い画面でハンバーガーに畳む(ボタンと、開閉の属性、JS の目印)。ヘッダーは固定(sticky)。"""
+    site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
+    h = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert 'class="menu-btn"' in h and 'aria-expanded="false"' in h and 'aria-controls="site-nav"' in h and 'id="site-nav"' in h
+    assert 'document.documentElement.className+=" js"' in h
+    css = (tmp_path / "style.css").read_text(encoding="utf-8")
+    assert ".top { position: sticky; top: 0;" in css and ".js .menu-btn" in css
 
 
 def test_ranking_pages_switch_between_shows_and_episodes(tmp_path):
