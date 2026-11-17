@@ -71,7 +71,7 @@ struct SettingsView: View {
             HStack {
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
                     Text("ふだんの就寝時刻").ncText(NCText.footnote, .textSub)
-                    Text(text).ncText(NCText.numMd)
+                    Text(text).ncText(model.bedtimeMinute == nil ? NCText.body : NCText.numMd)   // 未設定は、時刻の大きな数字にしない
                 }
                 Spacer()
                 if auto { Text("ヘルスケアの記録から").ncText(NCText.footnote, .textSub) }
@@ -103,8 +103,15 @@ struct SettingsView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer()
-                    HStack(spacing: NCSpace.s1) { Text(linked ? "変える" : "連携"); Image(systemName: "chevron.right") }
-                        .ncText(NCText.footnote, .textSub)
+                    if linked {
+                        HStack(spacing: NCSpace.s1) { Text("変える"); Image(systemName: "chevron.right") }
+                            .ncText(NCText.footnote, .textSub)
+                    } else {
+                        // 未連携は、目立たせる(主ボタンの色)。
+                        Text("連携").ncText(NCText.headline, .bgBase)
+                            .padding(.horizontal, NCSpace.s5).frame(minHeight: NCSize.tapMin)
+                            .background(Capsule().fill(Color.nc(.textMain)))
+                    }
                 }
                 .padding(NCSpace.s4)
                 .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
