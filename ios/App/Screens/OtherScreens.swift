@@ -42,6 +42,7 @@ struct DiscoverView: View {
             .appDestinations()
             .navigationTitle("見つける")
             .toolbarTitleDisplayMode(.inlineLarge)
+            .settingsEntry()
         }
     }
 
@@ -168,7 +169,7 @@ struct LogView: View {
         let f = DateFormatter(); f.locale = Locale(identifier: "ja_JP"); f.setLocalizedDateFormatFromTemplate("M/d E"); return f
     }()
 
-    /// 自分タブは、記録だけを置く。設定(就寝時刻・ヘルスケア・好み・アカウント・データの削除)は、右上の歯車から開く設定の画面に分ける。
+    /// 記録タブは、記録だけを置く。設定(就寝時刻・ヘルスケア・好み・アカウント・データの削除)は、どのタブでも右上の人型のボタンから開く。
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -189,16 +190,11 @@ struct LogView: View {
             }
             .refreshable { await model.refresh() }
             .background(Color.nc(.bgBase))
-            .navigationTitle("自分")
+            .navigationTitle("記録")
             .toolbarTitleDisplayMode(.inlineLarge)
             .contentMargins(.top, NCSpace.s5, for: .scrollContent)
             .appDestinations()
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink { SettingsView() } label: { Image(systemName: "gearshape") }
-                        .accessibilityLabel("設定")
-                }
-            }
+            .settingsEntry()
         }
     }
 

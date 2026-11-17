@@ -1,7 +1,7 @@
 import SwiftUI
 import NeochiCore
 
-/// 設定。自分タブの記録と分けて、アプリの設定だけを置く。
+/// 設定。記録タブの記録と分けて、アプリの設定だけを置く。どのタブでも、右上の人型のボタン(`settingsEntry`)から、シートで開く。
 /// 上から: 睡眠(就寝時刻・ヘルスケア)、好み、アカウント(1.0 は出さない)、データ、このアプリについて。
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
@@ -169,4 +169,30 @@ struct SettingsView: View {
         }
         .buttonStyle(.pressable)
     }
+}
+
+/// どのタブでも、右上に出す設定とアカウントの入口。設定は毎日は開かないので、タブにはせず、ここから開く。
+/// 1.1 でログインと契約を足すときは、この入口に状態(契約中の印など)を出せる。
+private struct SettingsEntry: ViewModifier {
+    @State private var open = false
+
+    func body(content: Content) -> some View {
+        content
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { open = true } label: { Image(systemName: "person.crop.circle") }
+                        .accessibilityLabel("設定とアカウント")
+                }
+            }
+            .sheet(isPresented: $open) {
+                NavigationStack {
+                    SettingsView()
+                        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("閉じる") { open = false } } }
+                }
+            }
+    }
+}
+
+extension View {
+    func settingsEntry() -> some View { modifier(SettingsEntry()) }
 }

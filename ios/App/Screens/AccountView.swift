@@ -119,7 +119,7 @@ struct AccountView: View {
     }
 }
 
-/// 自分タブの先頭に置くアカウントのカード。匿名のあいだは、連携をすすめる言葉を出す。
+/// 設定のアカウントの欄に置くカード。匿名のあいだは、連携をすすめる言葉を出す。
 struct AccountRow: View {
     var tick = 0   // 画面を閉じたあとに増やすと、状態を読み直す
     let action: () -> Void

@@ -5,7 +5,7 @@ import NeochiCore
 struct BedtimeSetupView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    /// 自分タブから開いた変更のとき。初回の質問と違い、夜の画面は開かず、「あとで」は「閉じる」。
+    /// 設定から開いた変更のとき。初回の質問と違い、夜の画面は開かず、「あとで」は「閉じる」。
     var editing = false
     @State private var time: Date
 

@@ -5,7 +5,7 @@ import NeochiCore
 struct GenrePreferenceView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    /// 自分タブから開いた変更のとき。「あとで」は「閉じる」。
+    /// 設定から開いた変更のとき。「あとで」は「閉じる」。
     var editing = false
     @State private var selected: Set<String> = []
 

@@ -39,6 +39,7 @@ struct TonightView: View {
                     stepButton("arrow.right", label: "次の晩", enabled: night < labels.count - 1) { night += 1 }
                 }
             }
+            .settingsEntry()
         }
     }
 
