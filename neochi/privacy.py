@@ -33,7 +33,7 @@ PRIVACY_BODY = '''<div class="prose">
 <p>内容を変えるときは、このページで知らせます。</p>
 
 <h2>連絡先</h2>
-<p>お問い合わせは、<a href="https://github.com/akizomo/neochi.../issues" rel="noopener">GitHub の Issues</a> へお願いします。</p>
+<p>お問い合わせは、<a href="mailto:contact@akizony.com">contact@akizony.com</a> へお願いします。</p>
 
 <p class="cap" style="margin-top:32px">制定日: 2026年11月16日</p>
 </div>'''
