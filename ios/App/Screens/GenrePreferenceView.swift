@@ -100,9 +100,15 @@ struct GenrePreferenceView: View {
         }
         .buttonStyle(.pressable)
             } else {
+        // 1つも選んでいないときは副ボタン(枠線)、選んだら主ボタン。
         Button { dismiss() } label: {
-            Text(model.favorites.isEmpty ? "あとで選ぶ" : "はじめる").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                .background(Capsule().fill(Color.nc(.textMain)))
+            if model.favorites.isEmpty {
+                Text("あとで選ぶ").ncText(NCText.body).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                    .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
+            } else {
+                Text("はじめる").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                    .background(Capsule().fill(Color.nc(.textMain)))
+            }
         }
         .buttonStyle(.pressable)
             }

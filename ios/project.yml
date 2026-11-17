@@ -33,7 +33,6 @@ targets:
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "4"
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_CFBundleDisplayName: NeochiPickzz   # ホーム画面の名前。xcodegen は Info.plist を作り直すので、ここに置く
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
@@ -48,6 +47,10 @@ targets:
       path: App/Info.plist
       properties:
         UIBackgroundModes: [audio]
+        # 起動画面: 背景色と記号 N だけ(ライト・ダークで切り替わる。App/Assets.xcassets の LaunchBackground・LaunchSymbol)
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchSymbol
         SupabaseHost: $(SUPABASE_HOST)
         SupabaseAnonKey: $(SUPABASE_ANON_KEY)
     entitlements:
