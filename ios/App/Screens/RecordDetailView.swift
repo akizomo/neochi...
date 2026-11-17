@@ -31,6 +31,8 @@ struct RecordDetailView: View {
                         .padding(NCSpace.s4).frame(maxWidth: .infinity, alignment: .leading)
                         .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))   // 朝の振り返りと同じカード
                     showRow(show, log)
+                        .padding(NCSpace.s4).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))   // ほかの項目と同じカード
                     ratings(log)
                     memo(log)
                 }
