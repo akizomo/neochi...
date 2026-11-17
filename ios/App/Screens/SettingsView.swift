@@ -16,6 +16,7 @@ struct SettingsView: View {
 
     @State private var confirmDeleteAll = false
     @State private var deleteError = false
+    @State private var healthGuide = false
 
     private static let privacyURL = URL(string: "https://neochipickzz.vercel.app/privacy.html")!
     private static let scoreURL = URL(string: "https://neochipickzz.vercel.app/about/")!   // スコアと根拠のページ
@@ -93,7 +94,7 @@ struct SettingsView: View {
             let linked = model.healthHasData == true
             Button {
                 if notAsked { Task { await model.requestHealth() } }
-                else if let u = URL(string: UIApplication.openSettingsURLString) { openURL(u) }
+                else { healthGuide = true }   // 許可の画面へ直接行く方法はないので、手順を見せて、ヘルスケアを開く
             } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: NCSpace.s1) {
@@ -117,6 +118,12 @@ struct SettingsView: View {
                 .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
             }
             .buttonStyle(.pressable)
+            .confirmationDialog("ヘルスケアで変更します", isPresented: $healthGuide, titleVisibility: .visible) {
+                Button("ヘルスケアを開く") { if let u = URL(string: "x-apple-health://") { openURL(u) } }
+                Button("設定アプリを開く") { if let u = URL(string: UIApplication.openSettingsURLString) { openURL(u) } }
+            } message: {
+                Text("右上のプロフィール →「プライバシー」→「アプリ」→ NeochiPickzz で、睡眠のオン・オフを変えられます。")
+            }
         }
     }
 
