@@ -57,7 +57,7 @@ struct MorningView: View {
                     Text(NCString.comment(minutes: m)).ncText(NCText.headline)
                     LatencyGauge(minutes: m).padding(.top, NCSpace.s2)
                     let recent = model.recentNights(including: (model.playStartedAt ?? Date(), m))
-                    if recent.count >= 2 { RecentNightsChart(nights: recent).padding(.top, NCSpace.s2) }
+                    if recent.count >= 2 { DataAccordion(title: "最近の夜と比べる") { RecentNightsChart(nights: recent) } }
                     if let s = model.playStartedAt, let o = model.onsetAt {
                         HStack(spacing: NCSpace.s6) {
                             timeColumn(NCString.startedLabel, s)

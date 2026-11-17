@@ -71,3 +71,28 @@ struct RecentNightsChart: View {
         }
     }
 }
+
+
+/// 目盛りのほかの睡眠データ(最近の夜との比べなど)を、たたんでおく。開くと中身が出る。
+struct DataAccordion<Content: View>: View {
+    let title: String
+    @State private var open = false
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: NCSpace.s3) {
+            Button { withAnimation(.snappy(duration: 0.25)) { open.toggle() } } label: {
+                HStack {
+                    Text(title).ncText(NCText.footnote, .textSub)
+                    Spacer()
+                    Image(systemName: "chevron.down").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.nc(.textSub))
+                        .rotationEffect(.degrees(open ? 180 : 0))
+                }
+                .frame(minHeight: NCSize.tapMin).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(open ? "開いています" : "閉じています")
+            if open { content().transition(.opacity) }
+        }
+    }
+}

@@ -28,8 +28,9 @@ struct RecordDetailView: View {
                     Text(Self.dayFormat.string(from: log.startedAt) + (log.source == .selfReport ? "(自己申告)" : ""))
                         .ncText(NCText.footnote, .textSub)
                     result(log)
+                        .padding(NCSpace.s4).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))   // 朝の振り返りと同じカード
                     showRow(show, log)
-                    if log.source == .watch, let m = log.latencyMinutes { sleepCard(log, minutes: m) }
                     ratings(log)
                     memo(log)
                 }
@@ -53,7 +54,12 @@ struct RecordDetailView: View {
                 if log.source == .watch {
                     LatencyGauge(minutes: m).padding(.top, NCSpace.s2)
                     let recent = model.recentNights(upTo: log.startedAt, currentLogID: log.id)
-                    if recent.count >= 2 { RecentNightsChart(nights: recent).padding(.top, NCSpace.s2) }
+                    DataAccordion(title: "最近の夜と睡眠データ") {
+                        VStack(alignment: .leading, spacing: NCSpace.s4) {
+                            if recent.count >= 2 { RecentNightsChart(nights: recent) }
+                            sleepCard(log, minutes: m)
+                        }
+                    }
                 }
             } else if let r = log.selfReport {
                 Text(r.label).ncText(NCText.title, .accentResult)
@@ -105,8 +111,6 @@ struct RecordDetailView: View {
                 fact("再生終了", log.startedAt.addingTimeInterval(Double(endMin) * 60), .textMain)
             }
         }
-        .padding(NCSpace.s4).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
     }
 
     private func fact(_ title: String, _ date: Date, _ color: NCColor) -> some View {
