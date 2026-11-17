@@ -61,6 +61,15 @@ main:focus { outline: none; }
 .foot .logo-w { height: 16px; }
 .mark { width: 40%; height: 40%; color: var(--sub); }
 nav a { color: var(--sub); text-decoration: none; font-size: 13px; padding: 12px 0; display: inline-block; }
+/* ヘッダーのメニュー: 折り返さない。細い画面では、ロゴの下に1行で並べる */
+.top .wrap { flex-wrap: wrap; column-gap: 24px; }
+.top nav { display: flex; gap: 20px; white-space: nowrap; }
+@media (max-width: 560px) {
+  .top .wrap { min-height: 0; padding-top: 12px; }
+  .top nav { flex-basis: 100%; gap: 22px; }
+  .top nav a { padding: 8px 0 10px; }
+  html { scroll-padding-top: 104px; }
+}
 nav a:hover { color: var(--text); }
 
 /* 一覧 */
@@ -215,6 +224,20 @@ svg text { font-family: var(--sans); }
 .prose ol { margin: 8px 0 0 20px; padding: 0; }
 .prose li { margin-top: 4px; }
 .prose dt .tag { margin-left: 8px; }
+
+/* 法的なページ(プライバシーポリシー): 読みやすさを優先。応援ボタンは出さない */
+.legal { padding-bottom: 64px; }
+.legal .cap { margin-top: 8px; }
+.legal .lead { color: var(--text); margin-top: 20px; }
+.legal p, .legal li { line-height: 27px; }
+.legal h2 { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line); }
+.legal .summary { margin-top: 28px; padding: 20px 20px 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.legal .summary h2 { margin: 0; padding: 0; border: 0; font-size: 15px; }
+.legal .summary dl { margin: 0; }
+.legal .summary dt { margin-top: 14px; font-size: 13px; color: var(--sub); font-weight: 600; }
+.legal .summary dd { margin: 2px 0 0; color: var(--text); }
+body:has(.legal) .bmc-fab { display: none; }
+body:has(.legal) .to-top { bottom: calc(16px + env(safe-area-inset-bottom)); }
 .tag { display: inline-block; font-size: 11px; font-weight: 400; line-height: 16px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--sub); white-space: nowrap; vertical-align: 1px; }
 .tag.study { color: var(--text); }
 .ref { font-size: 11px; margin-left: 2px; text-decoration: none; }
@@ -291,9 +314,7 @@ svg text { font-family: var(--sans); }
   .tonight { flex-direction: column; align-items: flex-start; padding: 16px; }
   .art-xl { width: 120px; height: 120px; }
   .eps { grid-template-columns: 1fr; }
-  nav a + a { margin-left: 14px; }
 }
-@media (min-width: 721px) { nav a + a { margin-left: 20px; } }
 
 /* 下層への道: 棚の最後のカード、見出しのリンク、パンくず、フッターの道 */
 .more { display: inline-flex; align-items: center; min-height: 32px; font-weight: 600; }
@@ -307,8 +328,8 @@ svg text { font-family: var(--sans); }
 .guide li a:hover span:last-child { text-decoration: underline; }
 .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; }
 .crumbs span { color: var(--sub); }
-.foot-nav { display: flex; gap: 20px; margin: 4px 0 12px; }
-.foot-nav a { color: var(--sub); font-size: 13px; text-decoration: none; padding: 8px 0; }
+.foot-nav { display: flex; flex-wrap: wrap; gap: 0 20px; margin: 4px 0 12px; }
+.foot-nav a { color: var(--sub); font-size: 13px; text-decoration: none; padding: 8px 0; white-space: nowrap; }
 .foot-nav a:hover { color: var(--text); }
 .sec > .actions { padding-top: 16px; }
 .sec .shelf-row { margin-top: 12px; }

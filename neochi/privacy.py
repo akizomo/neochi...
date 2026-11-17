@@ -1,16 +1,19 @@
-<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>プライバシーポリシー | NeochiPickzz</title>
-<meta name="description" content="NeochiPickzz が扱う情報と、その使いみち、削除のしかた。">
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<main class="wrap" id="main">
-<h1>NeochiPickzz プライバシーポリシー</h1>
-<p>akihiro uezono(以下「運営者」)は、NeochiPickzz(以下「本アプリ」)と、紹介サイト(neochipickzz.vercel.app)で扱う情報について、次のとおり定めます。</p>
+"""プライバシーポリシー(App Store に出すページ)。本文はここが正。site.py が /privacy.html に書き出す。"""
+
+PRIVACY_BODY = '''<div class="prose legal">
+<h1>プライバシーポリシー</h1>
+<p class="cap">制定日: 2026年11月16日</p>
+<p class="lead">akihiro uezono(以下「運営者」)は、NeochiPickzz(以下「本アプリ」)と、紹介サイト(neochipickzz.vercel.app)で扱う情報について、次のとおり定めます。</p>
+
+<div class="summary" role="note" aria-label="要点">
+<h2>要点</h2>
+<dl>
+<dt>取得するもの</dt><dd>ヘルスケアの睡眠データ(読み取りのみ)、聴いた記録、評価とメモ、匿名の識別子</dd>
+<dt>使いみち</dt><dd>寝落ちまでの時間の記録と、番組の評点の算出。広告・第三者への提供・販売はしません</dd>
+<dt>削除</dt><dd>アプリの「設定」タブの「記録をすべて削除」から、いつでも</dd>
+<dt>連絡先</dt><dd><a href="mailto:contact@akizony.com">contact@akizony.com</a></dd>
+</dl>
+</div>
 
 <h2>取得する情報</h2>
 <ol>
@@ -41,10 +44,6 @@
 <p>内容を変えるときは、このページで知らせます。</p>
 
 <h2>連絡先</h2>
-<p>お問い合わせは、<a href="https://github.com/akizomo/neochi.../issues" rel="noopener">GitHub の Issues</a> へお願いします。</p>
+<p>お問い合わせは、<a href="mailto:contact@akizony.com">contact@akizony.com</a> へお願いします。</p>
 
-<p class="cap">制定日: 2026年11月16日</p>
-<p><a href="./">トップへ戻る</a></p>
-</main>
-</body>
-</html>
+</div>'''
