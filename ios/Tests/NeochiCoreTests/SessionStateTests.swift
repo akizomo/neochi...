@@ -43,4 +43,16 @@ final class SessionStateCodableTests: XCTestCase {
         let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601
         XCTAssertEqual(try d.decode(SessionState.self, from: e.encode(s)), s)
     }
+
+    // 予約(今夜聴く・明日聴く)も保存できる。予約を足す前の保存でも読める
+    func testReservationsRoundTripAndOldFile() throws {
+        let night = Date(timeIntervalSince1970: 1_700_000_000)
+        let s = SessionState(favorites: ["a"], reservations: [SavedReservation(night: night, showID: "a", episodeID: "e1"),
+                                                              SavedReservation(night: night.addingTimeInterval(86400), showID: "b", episodeID: nil)])
+        let e = JSONEncoder(); e.dateEncodingStrategy = .iso8601
+        let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601
+        XCTAssertEqual(try d.decode(SessionState.self, from: e.encode(s)), s)
+        let old = #"{"history":[],"pendingMorning":false,"favorites":["a"],"queue":[],"genreStreakNights":0,"reservedShowIDs":{}}"#
+        XCTAssertNil(try d.decode(SessionState.self, from: Data(old.utf8)).reservations)
+    }
 }

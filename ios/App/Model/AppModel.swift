@@ -318,6 +318,7 @@ final class AppModel {
         history = r.history; favorites = r.favorites; queue = r.queue; currentShowID = r.currentShowID
         lastNight = r.lastNight; genreStreakNights = r.genreStreakNights; pendingMorning = r.pendingMorning
         reservations = reservations.filter { entry in s.contains(where: { $0.id == entry.value.show.id }) }
+        restoreReservations()
         persistSession()
     }
 
@@ -328,12 +329,32 @@ final class AppModel {
         guard let r = SessionStore.load() else { return }
         history = r.history; favorites = r.favorites; queue = r.queue; currentShowID = r.currentShowID
         lastNight = r.lastNight; genreStreakNights = r.genreStreakNights
+        savedReservations = r.reservations ?? []
+    }
+
+    /// 保存した予約。番組が読み込めてから、予約に戻す(restoreReservations)。
+    private var savedReservations: [SavedReservation] = []
+
+    func restoreReservations() {
+        let today = nightDay(0)
+        for r in savedReservations where r.night >= today {
+            guard let show = shows.first(where: { $0.id == r.showID }) else { continue }
+            if let eid = r.episodeID {
+                guard let ep = episodes[show.id]?.first(where: { $0.id == eid }) else { continue }
+                reservations[r.night] = TonightEngine.candidate(show: show, episode: ep, ctx: context)
+            } else {
+                reservations[r.night] = Candidate(show: show, episode: nil, playCount: 1, reason: .continuation)
+            }
+        }
+        savedReservations = []
     }
 
     func persistSession() {
         guard persistsSession else { return }
         SessionStore.save(SessionState(history: history, favorites: favorites, queue: queue, currentShowID: currentShowID,
-                                       lastNight: lastNight, genreStreakNights: genreStreakNights, pendingMorning: pendingMorning))
+                                       lastNight: lastNight, genreStreakNights: genreStreakNights, pendingMorning: pendingMorning,
+                                       reservations: reservations.filter { $0.key >= nightDay(0) }.map {
+                                           SavedReservation(night: $0.key, showID: $0.value.show.id, episodeID: $0.value.episode?.id) }))
     }
 
     func slate(night: Int) -> [Candidate] { TonightEngine.slate(night: night, ctx: context) }
@@ -396,6 +417,7 @@ final class AppModel {
         // 前の予約があったときは、置き換わったことを伝える(予約は、その晩に1本だけ)。
         showToast(night == 0 ? (replaced ? "今夜聴く話を変えました" : "今夜聴くに決めました")
                              : (replaced ? "明日聴く話を変えました" : "明日聴くに決めました"))
+        persistSession()
     }
     /// 今夜の予約が、この番組か。
     func isReservedTonight(_ show: Show) -> Bool { reservation(night: 0)?.show.id == show.id }
@@ -438,6 +460,7 @@ final class AppModel {
     func cancelReservation(night: Int) {
         reservations[nightDay(night)] = nil
         showToast("予約を取り消しました")
+        persistSession()
     }
 
     /// 夜の画面を閉じて、再生を止める。朝の振り返りは、そのまま残る。
