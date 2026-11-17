@@ -247,3 +247,27 @@ def test_z_rank_dry_run_saves_nothing(tmp_path, capsys, cfg):
     out = capsys.readouterr().out
     assert "ドライラン" in out and "ZZZ" in out and "格付けが変わる番組 1 件" in out
     assert p.read_text(encoding="utf-8") == before
+
+
+def test_too_short_episodes_are_skipped():
+    """入眠に必要な時間を確保できない短い回は解析しない。再生時間が不明な回は対象にする。"""
+    from types import SimpleNamespace as NS
+    from neochi import cli
+    cfg = {"episode": {"min_minutes": 10}}
+    assert cli._too_short(NS(duration_sec=4 * 60), cfg)
+    assert cli._too_short(NS(duration_sec=599), cfg)
+    assert not cli._too_short(NS(duration_sec=600), cfg)
+    assert not cli._too_short(NS(duration_sec=None), cfg)
+    assert not cli._too_short(NS(duration_sec=60), {})                      # 設定が無ければ何も除かない
+    assert not cli._too_short(NS(duration_sec=60), {"episode": {"min_minutes": 0}})  # 0 = 無効
+
+
+def test_below_standard_shows_are_skipped_but_unrated_are_not():
+    """載せない番組は、新着の解析から外す。評点がまだない番組は、解析しないと評点がつかないので外さない。"""
+    from neochi import cli
+    from neochi.store import JsonStore
+    s = JsonStore("/nonexistent/x.json")
+    s.upsert("show", {"id": "low", "title": "基準未満", "show_star": 3.2, "z_rank": None, "listing_status": "researching"})
+    s.upsert("show", {"id": "new", "title": "評点なし", "show_star": None, "z_rank": None, "listing_status": "researching"})
+    s.upsert("show", {"id": "ok", "title": "掲載中", "show_star": 4.2, "z_rank": "ZZ", "listing_status": "listed"})
+    assert cli.below_standard_ids(s) == {"low"}

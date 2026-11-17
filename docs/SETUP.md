@@ -120,7 +120,7 @@ App Store の審査と、ヘルスケアのデータを扱うアプリに必要�
 > 情報は、運営者が契約するクラウドのデータベース(日本のリージョン)に保存します。端末ごとの記録は、その端末の識別子でのみ読み書きできます。
 >
 > **削除**
-> 自分タブの「記録をすべて削除」から、この端末とサーバーの記録を削除できます。アプリを消しても、サーバーの記録は残るので、先に削除してください。
+> 「設定」タブの「記録をすべて削除」から、この端末とサーバーの記録を削除できます。アプリを消しても、サーバーの記録は残るので、先に削除してください。
 >
 > **本アプリの位置づけ**
 > 本アプリは、ポッドキャスト番組を紹介し、利用者が測った記録を示すものです。医療機器ではなく、健康状態を判断するものではありません。
@@ -155,7 +155,7 @@ App Store の審査と、ヘルスケアのデータを扱うアプリに必要�
 
 1.0 では、`AccountFeature.enabled = false`(`ios/App/Screens/AccountView.swift`)で画面に出さず、entitlements からも外してある。出すときは true にし、`com.apple.developer.applesignin`(Default)を `App/Neochi.entitlements` に戻す。
 
-アプリは匿名ログインで使い始め、アカウント画面(自分タブの先頭のカード)で Apple に連携する。連携すると、機種変更や入れ直しのあとも記録を引き継げる。実装は `ios/App/Screens/AccountView.swift` と `SupabaseClient.linkApple`。
+アプリは匿名ログインで使い始め、アカウント画面(設定の「アカウント」)で Apple に連携する。連携すると、機種変更や入れ直しのあとも記録を引き継げる。実装は `ios/App/Screens/AccountView.swift` と `SupabaseClient.linkApple`。
 
 1. App ID: developer.apple.com → Identifiers → 該当の App ID → Capabilities で、Sign in with Apple を有効にする(済み)。
    - 確認: 一覧で、Sign in with Apple と HealthKit の両方が有効になっている。
@@ -169,7 +169,7 @@ App Store の審査と、ヘルスケアのデータを扱うアプリに必要�
    ```
    - 確認: Functions の一覧に delete-account が出る。
 4. 実機で確かめる(シミュレーターでは Apple ID のログインが不安定なので、実機):
-   - 自分タブ → 先頭の「記録を引き継ぐ」のカード → 「Apple でサインイン」。完了後、「ログイン中 Apple」と出る。
+   - 「設定」タブ →「アカウント」の「記録を引き継ぐ」のカード → 「Apple でサインイン」。完了後、「ログイン中 Apple」と出る。
    - Supabase の Authentication → Users で、同じユーザーに Apple の identity が付き、**匿名のときの user_id が変わっていない**(これまでの `sleep_log` が残る)。
    - 「ログアウト」→ もう一度 Apple でサインイン → 前の記録が見える。
    - 未確認の点: 連携済みの Apple ID でサインインしたときの動き(別ユーザーとして入り直す)。Supabase の公式の文書には、このときのエラーが書かれていない。実機で一度試して、結果を教えてほしい。

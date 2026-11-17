@@ -1,7 +1,7 @@
 import Foundation
 
 /// 昨夜の結果。実測(または自己申告)の分数。記録がなければ minutes は nil。
-public struct LastNight: Hashable, Sendable {
+public struct LastNight: Hashable, Sendable, Codable {
     public let showID: String
     public let episodeID: String
     public let minutes: Int?

@@ -17,17 +17,19 @@ struct NeochiApp: App {
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
+    @State private var showSplash = true   // 起動時の1回だけ(SplashView)
 
     var body: some View {
         @Bindable var model = model
         TabView(selection: $model.selectedTab) {
             TonightView().tabItem { Label("今夜", systemImage: "moon") }.tag(AppModel.AppTab.tonight)
             DiscoverView().tabItem { Label("見つける", systemImage: "magnifyingglass") }.tag(AppModel.AppTab.discover)
-            LogView().tabItem { Label("自分", systemImage: "person.crop.circle") }.tag(AppModel.AppTab.me)
+            LogView().tabItem { Label("記録", systemImage: "clock") }.tag(AppModel.AppTab.log)
+            SettingsTab().tabItem { Label("設定", systemImage: "gearshape") }.tag(AppModel.AppTab.settings)
         }
         .tint(Color.nc(.textMain))
         // 番組を読み込めるまで(Release)。読み込めなかったときは、見本の番組を出さず、やり直しを出す。
-        .overlay { if model.loadState != .ready { LoadGateView() } }
+        .overlay { if model.loadState != .ready && !showSplash { LoadGateView() } }   // 起動の動きの下では出さない(透けて見えないように)
         .overlay(alignment: .bottom) {
             if let t = model.toast {
                 ToastView(text: t.text)
@@ -37,14 +39,19 @@ struct RootView: View {
             }
         }
         .animation(.snappy(duration: 0.25), value: model.toast)
+        .overlay { if showSplash { SplashView { showSplash = false }.ignoresSafeArea() } }
+        // 就寝時刻に開いたときと、朝の記録が開くときは、全画面の画面が上に出る。見えない裏で動かさない
+        .onChange(of: model.nightScreen != nil) { _, open in if open { showSplash = false } }
+        .onChange(of: model.morningOpen) { _, open in if open { showSplash = false } }
         .fullScreenCover(item: $model.nightScreen) { _ in NightView() }
         .task { await model.loadRemote() }
         .task { await model.loadHealthBedtimes() }
         .task { await model.refreshHealthAccess() }
-        .onAppear { model.openNightIfBedtime() }
+        .onAppear { model.openNightIfBedtime(); if model.nightScreen != nil || model.morningOpen { showSplash = false } }
         .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime(); Task { await model.refreshHealthAccess() } } }
-        .sheet(isPresented: Binding(get: { model.needsBedtimeQuestion }, set: { _ in })) { BedtimeSetupView().interactiveDismissDisabled() }
-        .sheet(isPresented: Binding(get: { model.needsGenreQuestion }, set: { _ in })) { GenrePreferenceView().interactiveDismissDisabled() }
+        .sheet(isPresented: $model.onboardingOpen) { OnboardingView().interactiveDismissDisabled() }
+        // オンボーディングは、起動のアニメーションが終わってから出す。
+        .onChange(of: model.needsOnboarding && !showSplash, initial: true) { _, needs in if needs { model.onboardingOpen = true } }
         .fullScreenCover(isPresented: $model.morningOpen) { MorningView() }
     }
 }
