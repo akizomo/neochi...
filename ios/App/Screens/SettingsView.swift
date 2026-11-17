@@ -83,10 +83,10 @@ struct SettingsView: View {
         .buttonStyle(.pressable).disabled(auto)
     }
 
-    /// ヘルスケア(睡眠データ)の連携。ほかの項目と同じ並びで、左に今の状態、右に変える入口を置く。
-    /// 読み取りの許可が「あるか」は、アプリからは分からない。聞いていなければ「連携」で許可画面を出す。聞いたあとは、実際に睡眠データを
-    /// 受け取れているか(過去30日)で状態を示し、「変える」で設定アプリの NeochiPickzz の画面(ヘルスケア → 睡眠)へ案内する
-    /// (連携を切る・つなぎ直すのは、iOS の設定でしかできない)。
+    /// ヘルスケア(睡眠データ)の連携。ほかの項目と同じ並びで、左に今の状態(未連携 / 連携中)、右に入口(連携 / 変える)。
+    /// 読み取りの許可が「あるか」は、アプリからは分からない。聞いていなければ許可画面を出す。聞いたあとは、実際に睡眠データを
+    /// 受け取れているか(過去30日)で連携中かを決め、入口は設定アプリのこのアプリの画面(ヘルスケア → 睡眠)へ
+    /// (許可をつなぎ直す・切るのは、iOS の設定でしかできない)。
     @ViewBuilder private var healthRow: some View {
         if model.healthAccess != .unavailable {
             let notAsked = model.healthAccess == .notAsked
@@ -95,23 +95,15 @@ struct SettingsView: View {
                 if notAsked { Task { await model.requestHealth() } }
                 else if let u = URL(string: UIApplication.openSettingsURLString) { openURL(u) }
             } label: {
-                VStack(alignment: .leading, spacing: NCSpace.s2) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: NCSpace.s1) {
-                            Text("ヘルスケア(睡眠データ)").ncText(NCText.footnote, .textSub)
-                            Text(notAsked ? "未連携" : linked ? "睡眠データを受け取れています" : "睡眠データを受け取れていません")
-                                .ncText(NCText.body).fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer()
-                        HStack(spacing: NCSpace.s1) { Text(notAsked ? "連携" : "変える"); Image(systemName: "chevron.right") }
-                            .ncText(NCText.footnote, .textSub)
+                HStack {
+                    VStack(alignment: .leading, spacing: NCSpace.s1) {
+                        Text("ヘルスケア(睡眠データ)").ncText(NCText.footnote, .textSub)
+                        Text(linked ? "連携中" : "未連携").ncText(NCText.body)
                     }
-                    if !notAsked && !linked {
-                        Text("許可していないか、睡眠の記録がないためです。「変える」で設定アプリを開き、ヘルスケア → 睡眠 をオンにします。")
-                            .ncText(NCText.footnote, .textSub).fixedSize(horizontal: false, vertical: true)
-                    }
+                    Spacer()
+                    HStack(spacing: NCSpace.s1) { Text(linked ? "変える" : "連携"); Image(systemName: "chevron.right") }
+                        .ncText(NCText.footnote, .textSub)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(NCSpace.s4)
                 .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
             }
