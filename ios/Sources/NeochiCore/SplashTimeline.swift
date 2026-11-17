@@ -4,14 +4,14 @@ import Foundation
 /// 時刻(秒)から、角度・濃さ・位置を求めるだけで、画面の描き方には依らない(Linux でもテストできる)。
 /// 長さの単位は、ロゴの SVG と同じ(N の高さを 698 とする)。位置は N の右下の角(倒れる軸)からの距離。
 public enum SplashTimeline {
-    public static let fallStart = 0.8        // 倒れ始め(秒)
-    public static let fallDuration = 1.4
+    public static let fallStart = 0.6        // 倒れ始め(秒)
+    public static let fallDuration = 1.0
     public static let fallAngle = 90.0       // 時計回り
-    public static let fadeStart = 4.8        // 最初の画面へ切り替え始める
-    public static let total = 5.2
+    public static let fadeStart = 3.3        // 最初の画面へ切り替え始める
+    public static let total = 3.7
     public static let reducedFadeStart = 0.8 // 視差効果を減らす: 動かさず、N を見せるだけ
     public static let reducedTotal = 1.2
-    public static let wordmarkFadeIn = 0.6   // 下のワードマークが現れるまで
+    public static let wordmarkFadeIn = 0.4   // 下のワードマークが現れるまで
 
     public struct Floater: Equatable, Sendable {
         public let start: Double
@@ -22,8 +22,8 @@ public enum SplashTimeline {
     }
 
     public static let floaters: [Floater] = [
-        Floater(start: 2.5, duration: 1.8, scale: 0.30, x: 642, y: -700),
-        Floater(start: 3.1, duration: 1.8, scale: 0.22, x: 782, y: -900),
+        Floater(start: 1.6, duration: 1.3, scale: 0.30, x: 642, y: -700),
+        Floater(start: 2.0, duration: 1.3, scale: 0.22, x: 782, y: -900),
     ]
     public static let floatRise = 120.0     // 消えるまでに上がる高さ
     public static let floatPeak = 0.6       // 濃さの最大
