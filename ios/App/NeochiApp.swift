@@ -29,7 +29,7 @@ struct RootView: View {
         }
         .tint(Color.nc(.textMain))
         // 番組を読み込めるまで(Release)。読み込めなかったときは、見本の番組を出さず、やり直しを出す。
-        .overlay { if model.loadState != .ready { LoadGateView() } }
+        .overlay { if model.loadState != .ready && !showSplash { LoadGateView() } }   // 起動の動きの下では出さない(透けて見えないように)
         .overlay(alignment: .bottom) {
             if let t = model.toast {
                 ToastView(text: t.text)
@@ -39,7 +39,7 @@ struct RootView: View {
             }
         }
         .animation(.snappy(duration: 0.25), value: model.toast)
-        .overlay { if showSplash { SplashView { showSplash = false } } }
+        .overlay { if showSplash { SplashView { showSplash = false }.ignoresSafeArea() } }
         // 就寝時刻に開いたときと、朝の記録が開くときは、全画面の画面が上に出る。見えない裏で動かさない
         .onChange(of: model.nightScreen != nil) { _, open in if open { showSplash = false } }
         .onChange(of: model.morningOpen) { _, open in if open { showSplash = false } }
@@ -49,9 +49,9 @@ struct RootView: View {
         .task { await model.refreshHealthAccess() }
         .onAppear { model.openNightIfBedtime(); if model.nightScreen != nil || model.morningOpen { showSplash = false } }
         .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime(); Task { await model.refreshHealthAccess() } } }
-        .sheet(isPresented: Binding(get: { model.needsBedtimeQuestion }, set: { _ in })) { BedtimeSetupView().interactiveDismissDisabled() }
-        .sheet(isPresented: $model.genreSheetOpen) { GenrePreferenceView().interactiveDismissDisabled() }
-        .onChange(of: model.needsGenreQuestion) { _, needs in if needs { model.genreSheetOpen = true } }
+        .sheet(isPresented: $model.onboardingOpen) { OnboardingView().interactiveDismissDisabled() }
+        // オンボーディングは、起動のアニメーションが終わってから出す。
+        .onChange(of: model.needsOnboarding && !showSplash, initial: true) { _, needs in if needs { model.onboardingOpen = true } }
         .fullScreenCover(isPresented: $model.morningOpen) { MorningView() }
     }
 }

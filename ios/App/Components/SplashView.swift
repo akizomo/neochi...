@@ -18,7 +18,6 @@ struct SplashView: View {
         TimelineView(.animation) { context in
             let t = context.date.timeIntervalSince(start)
             ZStack {
-                bg.ignoresSafeArea()
                 Canvas { ctx, size in draw(&ctx, size: size, t: t) }
                 VStack {
                     Spacer()
@@ -29,6 +28,7 @@ struct SplashView: View {
                 }
             }
             .opacity(SplashTimeline.screenOpacity(at: t, reduceMotion: reduceMotion))
+            .background(bg.ignoresSafeArea())      // 地は、終わりまで透けさせない(動きの内容だけが溶ける)
         }
         .contentShape(Rectangle())
         .onTapGesture { onFinish() }
