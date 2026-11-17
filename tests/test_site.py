@@ -199,14 +199,14 @@ def test_reading_pages_have_no_support_button(tmp_path):
         assert "bmc-fab" not in h and 'class="nofab"' in h, path
 
 
-def test_header_menu_collapses_on_narrow_screens(tmp_path):
-    """ヘッダーのメニューは、細い画面でハンバーガーに畳む(ボタンと、開閉の属性、JS の目印)。ヘッダーは固定(sticky)。"""
+def test_header_menu_stays_in_one_row_and_header_is_fixed(tmp_path):
+    """ヘッダーのメニューは、細い画面でもロゴの下に1行で並べる(折り返さない)。ヘッダーは固定(sticky)。ハンバーガーは使わない。"""
     site.build(DATA, tmp_path, cli.load_config(), "https://example.com/")
     h = (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert 'class="menu-btn"' in h and 'aria-expanded="false"' in h and 'aria-controls="site-nav"' in h and 'id="site-nav"' in h
-    assert 'document.documentElement.className+=" js"' in h
+    assert "menu-btn" not in h and "site-nav" not in h
     css = (tmp_path / "style.css").read_text(encoding="utf-8")
-    assert ".top { position: sticky; top: 0;" in css and ".js .menu-btn" in css
+    assert ".top { position: sticky; top: 0;" in css and ".top nav { display: flex; gap: 20px; white-space: nowrap; }" in css
+    assert ".top nav { flex-basis: 100%;" in css
 
 
 def test_ranking_pages_switch_between_shows_and_episodes(tmp_path):

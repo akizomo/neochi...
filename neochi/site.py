@@ -330,11 +330,10 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 <link rel="icon" href="{root}favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="{root}apple-touch-icon.png">
 <link rel="stylesheet" href="{root}style.css">
-<script>document.documentElement.className+=" js"</script>
 </head>
 <body class="{" ".join(c for c in ("wide" if wide else "", "nofab" if nofab else "") if c)}">
 <a class="skip" href="#main">本文へ</a>
-<header class="top"><div class="wrap">{wordmark(root)}<button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="メニューを開く"><span class="bars" aria-hidden="true"></span></button><nav id="site-nav" aria-label="メニュー"><a href="{root}#tonight">今夜の1本</a><a href="{root}ranking/">ランキング</a><a href="{root}about/">スコアと根拠</a></nav></div></header>
+<header class="top"><div class="wrap">{wordmark(root)}<nav aria-label="メニュー"><a href="{root}#tonight">今夜の1本</a><a href="{root}ranking/">ランキング</a><a href="{root}about/">スコアと根拠</a></nav></div></header>
 <main class="wrap" id="main" tabindex="-1">
 {body}
 </main>
@@ -993,13 +992,6 @@ def about_html(cfg: dict) -> str:
 
 
 TOP_JS = """
-(()=>{const h=document.querySelector('.top'),m=h&&h.querySelector('.menu-btn');if(!m)return;
-const set=o=>{h.classList.toggle('open',o);m.setAttribute('aria-expanded',String(o));m.setAttribute('aria-label',o?'メニューを閉じる':'メニューを開く');};
-m.addEventListener('click',()=>set(!h.classList.contains('open')));
-addEventListener('keydown',e=>{if(e.key==='Escape')set(false);});
-document.addEventListener('click',e=>{if(!h.contains(e.target))set(false);});
-h.querySelectorAll('nav a').forEach(a=>a.addEventListener('click',()=>set(false)));
-addEventListener('resize',()=>{if(innerWidth>560)set(false);});})();
 (()=>{const b=document.getElementById('top-btn');if(!b)return;const f=()=>{b.hidden=scrollY<600;};addEventListener('scroll',f,{passive:true});f();
 b.addEventListener('click',e=>{e.preventDefault();scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});});})();
 """
