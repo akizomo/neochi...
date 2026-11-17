@@ -99,6 +99,8 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: NCSpace.s1) {
                         Text("ヘルスケア(睡眠データ)").ncText(NCText.footnote, .textSub)
                         Text(linked ? "連携中" : "未連携").ncText(NCText.body)
+                        Text("寝落ちまでの時間を、自動で記録します").ncText(NCText.footnote, .textSub)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer()
                     HStack(spacing: NCSpace.s1) { Text(linked ? "変える" : "連携"); Image(systemName: "chevron.right") }
