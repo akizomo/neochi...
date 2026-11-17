@@ -17,6 +17,7 @@ struct NeochiApp: App {
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
+    @State private var showSplash = true   // 起動時の1回だけ(SplashView)
 
     var body: some View {
         @Bindable var model = model
@@ -38,11 +39,15 @@ struct RootView: View {
             }
         }
         .animation(.snappy(duration: 0.25), value: model.toast)
+        .overlay { if showSplash { SplashView { showSplash = false } } }
+        // 就寝時刻に開いたときと、朝の記録が開くときは、全画面の画面が上に出る。見えない裏で動かさない
+        .onChange(of: model.nightScreen != nil) { _, open in if open { showSplash = false } }
+        .onChange(of: model.morningOpen) { _, open in if open { showSplash = false } }
         .fullScreenCover(item: $model.nightScreen) { _ in NightView() }
         .task { await model.loadRemote() }
         .task { await model.loadHealthBedtimes() }
         .task { await model.refreshHealthAccess() }
-        .onAppear { model.openNightIfBedtime() }
+        .onAppear { model.openNightIfBedtime(); if model.nightScreen != nil || model.morningOpen { showSplash = false } }
         .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime(); Task { await model.refreshHealthAccess() } } }
         .sheet(isPresented: Binding(get: { model.needsBedtimeQuestion }, set: { _ in })) { BedtimeSetupView().interactiveDismissDisabled() }
         .sheet(isPresented: $model.genreSheetOpen) { GenrePreferenceView().interactiveDismissDisabled() }
