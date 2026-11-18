@@ -186,23 +186,13 @@ struct StarScore: View {
     }
 }
 
-/// 左に評点(★と数字)、右にヘルスケアの実測の平均。
+/// 評点(★と数字)。
 struct MetricsRow: View {
     let show: Show
 
+    /// カードと一覧では、★だけを出す。寝落ちまでの平均の分は、話の長さと見まちがえやすいので、番組の詳細でだけ出す。
     var body: some View {
-        HStack(spacing: NCSpace.s3) {
-            StarScore(star: show.star)
-            Rectangle().fill(Color.nc(.line)).frame(width: NCSize.borderW, height: NCSize.dividerH)
-            if let m = show.avgMinutes {
-                HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
-                    Text("\(m)").ncText(NCText.numMd, .accentResult)
-                    Text("分").ncText(NCText.footnote, .accentResult)
-                }
-            } else {
-                Text("―").ncText(NCText.numMd, .textSub)
-            }
-        }
+        StarScore(star: show.star)
     }
 }
 
