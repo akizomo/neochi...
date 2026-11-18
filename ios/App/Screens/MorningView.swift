@@ -84,9 +84,6 @@ struct MorningView: View {
     /// ヘルスケアに睡眠の記録がない朝。分数ではなく、選択肢で答える(答えなくても記録できる)。
     private var selfReportSection: some View {
         Section {
-            // 質問は、評価の質問と同じく、カードの中の見出し。セクションの題は、別に付ける。
-            Text(NCString.selfReportQuestion).ncText(NCText.headline)
-                .listRowBackground(Color.nc(.surface))
             ForEach(SelfReportLatency.allCases, id: \.self) { opt in
                 Button { selfReport = selfReport == opt ? nil : opt } label: {
                     HStack {
