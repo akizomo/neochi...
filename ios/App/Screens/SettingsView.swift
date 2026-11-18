@@ -43,6 +43,19 @@ struct SettingsView: View {
                 dataRow
                 header("このアプリについて")
                 aboutRows
+                #if DEBUG
+                header("開発")
+                NavigationLink { CatalogView() } label: {
+                    HStack {
+                        Text("部品カタログ").ncText(NCText.body)
+                        Spacer()
+                        Image(systemName: "chevron.right").ncText(NCText.footnote, .textSub)
+                    }
+                    .padding(NCSpace.s4)
+                    .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+                }
+                .buttonStyle(.pressable)
+                #endif
             }
             .padding(.horizontal, NCSpace.s5)
             .padding(.bottom, NCSpace.s8)
@@ -109,9 +122,7 @@ struct SettingsView: View {
                             .ncText(NCText.footnote, .textSub)
                     } else {
                         // 未連携は、目立たせる(主ボタンの色)。
-                        Text("連携").ncText(NCText.headline, .bgBase)
-                            .padding(.horizontal, NCSpace.s5).frame(minHeight: NCSize.tapMin)
-                            .background(Capsule().fill(Color.nc(.textMain)))
+                        NCButtonLabel(title: "連携", kind: .primary, size: .small, fullWidth: false)
                     }
                 }
                 .padding(NCSpace.s4)

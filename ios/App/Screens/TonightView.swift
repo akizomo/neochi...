@@ -55,9 +55,14 @@ struct TonightView: View {
             HStack {
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
                     Text("昨夜の結果").ncText(NCText.footnote, .textSub)
-                    HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
-                        Text("\(model.lastNight?.minutes ?? 0)").ncText(NCText.numMd, .accentResult)
-                        Text("分").ncText(NCText.footnote, .accentResult)
+                    // 測れていない晩は「0分」と出さない(まだ答えていないだけ)。
+                    if let m = model.lastNight?.minutes {
+                        HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
+                            Text("\(m)").ncText(NCText.numMd, .accentResult)
+                            Text("分").ncText(NCText.footnote, .accentResult)
+                        }
+                    } else {
+                        Text("まだ記録していません").ncText(NCText.body)
                     }
                 }
                 Spacer()
@@ -70,7 +75,9 @@ struct TonightView: View {
 
     @ViewBuilder private var candidates: some View {
         if let reserved = model.reservation(night: night) {
-            TonightCard(candidate: reserved, primaryTitle: "取り消す", primaryIcon: "xmark") {
+            // 決めたあと、何が起きるかを、取り消すボタンの下に書く(押しても、どうなったか分からないので)。
+            TonightCard(candidate: reserved, primaryTitle: "取り消す", primaryIcon: "xmark", secondary: true,
+                        note: night == 0 ? model.reservationNote(night: 0) : "明日になると、ここが「今夜」に変わります") {
                 model.cancelReservation(night: night)
             }
         } else {
@@ -97,11 +104,7 @@ struct TonightView: View {
         VStack(spacing: NCSpace.s3) {
             Text("お気に入りは、まだありません。").ncText(NCText.body)
             Text("気になる番組のしおりを押すと、ここに並びます。").ncText(NCText.footnote, .textSub).multilineTextAlignment(.center)
-            Button { model.selectedTab = .discover } label: {
-                Text("見つける").ncText(NCText.body).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                    .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
-            }
-            .buttonStyle(.pressable)
+            NCButton(title: "見つける", kind: .secondary) { model.selectedTab = .discover }
         }
         .padding(NCSpace.s5)
         .frame(maxWidth: .infinity)

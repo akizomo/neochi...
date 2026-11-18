@@ -142,15 +142,8 @@ private struct BestCard: View {
                     MetricsRow(show: show).padding(.top, NCSpace.s2)
                 }
                 .allowsHitTesting(false)
-                Button { model.toggleTonight(show) } label: {
-                    Label(reserved ? "今夜予約済み" : "今夜聴く", systemImage: reserved ? "checkmark" : "moon")
-                        .ncText(NCText.headline, reserved ? .textMain : .bgBase)
-                        .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                        .background(Capsule().fill(reserved ? Color.clear : Color.nc(.textMain)))
-                        .overlay(Capsule().strokeBorder(Color.nc(.textMain), lineWidth: reserved ? 1.5 : 0))
-                }
-                .buttonStyle(.pressable)
-                .padding(.top, NCSpace.s3)
+                ReserveButton(night: 0, reserved: reserved) { model.toggleTonight(show) }
+                    .padding(.top, NCSpace.s3)
             }
             .padding(NCSpace.s4)
         }

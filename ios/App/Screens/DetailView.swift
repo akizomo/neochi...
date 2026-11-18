@@ -3,7 +3,7 @@ import Charts
 import NeochiCore
 
 /// 番組の詳細。「どんな番組か。次にどの話を聴くか」に答える。
-/// 上から: 評点と実測 → 次に聴く話(今夜聴く) → この番組の傾向 → 話の一覧 → 寝落ちの実績 → 最近の話 → 解析について。
+/// 上から: 評点と実測 → 次に聴く話(今夜・明日聴く) → この番組の傾向 → 寝落ちの実績 → 最近の話 → 話の一覧 → 解析について。
 /// 観点ごとの根拠(起伏・耳・興味の中身)は、話ごとのものなので、話の詳細で見せる。
 /// 要因(★・琥珀)は左、結果(ランク・分・青灰)は右。合算しない。
 struct DetailView: View {
@@ -33,9 +33,10 @@ struct DetailView: View {
                     duo(show)
                     nextEpisode(show)
                     tendency(show)
-                    episodeList
                     record(show)
                     if analyzed.filter({ $0.1.finalStar != nil && $0.1.isJudged }).count >= 2 { recent }
+                    // 話の一覧は長くなるので、実績と最近の話のあと(話が多いと、実績が下に押しやられるため)。
+                    episodeList
                     if let (_, a) = latest { AboutAnalysis(analysis: a) } else {
                         Text("この番組の解析は、まだありません。").ncText(NCText.footnote, .textSub)
                     }
@@ -81,18 +82,14 @@ struct DetailView: View {
         }
     }
 
-    private func duo(_ show: Show) -> some View {
-        VStack(alignment: .leading, spacing: NCSpace.s2) {
-            duoRow(show)
-            Text(NCString.ratingBreakdown(watchCount: show.stats?.count ?? 0, avgMinutes: show.stats?.avgMinutes ?? 0))
-                .ncText(NCText.caption, .textSub)
-        }
-    }
+    private func duo(_ show: Show) -> some View { duoRow(show) }
 
     private func duoRow(_ show: Show) -> some View {
         HStack(alignment: .top, spacing: NCSpace.s4) {
             VStack(alignment: .leading, spacing: NCSpace.s1) {
-                Text("評点").ncText(NCText.caption, .textSub)
+                // 何から出した評点かは、見出しに添える(下に別の行で「AI解析」と出すと、浮いて見えたため)。
+                let n = show.stats?.count ?? 0
+                Text(n >= 3 ? "評点(AI解析と実測\(n)件)" : "評点(AI解析)").ncText(NCText.caption, .textSub)
                 StarScore(star: show.star)
             }
             Rectangle().fill(Color.nc(.line)).frame(width: 1, height: 56)
@@ -118,16 +115,17 @@ struct DetailView: View {
     /// 主役は、次に聴く話。「今夜聴く」は、この話を予約する(どの話か見える)。
     @ViewBuilder private func nextEpisode(_ show: Show) -> some View {
         let candidate = model.nextCandidate(for: show)
-        let reservedC = model.reservation(night: 0).flatMap { $0.show.id == show.id ? $0 : nil }
-        let shown = reservedC ?? candidate
-        let reserved = reservedC != nil
+        let tonightC = model.reservation(night: 0).flatMap { $0.show.id == show.id ? $0 : nil }
+        let tomorrowC = model.reservation(night: 1).flatMap { $0.show.id == show.id ? $0 : nil }
+        let shown = tonightC ?? tomorrowC ?? candidate
+        let reserved = tonightC != nil
         VStack(spacing: NCSpace.s3) {
             if let c = shown, let ep = c.episode {
                 NavigationLink(value: EpisodeRoute(id: ep.id)) {
                     VStack(alignment: .leading, spacing: NCSpace.s2) {
                         // 見出しは1つだけ。予約済みなら「今夜聴く話」、まだなら、その話を選んだ理由(最新の話、昨夜は18分で寝落ち、など)。
-                        if reserved {
-                            Text("今夜聴く話").ncText(NCText.caption, .textSub)
+                        if reserved || tomorrowC != nil {
+                            Text(reserved ? "今夜聴く話" : "明日聴く話").ncText(NCText.caption, .textSub)
                         } else {
                             ReasonText(reason: c.reason)
                         }
@@ -149,25 +147,16 @@ struct DetailView: View {
                 .buttonStyle(.pressable)
             }
             HStack(spacing: NCSpace.s2) {
-                Button { model.toggleTonight(show) } label: {
-                    Label(reserved ? "今夜予約済み" : "今夜聴く", systemImage: reserved ? "checkmark" : "moon")
-                        .ncText(NCText.headline, reserved ? .textMain : .bgBase).frame(maxWidth: .infinity, minHeight: 52)
-                        .background(Capsule().fill(reserved ? Color.clear : Color.nc(.textMain)))
-                        .overlay(Capsule().strokeBorder(Color.nc(.textMain), lineWidth: reserved ? 1.5 : 0))
-                }
-                .buttonStyle(.pressable)
-                Button { model.toggleQueue(show) } label: {
-                    Text(model.queue.contains(show.id) ? "次に聴くから外す" : "次に聴く").ncText(NCText.body)
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
-                }
-                .buttonStyle(.pressable)
+                ReserveButton(night: 0, reserved: reserved) { model.toggleReserve(show, night: 0) }
+                ReserveButton(night: 1, reserved: tomorrowC != nil) { model.toggleReserve(show, night: 1) }
+            }
+            // 決めたあと、何が起きるかを書く(今夜タブと同じ言葉)。
+            if reserved || tomorrowC != nil {
+                Text(model.reservationNote(night: reserved ? 0 : 1)).ncText(NCText.footnote, .textSub)
+                    .multilineTextAlignment(.center).frame(maxWidth: .infinity)
             }
             if let c = candidate {
-                Button { model.play(c) } label: {
-                    Text("いま聴く").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.pressable)
+                NCButton(title: "いま聴く", kind: .text, size: .medium) { model.play(c) }
             }
         }
     }

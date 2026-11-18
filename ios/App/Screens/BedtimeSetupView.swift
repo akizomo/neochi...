@@ -30,15 +30,10 @@ struct BedtimeSetupView: View {
         // ボタンは下に固定。スクロールするのは、上の内容だけ。
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: NCSpace.s1) {
-                Button { model.saveBedtime(time, openNight: !editing); if editing { dismiss() } } label: {
-                    Text("決める").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                    .background(Capsule().fill(Color.nc(.textMain)))
-            }
-            .buttonStyle(.pressable)
-                Button { if editing { dismiss() } else { model.saveBedtime(nil) } } label: {
-                    Text(editing ? "閉じる" : "あとで").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
-            }
-            .buttonStyle(.pressable)
+                NCButton(title: "決める") { model.saveBedtime(time, openNight: !editing); if editing { dismiss() } }
+                NCButton(title: editing ? "閉じる" : "あとで", kind: .text, size: .medium) {
+                    if editing { dismiss() } else { model.saveBedtime(nil) }
+                }
             }
             .padding(.horizontal, NCSpace.s5).padding(.top, NCSpace.s2)
             .background(Color.nc(.bgBase))

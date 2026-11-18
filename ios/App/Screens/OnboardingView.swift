@@ -167,19 +167,10 @@ struct OnboardingView: View {
             }
             if step == .shows && model.favorites.isEmpty {
                 // 1つも選んでいないときは副ボタン(枠線)。
-                Button { next() } label: {
-                    Text("あとで選ぶ").ncText(NCText.body).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                        .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
-                }
-                .buttonStyle(.pressable)
+                NCButton(title: "あとで選ぶ", kind: .secondary) { next() }
             } else {
-                Button { next() } label: {
-                    Text(isLast && step != .health ? "はじめる" : "次へ").ncText(NCText.headline, .bgBase)
-                        .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                        .background(Capsule().fill(Color.nc(.textMain)))
-                }
-                .buttonStyle(.pressable)
-                .disabled(requesting)
+                NCButton(title: isLast && step != .health ? "はじめる" : "次へ") { next() }
+                    .disabled(requesting)
             }
         }
         .padding(.horizontal, NCSpace.s5).padding(.vertical, NCSpace.s2)

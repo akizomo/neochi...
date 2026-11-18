@@ -141,18 +141,11 @@ struct MorningView: View {
     /// 親指が届く画面の下に置く。
     private var actions: some View {
         VStack(spacing: NCSpace.s1) {
-            Button {
+            NCButton(title: NCString.save) {
                 model.saveLog(interest: interest, calm: calm, note: note, selfReport: selfReport)
                 dismiss()
-            } label: {
-                Text(NCString.save).ncText(NCText.headline, .bgBase)
-                    .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                    .background(Capsule().fill(Color.nc(.textMain)))
             }
-            .buttonStyle(.pressable)
-            Button(NCString.later) { dismiss() }
-                .buttonStyle(.pressable)
-                .ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
+            NCButton(title: NCString.later, kind: .text, size: .medium) { dismiss() }
         }
         .padding(.horizontal, NCSpace.s5).padding(.top, NCSpace.s2)
         .background(Color.nc(.bgBase))

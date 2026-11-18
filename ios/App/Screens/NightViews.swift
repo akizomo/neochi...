@@ -54,6 +54,16 @@ struct NightView: View {
         ZStack {
             Color.nc(.bgNight).ignoresSafeArea()
             VStack(spacing: NCSpace.s8) {
+                // 就寝の時間帯に開いて、自動で切り替えたとき。黙って切り替えず、なぜこの画面かと、次の一手を書く。
+                if model.nightScreenAuto && model.playing == nil {
+                    VStack(spacing: NCSpace.s1) {
+                        Text("おやすみの時間です").ncText(NCText.headline)
+                        Text(model.reservation(night: 0) != nil ? "今夜聴くに決めた話を用意しました。再生を押すと聴き始めます"
+                                                                 : "今夜のおすすめを用意しました。再生を押すと聴き始めます")
+                            .ncText(NCText.footnote, .textSub).multilineTextAlignment(.center)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
                 VStack(spacing: NCSpace.s2) {
                     // 何を流しているかが、ひと目で分かるように。夜なので小さく、少し暗くする。
                     if let show = shown?.show {
@@ -118,7 +128,8 @@ struct NightView: View {
             .padding(.horizontal, NCSpace.s8)
             VStack {
                 Spacer()
-                Button("終わる") { model.endPlayback() }
+                // 再生前は「閉じる」(昼の画面に戻るだけ)。再生してからは「終わる」(止めて閉じる)。
+                Button(model.playing == nil ? "閉じる" : "終わる") { model.endPlayback() }
                     .ncText(NCText.body, .textSub).frame(minHeight: NCSize.tapMin)
             }
             .padding(.horizontal, NCSpace.s4).padding(.bottom, NCSpace.s6)

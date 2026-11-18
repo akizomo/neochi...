@@ -190,11 +190,7 @@ struct RecordDetailView: View {
                 .padding(NCSpace.s4).frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
             } else {
-                Button { noteOpen = true } label: {
-                    Label("メモを追加", systemImage: "plus").ncText(NCText.body)
-                        .frame(maxWidth: .infinity, minHeight: NCSize.tapMin)
-                        .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
-                }
+                NCButton(title: "メモを追加", icon: "plus", kind: .secondary, size: .medium) { noteOpen = true }
             }
         }
     }
