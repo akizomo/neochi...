@@ -67,12 +67,7 @@ struct LoadGateView: View {
                 VStack(spacing: NCSpace.s4) {
                     Text("番組を読み込めませんでした").ncText(NCText.headline)
                     Text("通信を確かめて、もう一度お試しください。").ncText(NCText.footnote, .textSub)
-                    Button { Task { await model.reload() } } label: {
-                        Text("もう一度").ncText(NCText.headline, .bgBase)
-                            .padding(.horizontal, NCSpace.s6).frame(minHeight: NCSize.buttonH)
-                            .background(Capsule().fill(Color.nc(.textMain)))
-                    }
-                    .buttonStyle(.pressable)
+                    NCButton(title: "もう一度", fullWidth: false) { Task { await model.reload() } }
                 }
                 .multilineTextAlignment(.center)
                 .padding(NCSpace.s6)

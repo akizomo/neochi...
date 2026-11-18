@@ -17,11 +17,7 @@ struct GenrePreferenceView: View {
         .padding(NCSpace.s5)
         .frame(maxWidth: .infinity, alignment: .top) }
         .safeAreaInset(edge: .bottom) {
-            Button { model.savePreferredGenres(selected); dismiss() } label: {
-                Text("決める").ncText(NCText.headline, .bgBase).frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                    .background(Capsule().fill(Color.nc(.textMain)))
-            }
-            .buttonStyle(.pressable)
+            NCButton(title: "決める") { model.savePreferredGenres(selected); dismiss() }
             .padding(.horizontal, NCSpace.s5).padding(.vertical, NCSpace.s2)
             .background(Color.nc(.bgBase))
         }

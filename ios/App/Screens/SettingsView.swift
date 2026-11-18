@@ -109,9 +109,7 @@ struct SettingsView: View {
                             .ncText(NCText.footnote, .textSub)
                     } else {
                         // 未連携は、目立たせる(主ボタンの色)。
-                        Text("連携").ncText(NCText.headline, .bgBase)
-                            .padding(.horizontal, NCSpace.s5).frame(minHeight: NCSize.tapMin)
-                            .background(Capsule().fill(Color.nc(.textMain)))
+                        NCButtonLabel(title: "連携", kind: .primary, size: .small, fullWidth: false)
                     }
                 }
                 .padding(NCSpace.s4)

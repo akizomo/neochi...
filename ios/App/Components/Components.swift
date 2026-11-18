@@ -276,21 +276,8 @@ struct TonightCard: View {
                     MetricsRow(show: candidate.show).padding(.top, NCSpace.s2)
                 }
                 .allowsHitTesting(false)
-                Button(action: onPrimary) {
-                    if secondary {
-                        Label(primaryTitle, systemImage: primaryIcon)
-                            .ncText(NCText.body)
-                            .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                            .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
-                    } else {
-                        Label(primaryTitle, systemImage: primaryIcon)
-                            .ncText(NCText.headline, .bgBase)
-                            .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                            .background(Capsule().fill(Color.nc(.textMain)))
-                    }
-                }
-                .buttonStyle(.pressable)
-                .padding(.top, NCSpace.s3)
+                NCButton(title: primaryTitle, icon: primaryIcon, kind: secondary ? .secondary : .primary, action: onPrimary)
+                    .padding(.top, NCSpace.s3)
                 if let note {
                     Text(note).ncText(NCText.footnote, .textSub).multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
@@ -543,3 +530,4 @@ private struct AppDestinations: ViewModifier {
 extension View {
     func appDestinations() -> some View { modifier(AppDestinations()) }
 }
+

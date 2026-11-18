@@ -123,6 +123,8 @@ public enum NCSize {
     public static let cardW: Double = 1080
     public static let cardH: Double = 1350
     public static let buttonH: Double = 52
+    public static let buttonHM: Double = 44
+    public static let buttonHS: Double = 32
     public static let dividerH: Double = 22
     public static let sheetH: Double = 160
     public static let borderW: Double = 1
@@ -163,6 +165,9 @@ public enum NCText {
     public static let body = NCTextStyle(size: 15, lineHeight: 24, weight: 400, family: .sans)
     public static let footnote = NCTextStyle(size: 13, lineHeight: 20, weight: 400, family: .sans)
     public static let caption = NCTextStyle(size: 11, lineHeight: 16, weight: 500, family: .sans)
+    public static let buttonL = NCTextStyle(size: 17, lineHeight: 24, weight: 600, family: .sans)
+    public static let buttonM = NCTextStyle(size: 15, lineHeight: 20, weight: 600, family: .sans)
+    public static let buttonS = NCTextStyle(size: 13, lineHeight: 18, weight: 600, family: .sans)
     public static let numHero = NCTextStyle(size: 96, lineHeight: 96, weight: 500, family: .mono)
     public static let numLg = NCTextStyle(size: 40, lineHeight: 44, weight: 500, family: .mono)
     public static let numMd = NCTextStyle(size: 24, lineHeight: 28, weight: 500, family: .mono)

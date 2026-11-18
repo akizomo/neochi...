@@ -147,8 +147,8 @@ struct DetailView: View {
                 .buttonStyle(.pressable)
             }
             HStack(spacing: NCSpace.s2) {
-                reserveButton(show, night: 0, reserved: reserved)
-                reserveButton(show, night: 1, reserved: tomorrowC != nil)
+                ReserveButton(night: 0, reserved: reserved) { model.toggleReserve(show, night: 0) }
+                ReserveButton(night: 1, reserved: tomorrowC != nil) { model.toggleReserve(show, night: 1) }
             }
             // 決めたあと、何が起きるかを書く(今夜タブと同じ言葉)。
             if reserved || tomorrowC != nil {
@@ -156,26 +156,9 @@ struct DetailView: View {
                     .multilineTextAlignment(.center).frame(maxWidth: .infinity)
             }
             if let c = candidate {
-                Button { model.play(c) } label: {
-                    Text("いま聴く").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.pressable)
+                NCButton(title: "いま聴く", kind: .text, size: .medium) { model.play(c) }
             }
         }
-    }
-
-    /// 今夜聴く(主ボタン)・明日聴く(副ボタン)。予約したら「予約済み」(枠線とチェック)にし、もう一度押すと取り消す。
-    private func reserveButton(_ show: Show, night: Int, reserved: Bool) -> some View {
-        let primary = night == 0 && !reserved
-        return Button { model.toggleReserve(show, night: night) } label: {
-            Label(reserved ? (night == 0 ? "今夜予約済み" : "明日予約済み") : (night == 0 ? "今夜聴く" : "明日聴く"),
-                  systemImage: reserved ? "checkmark" : (night == 0 ? "moon" : "moon.zzz"))
-                .ncText(primary ? NCText.headline : NCText.body, primary ? .bgBase : .textMain)
-                .frame(maxWidth: .infinity, minHeight: 52)
-                .background(Capsule().fill(primary ? Color.nc(.textMain) : Color.clear))
-                .overlay(Capsule().strokeBorder(reserved ? Color.nc(.textMain) : Color.nc(.borderControl), lineWidth: primary ? 0 : (reserved ? 1.5 : 1)))
-        }
-        .buttonStyle(.pressable)
     }
 
     /// 「11/12 · 42分 · 聴いた」。あるものだけ。
