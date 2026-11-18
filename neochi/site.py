@@ -339,7 +339,7 @@ def page(*, title: str, desc: str, root: str, body: str, canonical: str = "", og
 </main>
 <footer class="foot"><div class="wrap">
 <div class="foot-brand">{wordmark(root, "wf")}<span class="foot-made">made by {MAKER}</span></div>
-<nav class="foot-nav"><a href="{root}">トップ</a><a href="{root}ranking/">ランキング</a><a href="{root}episodes/">寝落ち向きの話</a><a href="{root}about/">スコアと根拠</a><a href="{root}privacy.html">プライバシー</a></nav>
+<nav class="foot-nav"><a href="{root}">トップ</a><a href="{root}ranking/">ランキング</a><a href="{root}episodes/">寝落ち向きの話</a><a href="{root}about/">スコアと根拠</a><a href="{root}privacy.html">プライバシー</a><a href="{root}terms.html">利用規約</a></nav>
 <p>{FOOT_NOTE}</p>
 <p>{FOOT_RIGHTS}</p>
 </div></footer>
@@ -1053,6 +1053,9 @@ def build(data: dict, out_dir: str | Path, cfg: dict, base_url: str = "") -> lis
     from .privacy import PRIVACY_BODY
     (out / "privacy.html").write_text(page(title=f"プライバシーポリシー | {strings.PRODUCT}", desc="NeochiPickzz が扱う情報と、その使いみち、削除のしかた。",
                                            root="./", body=PRIVACY_BODY, canonical=base_url and base_url + "privacy.html", nofab=True), encoding="utf-8")
+    from .terms import TERMS_BODY
+    (out / "terms.html").write_text(page(title=f"利用規約 | {strings.PRODUCT}", desc="NeochiPickzz の利用条件と、プレミアム(有料)の取り扱い。",
+                                         root="./", body=TERMS_BODY, canonical=base_url and base_url + "terms.html", nofab=True), encoding="utf-8")
     (out / "about").mkdir()
     (out / "about" / "index.html").write_text(page(title=f"スコアと根拠 | {strings.PRODUCT}", desc=FOOT_NOTE, root="../",
                                                    body=about_html(cfg), canonical=base_url and base_url + "about/",

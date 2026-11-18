@@ -56,3 +56,15 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+
+# 手元で購入を試すための StoreKit の設定(商品は Config/Neochi.storekit)。本番の商品は App Store Connect に作る(docs/PREMIUM.md §7)。
+schemes:
+  Neochi:
+    build:
+      targets:
+        Neochi: all
+    run:
+      config: Debug
+      storeKitConfiguration: Config/Neochi.storekit
+    archive:
+      config: Release

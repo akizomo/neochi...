@@ -35,6 +35,10 @@ struct SettingsView: View {
                 healthRow
                 header("好み")
                 genreRow
+                if PremiumFeatureFlag.enabled {
+                    header("プレミアム")
+                    PremiumRow()
+                }
                 if AccountFeature.enabled {
                     header("アカウント")
                     AccountRow()

@@ -28,6 +28,20 @@ actor SupabaseClient {
 
     enum ClientError: Error { case notConfigured, http(Int) }
 
+    /// いまのユーザー ID(アクセストークンの sub)。購入に付ける `appAccountToken` に使う(docs/PREMIUM.md §6)。
+    /// 接続先がない・まだログインしていないときは nil。
+    func currentUserUUID() async -> UUID? {
+        guard let s = try? await validSession() else { return nil }
+        let parts = s.accessToken.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        var b64 = String(parts[1]).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        while b64.count % 4 != 0 { b64 += "=" }
+        guard let data = Data(base64Encoded: b64),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let sub = obj["sub"] as? String else { return nil }
+        return UUID(uuidString: sub)
+    }
+
     // MARK: 認証
 
     private struct TokenResponse: Decodable {
