@@ -74,10 +74,7 @@ struct MorningView: View {
                     } else {
                         Text(model.hasHealthSleepData ? "ヘルスケアの記録を待っています" : "睡眠データがありません").ncText(NCText.title)
                     }
-                    if selfReport == nil {
-                        Text(model.hasHealthSleepData ? NCString.awaitingHealthNote : NCString.noHealthNote)
-                            .ncText(NCText.footnote, .textSub).fixedSize(horizontal: false, vertical: true)
-                    }
+
                 }
             }
             .listRowBackground(Color.nc(.surface))
@@ -103,7 +100,7 @@ struct MorningView: View {
                 .accessibilityAddTraits(selfReport == opt ? .isSelected : [])
                 .listRowBackground(Color.nc(.surface))
             }
-        } header: { Text(NCString.selfReportQuestion) } footer: { Text(NCString.selfReportFooter) }
+        } header: { Text(NCString.selfReportQuestion) } footer: { Text((model.hasHealthSleepData ? NCString.awaitingHealthNote + "" : "") + NCString.selfReportFooter) }
     }
 
     /// 数字の元になった時刻(データ)。ヘルスケアで入眠が確認できたときだけ出す。
