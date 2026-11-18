@@ -119,17 +119,28 @@ struct EpisodeDetailView: View {
 
     // MARK: アクション
 
-    /// 「この話を」と明示して、話を指定して予約する。
+    /// 「この話を」と明示して、話を指定して予約する。今夜(主ボタン)と明日(副ボタン)。決めたら、次に何が起きるかを下に書く。
     private func actions(_ show: Show, _ ep: Episode) -> some View {
-        let reserved = model.isReservedTonight(episode: ep)
+        let tonight = model.isReserved(episode: ep, night: 0)
+        let tomorrow = model.isReserved(episode: ep, night: 1)
         return VStack(spacing: NCSpace.s2) {
-            Button { model.toggleTonight(episode: ep, of: show) } label: {
-                Label(reserved ? "今夜予約済み" : "この話を今夜聴く", systemImage: reserved ? "checkmark" : "moon")
-                    .ncText(NCText.headline, reserved ? .textMain : .bgBase).frame(maxWidth: .infinity, minHeight: 52)
-                    .background(Capsule().fill(reserved ? Color.clear : Color.nc(.textMain)))
-                    .overlay(Capsule().strokeBorder(Color.nc(.textMain), lineWidth: reserved ? 1.5 : 0))
+            Button { model.toggleReserve(episode: ep, of: show, night: 0) } label: {
+                Label(tonight ? "今夜予約済み" : "この話を今夜聴く", systemImage: tonight ? "checkmark" : "moon")
+                    .ncText(NCText.headline, tonight ? .textMain : .bgBase).frame(maxWidth: .infinity, minHeight: 52)
+                    .background(Capsule().fill(tonight ? Color.clear : Color.nc(.textMain)))
+                    .overlay(Capsule().strokeBorder(Color.nc(.textMain), lineWidth: tonight ? 1.5 : 0))
             }
             .buttonStyle(.pressable)
+            Button { model.toggleReserve(episode: ep, of: show, night: 1) } label: {
+                Label(tomorrow ? "明日予約済み" : "この話を明日聴く", systemImage: tomorrow ? "checkmark" : "moon.zzz")
+                    .ncText(NCText.body).frame(maxWidth: .infinity, minHeight: 52)
+                    .overlay(Capsule().strokeBorder(tomorrow ? Color.nc(.textMain) : Color.nc(.borderControl), lineWidth: tomorrow ? 1.5 : 1))
+            }
+            .buttonStyle(.pressable)
+            if tonight || tomorrow {
+                Text(model.reservationNote(night: tonight ? 0 : 1)).ncText(NCText.footnote, .textSub)
+                    .multilineTextAlignment(.center).frame(maxWidth: .infinity)
+            }
             Button { model.playNow(episode: ep, of: show) } label: {
                 Text("いま聴く").ncText(NCText.body, .textSub).frame(maxWidth: .infinity, minHeight: 44)
             }

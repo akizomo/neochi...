@@ -532,6 +532,30 @@ final class AppModel {
             ?? TonightEngine.listenNow(show: show, ctx: context)
     }
 
+    /// その晩(0 = 今夜、1 = 明日)の予約が、この番組 / この話か。
+    func isReserved(_ show: Show, night: Int) -> Bool { reservation(night: night)?.show.id == show.id }
+    func isReserved(episode: Episode, night: Int) -> Bool { reservation(night: night)?.episode?.id == episode.id }
+
+    /// 番組を指定して、その晩に聴くを予約する。予約済みなら取り消す。
+    func toggleReserve(_ show: Show, night: Int) {
+        if isReserved(show, night: night) { cancelReservation(night: night); return }
+        let c = night == 0 ? nextCandidate(for: show)
+            : (slate(night: night).first(where: { $0.show.id == show.id }) ?? nextCandidate(for: show))
+        if let c { reserve(night: night, c) }
+    }
+
+    /// 話を指定して、その晩に聴くを予約する。この話が予約済みなら取り消す。
+    func toggleReserve(episode: Episode, of show: Show, night: Int) {
+        if isReserved(episode: episode, night: night) { cancelReservation(night: night); return }
+        reserve(night: night, TonightEngine.candidate(show: show, episode: episode, ctx: context))
+    }
+
+    /// 予約したあと、次に何が起きるか(今夜タブと詳細で同じ言葉)。
+    func reservationNote(night: Int) -> String {
+        night == 0 ? "\(bedtimeText ?? "寝る前に")アプリを開くと、この話をすぐ再生できます"
+                   : "明日の夜、今夜タブにこの話が出ます"
+    }
+
     /// 番組を指定して、今夜聴くを予約する。予約済みなら取り消す。候補にない番組でも、その番組自体を予約する。
     func toggleTonight(_ show: Show) {
         if isReservedTonight(show) { cancelReservation(night: 0); return }
