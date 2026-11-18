@@ -250,6 +250,8 @@ struct TonightCard: View {
     let candidate: Candidate
     let primaryTitle: String
     let primaryIcon: String
+    /// ボタンを副ボタン(枠線)にする。取り消しのように、強く勧めない操作のとき。
+    var secondary = false
     /// 主ボタンの下に添える一言(予約したあと、次に何が起きるか)。
     var note: String? = nil
     let onPrimary: () -> Void
@@ -285,10 +287,17 @@ struct TonightCard: View {
                 }
                 .allowsHitTesting(false)
                 Button(action: onPrimary) {
-                    Label(primaryTitle, systemImage: primaryIcon)
-                        .ncText(NCText.headline, .bgBase)
-                        .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
-                        .background(Capsule().fill(Color.nc(.textMain)))
+                    if secondary {
+                        Label(primaryTitle, systemImage: primaryIcon)
+                            .ncText(NCText.body)
+                            .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                            .overlay(Capsule().strokeBorder(Color.nc(.borderControl), lineWidth: 1))
+                    } else {
+                        Label(primaryTitle, systemImage: primaryIcon)
+                            .ncText(NCText.headline, .bgBase)
+                            .frame(maxWidth: .infinity, minHeight: NCSize.buttonH)
+                            .background(Capsule().fill(Color.nc(.textMain)))
+                    }
                 }
                 .buttonStyle(.pressable)
                 .padding(.top, NCSpace.s3)

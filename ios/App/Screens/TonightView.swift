@@ -76,7 +76,7 @@ struct TonightView: View {
     @ViewBuilder private var candidates: some View {
         if let reserved = model.reservation(night: night) {
             // 決めたあと、何が起きるかを、取り消すボタンの下に書く(押しても、どうなったか分からないので)。
-            TonightCard(candidate: reserved, primaryTitle: "取り消す", primaryIcon: "xmark",
+            TonightCard(candidate: reserved, primaryTitle: "取り消す", primaryIcon: "xmark", secondary: true,
                         note: night == 0
                         ? "\(model.bedtimeText ?? "寝る前に")アプリを開くと、この話をすぐ再生できます"
                         : "明日になると、ここが「今夜」に変わります") {
