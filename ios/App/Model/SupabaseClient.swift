@@ -233,6 +233,7 @@ actor SupabaseClient {
         let interest_level: String?; let interest_score: Int?; let input_depth: String?
         let reasons: Reasons?; let features: Features?
         let calm_per_min: [Double]?; let content_summary: String?
+        let content_start_sec: Int?; let content_start_anchor: String?
         struct Reasons: Decodable {
             let llm: String?; let moments: [M]?; let items: Items?
             struct M: Decodable { let min: Int; let note: String; let level: Int? }
@@ -261,8 +262,12 @@ actor SupabaseClient {
                                                   URLQueryItem(name: "order", value: "analyzed_at.desc")])
         }
         let data: Data
-        do { data = try await fetch(Self.analysisColumns + ",calm_per_min,content_summary") }
-        catch ClientError.http(400) { data = try await fetch(Self.analysisColumns) }
+        // 列が無い環境(migration 0007 / 0009 の前)では、その列を除いて読み直す。
+        do { data = try await fetch(Self.analysisColumns + ",calm_per_min,content_summary,content_start_sec,content_start_anchor") }
+        catch ClientError.http(400) {
+            do { data = try await fetch(Self.analysisColumns + ",calm_per_min,content_summary") }
+            catch ClientError.http(400) { data = try await fetch(Self.analysisColumns) }
+        }
         return try Self.decoder.decode([AnalysisRow].self, from: data).map { r in
             let f = r.features
             var a = EpisodeAnalysis(
@@ -280,6 +285,7 @@ actor SupabaseClient {
             a.moments = (r.reasons?.moments ?? []).map { Moment(minute: $0.min, note: $0.note, level: $0.level) }
             a.calmPerMin = r.calm_per_min ?? []
             a.contentSummary = r.content_summary
+            a.contentStartSec = r.content_start_sec; a.contentStartAnchor = r.content_start_anchor
             return a
         }
     }
