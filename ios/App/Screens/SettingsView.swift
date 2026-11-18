@@ -43,6 +43,19 @@ struct SettingsView: View {
                 dataRow
                 header("このアプリについて")
                 aboutRows
+                #if DEBUG
+                header("開発")
+                NavigationLink { CatalogView() } label: {
+                    HStack {
+                        Text("部品カタログ").ncText(NCText.body)
+                        Spacer()
+                        Image(systemName: "chevron.right").ncText(NCText.footnote, .textSub)
+                    }
+                    .padding(NCSpace.s4)
+                    .background(RoundedRectangle(cornerRadius: NCRadius.md, style: .continuous).fill(Color.nc(.surface)))
+                }
+                .buttonStyle(.pressable)
+                #endif
             }
             .padding(.horizontal, NCSpace.s5)
             .padding(.bottom, NCSpace.s8)
