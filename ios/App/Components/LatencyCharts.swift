@@ -6,6 +6,8 @@ import NeochiCore
 /// 4つのゾーン(すぐ / 理想 / やや粘り / 長め。朝のひとことと同じ区切り)の上に、今夜の位置を置く。
 struct LatencyGauge: View {
     let minutes: Int
+    /// 自己申告の選択肢から出した、おおよその分(「約」をつける)。
+    var approximate = false
 
     var body: some View {
         let zone = LatencyZone.of(minutes: minutes)
@@ -16,7 +18,7 @@ struct LatencyGauge: View {
             ZStack(alignment: .topLeading) {
                 // 位置の目印(数字と三角)
                 VStack(spacing: 2) {
-                    Text("\(minutes)分").ncText(NCText.numSm, .accentResult)
+                    Text("\(approximate ? "約" : "")\(minutes)分").ncText(NCText.numSm, .accentResult)
                     Image(systemName: "arrowtriangle.down.fill").font(.system(size: 9)).foregroundStyle(Color.nc(.accentResult))
                 }
                 .fixedSize()

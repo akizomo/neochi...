@@ -57,10 +57,14 @@ public enum NCString {
     public static let later = "あとで"
 
     public static let selfReportQuestion = "どのくらいで寝ましたか"
-    public static let selfReportFooter = "ヘルスケアに睡眠の記録がなかったので、覚えている範囲で選んでください。番組の評点には入れません。ヘルスケアの許可は、設定で確認できます。"
+    public static let selfReportFooter = "答えは目安として記録します。番組の評点には入れません。"
 
     public static let noResult = "寝落ちまで ―"
     public static let noResultNote = "寝落ちの記録を確認中です"
+    /// ヘルスケアに睡眠データが入る人(ウォッチなど)の朝。反映が遅れて、まだ入っていないとき。
+    public static let awaitingHealthNote = "ヘルスケアへの反映には、時間がかかることがあります。反映されたら、記録に自動で追記します。覚えていれば、下から選んでもかまいません。"
+    /// ヘルスケアに睡眠データがない人の朝。自己申告で答える。
+    public static let noHealthNote = "覚えている範囲で、下から選んでください。"
     public static let researching = "調査中"
     /// 検索で見つからないとき。理由は書かず、評点も出さない。
     public static let notListed = "まだ掲載していません"

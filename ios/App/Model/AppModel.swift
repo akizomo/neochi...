@@ -205,6 +205,7 @@ final class AppModel {
     func refresh() async {
         await loadRemote()
         if pendingMorning { await refreshOnset() }
+        await backfillOnsets()
     }
 
     private func loadFailed(_ status: String) {
@@ -221,6 +222,8 @@ final class AppModel {
         m.analyses = SampleData.analyses
         m.sleepPoints = SampleData.sleepPoints
         #if DEBUG
+        // 見本: 起動引数 -noMeasure で、ヘルスケアに入眠が入っていない朝にする(自己申告の画面を確かめる用)
+        if ProcessInfo.processInfo.arguments.contains("-noMeasure") { m.lastNight = nil }
         // 見本: 最近の夜の記録(寝落ちまでの分のグラフを確かめる用)。端末には保存しない。
         if m.logs.isEmpty {
             for (i, mins) in [34, 22, 14, 41, 9].enumerated() {
@@ -262,6 +265,28 @@ final class AppModel {
         try? await health.requestAuthorization()
         await refreshHealthAccess()
         await loadHealthBedtimes()
+    }
+
+    /// ヘルスケアの睡眠データが入る人か(過去30日に受け取れた)。朝に入眠が出ないときの案内の出し分けに使う。
+    var hasHealthSleepData: Bool { healthHasData == true }
+
+    /// 入眠がまだ分からないまま保存した晩を、ヘルスケアに反映された分から埋める(最大3日前まで)。
+    /// 朝すぐはまだ入っていないことが多いので、アプリを開くたびに確かめる。埋まったら、実測の記録に変えてサーバーにも反映する。
+    func backfillOnsets() async {
+        guard healthAccess == .asked else { return }
+        let from = now().addingTimeInterval(-3 * 86400)
+        var changed = false
+        for i in logs.indices where logs[i].source == .selfReport && logs[i].sleepOnsetAt == nil && logs[i].startedAt > from {
+            guard let onset = try? await health.sleepOnset(after: logs[i].startedAt) else { continue }
+            logs[i].sleepOnsetAt = onset
+            logs[i].source = .watch
+            logs[i].selfReport = nil
+            if let m = logs[i].latencyMinutes { lastNight = LastNight(showID: logs[i].showID, episodeID: logs[i].episodeID, minutes: m) }
+            let log = logs[i]
+            Task { try? await SupabaseClient.shared.upload(log) }
+            changed = true
+        }
+        if changed { LogStore.save(logs); persistSession() }
     }
 
     func refreshOnset() async {

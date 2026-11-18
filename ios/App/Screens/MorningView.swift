@@ -66,8 +66,18 @@ struct MorningView: View {
                         .padding(.top, NCSpace.s2)
                     }
                 } else {
-                    Text("―").ncText(NCText.numHero, .textSub)
-                    Text(NCString.noResultNote).ncText(NCText.body, .textSub)
+                    // 測れていない朝(ウォッチがない人が多い。あっても、反映が遅れていることがある)。大きな「―」は出さず、
+                    // 答えられるようにする。答えたら、その目安をゾーンの目盛りに置く。
+                    if let r = selfReport {
+                        Text(r.label).ncText(NCText.title, .accentResult)
+                        LatencyGauge(minutes: r.minutes, approximate: true).padding(.top, NCSpace.s1)
+                    } else {
+                        Text(model.hasHealthSleepData ? "ヘルスケアの記録を待っています" : "睡眠データがありません").ncText(NCText.title)
+                    }
+                    if selfReport == nil {
+                        Text(model.hasHealthSleepData ? NCString.awaitingHealthNote : NCString.noHealthNote)
+                            .ncText(NCText.footnote, .textSub).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
             .listRowBackground(Color.nc(.surface))
