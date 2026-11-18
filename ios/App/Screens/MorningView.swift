@@ -66,8 +66,15 @@ struct MorningView: View {
                         .padding(.top, NCSpace.s2)
                     }
                 } else {
-                    Text("―").ncText(NCText.numHero, .textSub)
-                    Text(NCString.noResultNote).ncText(NCText.body, .textSub)
+                    // 測れていない朝(ウォッチがない人が多い。あっても、反映が遅れていることがある)。大きな「―」は出さず、
+                    // 答えられるようにする。答えたら、その目安をゾーンの目盛りに置く。
+                    if let r = selfReport {
+                        Text(r.label).ncText(NCText.title, .accentResult)
+                        LatencyGauge(minutes: r.minutes, approximate: true).padding(.top, NCSpace.s1)
+                    } else {
+                        Text(model.hasHealthSleepData ? "ヘルスケアの記録を待っています" : "睡眠データがありません").ncText(NCText.title)
+                    }
+
                 }
             }
             .listRowBackground(Color.nc(.surface))
@@ -85,7 +92,7 @@ struct MorningView: View {
                             Text(opt.hint).ncText(NCText.footnote, .textSub)
                         }
                         Spacer()
-                        if selfReport == opt { Image(systemName: "circle.fill").font(.system(size: NCSize.iconSm)).foregroundStyle(Color.nc(.accentResult)) }
+                        if selfReport == opt { Image(systemName: "checkmark").font(.system(size: NCSize.iconSm, weight: .semibold)).foregroundStyle(Color.nc(.accentResult)) }
                     }
                     .contentShape(Rectangle())
                 }
@@ -93,7 +100,7 @@ struct MorningView: View {
                 .accessibilityAddTraits(selfReport == opt ? .isSelected : [])
                 .listRowBackground(Color.nc(.surface))
             }
-        } header: { Text(NCString.selfReportQuestion) } footer: { Text(NCString.selfReportFooter) }
+        } header: { Text(NCString.selfReportHeader) } footer: { Text((model.hasHealthSleepData ? NCString.awaitingHealthNote + "" : "") + NCString.selfReportFooter) }
     }
 
     /// 数字の元になった時刻(データ)。ヘルスケアで入眠が確認できたときだけ出す。

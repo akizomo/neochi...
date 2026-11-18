@@ -47,8 +47,8 @@ struct RootView: View {
         .task { await model.loadRemote() }
         .task { await model.loadHealthBedtimes() }
         .task { await model.refreshHealthAccess() }
-        .onAppear { model.openNightIfBedtime(); if model.nightScreen != nil || model.morningOpen { showSplash = false } }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { model.openNightIfBedtime(); Task { await model.refreshHealthAccess() } } }
+        .onAppear { model.refreshForNewDay(); model.openNightIfBedtime(); if model.nightScreen != nil || model.morningOpen { showSplash = false } }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { model.refreshForNewDay(); model.openNightIfBedtime(); Task { await model.refreshHealthAccess(); await model.backfillOnsets() } } }
         .sheet(isPresented: $model.onboardingOpen) { OnboardingView().interactiveDismissDisabled() }
         // オンボーディングは、起動のアニメーションが終わってから出す。
         .onChange(of: model.needsOnboarding && !showSplash, initial: true) { _, needs in if needs { model.onboardingOpen = true } }
