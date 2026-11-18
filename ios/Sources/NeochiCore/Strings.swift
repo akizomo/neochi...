@@ -56,6 +56,7 @@ public enum NCString {
     public static let save = "記録する"
     public static let later = "あとで"
 
+    public static let selfReportHeader = "寝落ちまでの目安"
     public static let selfReportQuestion = "どのくらいで寝ましたか"
     public static let selfReportFooter = "答えは目安として記録します。番組の評点には入れません。"
 

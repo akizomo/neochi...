@@ -84,6 +84,9 @@ struct MorningView: View {
     /// ヘルスケアに睡眠の記録がない朝。分数ではなく、選択肢で答える(答えなくても記録できる)。
     private var selfReportSection: some View {
         Section {
+            // 質問は、評価の質問と同じく、カードの中の見出し。セクションの題は、別に付ける。
+            Text(NCString.selfReportQuestion).ncText(NCText.headline)
+                .listRowBackground(Color.nc(.surface))
             ForEach(SelfReportLatency.allCases, id: \.self) { opt in
                 Button { selfReport = selfReport == opt ? nil : opt } label: {
                     HStack {
@@ -100,7 +103,7 @@ struct MorningView: View {
                 .accessibilityAddTraits(selfReport == opt ? .isSelected : [])
                 .listRowBackground(Color.nc(.surface))
             }
-        } header: { Text(NCString.selfReportQuestion) } footer: { Text((model.hasHealthSleepData ? NCString.awaitingHealthNote + "" : "") + NCString.selfReportFooter) }
+        } header: { Text(NCString.selfReportHeader) } footer: { Text((model.hasHealthSleepData ? NCString.awaitingHealthNote + "" : "") + NCString.selfReportFooter) }
     }
 
     /// 数字の元になった時刻(データ)。ヘルスケアで入眠が確認できたときだけ出す。
