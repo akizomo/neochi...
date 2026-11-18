@@ -75,13 +75,11 @@ struct TonightView: View {
 
     @ViewBuilder private var candidates: some View {
         if let reserved = model.reservation(night: night) {
-            // 決めたあと、何が起きるかを書く(押しても、どうなったか分からないので)。
-            Label(night == 0
-                  ? "今夜聴く話に決めています。\(model.bedtimeText.map { "\($0)、" } ?? "寝る前に")アプリを開くと、夜の画面でこの話を用意します。"
-                  : "明日の夜に聴く話に決めています。明日になると、ここが「今夜」に変わります。",
-                  systemImage: "moon.stars")
-                .ncText(NCText.footnote, .textSub).fixedSize(horizontal: false, vertical: true)
-            TonightCard(candidate: reserved, primaryTitle: "取り消す", primaryIcon: "xmark") {
+            // 決めたあと、何が起きるかを、取り消すボタンの下に書く(押しても、どうなったか分からないので)。
+            TonightCard(candidate: reserved, primaryTitle: "取り消す", primaryIcon: "xmark",
+                        note: night == 0
+                        ? "\(model.bedtimeText ?? "寝る前に")開くと、この話から聴けます"
+                        : "明日になると、ここが「今夜」に変わります") {
                 model.cancelReservation(night: night)
             }
         } else {

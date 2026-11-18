@@ -250,6 +250,8 @@ struct TonightCard: View {
     let candidate: Candidate
     let primaryTitle: String
     let primaryIcon: String
+    /// 主ボタンの下に添える一言(予約したあと、次に何が起きるか)。
+    var note: String? = nil
     let onPrimary: () -> Void
 
     private var surface: some View {
@@ -290,6 +292,11 @@ struct TonightCard: View {
                 }
                 .buttonStyle(.pressable)
                 .padding(.top, NCSpace.s3)
+                if let note {
+                    Text(note).ncText(NCText.footnote, .textSub).multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .allowsHitTesting(false)
+                }
             }
             .padding(NCSpace.s4)
         }
