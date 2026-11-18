@@ -92,7 +92,7 @@ struct MorningView: View {
                             Text(opt.hint).ncText(NCText.footnote, .textSub)
                         }
                         Spacer()
-                        if selfReport == opt { Image(systemName: "circle.fill").font(.system(size: NCSize.iconSm)).foregroundStyle(Color.nc(.accentResult)) }
+                        if selfReport == opt { Image(systemName: "checkmark").font(.system(size: NCSize.iconSm, weight: .semibold)).foregroundStyle(Color.nc(.accentResult)) }
                     }
                     .contentShape(Rectangle())
                 }

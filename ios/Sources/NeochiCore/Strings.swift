@@ -46,9 +46,9 @@ public enum NCString {
         case .absorbed: return "続きが気になって、聞き続けてしまう"
         }
     }
-    public static let calmQuestion = "話の流れは、ゆるやかでしたか"
-    public static let calmLow = "起伏が多かった"
-    public static let calmHigh = "ゆるやかだった"
+    public static let calmQuestion = "聴いていて、盛り上がりや驚きはありましたか"
+    public static let calmLow = "たくさんあった"
+    public static let calmHigh = "ほとんどなかった"
     // ⓘ から開く説明。長く書かない(1〜2行)。定義の出どころは docs/SCORE.md §2・§3
     public static let infoInterest = "話にどれくらい引き込まれたかを、1〜10で選びます。4〜6(少し気になるが、追わなくても困らない)が、眠るにはいちばん向いています。低すぎると気が散り、高すぎると聞き続けてしまいます。"
     public static let infoCalm = "盛り上がり、驚き、対立、急な話題の転換が少ないほど、ゆるやかです。数字が大きいほど、寝落ちに向いています。"
