@@ -113,12 +113,19 @@ final class AppModel {
 
     /// 就寝の時間帯にアプリを開いたら、昼の画面ではなく夜の画面を出す。
     func openNightIfBedtime() {
-        guard nightScreen == nil, inBedtimeWindow else { return }
+        guard nightScreen == nil, !morningOpen, inBedtimeWindow else { return }
         nightScreenNight = nightDay(0)
+        nightScreenAuto = playing == nil
         nightScreen = playing == nil ? .ready : .playing
     }
 
     enum NightScreen: String, Identifiable { case ready, playing; var id: String { rawValue } }
+
+    /// 就寝の時間帯に開いたので、夜の画面を自動で出したか。夜の画面に、なぜ切り替わったかを書くために使う。
+    var nightScreenAuto = false
+
+    /// ふだんの就寝時刻の言い方(「23:00ごろ」)。分からなければ nil。
+    var bedtimeText: String? { bedtimeMinute.map { String(format: "%d:%02dごろ", $0 / 60, $0 % 60) } }
 
     /// 夜の画面を出した晩(`nightDay(0)`)。朝になって、その晩が明けたかを見る。
     private var nightScreenNight: Date?
@@ -135,16 +142,21 @@ final class AppModel {
         }
         let nightOver = nightScreenNight.map { $0 < tonight } ?? false
         if nightScreen != nil && nightOver && !inBedtimeWindow { endPlayback() }
-        if morningDue && !morningOpen && !onboardingOpen {
+        // 朝の振り返りを自動で出すのは、1日1回まで(「あとで」で閉じたら、その日はもう出さない。今夜タブの「昨夜の結果」からは開ける)。
+        // 就寝の時間帯(また夜になった)には出さない。夜の画面を優先する。
+        let autoShown = UserDefaults.standard.object(forKey: Self.morningAutoKey) as? Date
+        if morningDue && !morningOpen && !onboardingOpen && !inBedtimeWindow && autoShown != tonight {
             let wasOpen = nightScreen != nil
             if wasOpen { endPlayback() }
+            UserDefaults.standard.set(tonight, forKey: Self.morningAutoKey)
             // 全画面の画面は、同時に2つ出せない。夜の画面が閉じてから出す。
             Task { @MainActor in
                 if wasOpen { try? await Task.sleep(for: .milliseconds(600)) }
-                if morningDue && !morningOpen { morningOpen = true }
+                if morningDue && !morningOpen && nightScreen == nil { morningOpen = true }
             }
         }
     }
+    private static let morningAutoKey = "morningAutoShownDay"
 
     init(shows: [Show], episodes: [String: [Episode]], history: [PlayRecord] = [], favorites: Set<String> = [],
          queue: [String] = [], currentShowID: String? = nil, lastNight: LastNight? = nil,
@@ -558,6 +570,7 @@ final class AppModel {
         player.stop()
         playing = nil
         nightScreen = nil
+        nightScreenAuto = false
     }
 
     /// 再生を始める。再生した番組が、次の「いまの番組」になる。

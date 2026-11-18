@@ -55,9 +55,14 @@ struct TonightView: View {
             HStack {
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
                     Text("昨夜の結果").ncText(NCText.footnote, .textSub)
-                    HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
-                        Text("\(model.lastNight?.minutes ?? 0)").ncText(NCText.numMd, .accentResult)
-                        Text("分").ncText(NCText.footnote, .accentResult)
+                    // 測れていない晩は「0分」と出さない(まだ答えていないだけ)。
+                    if let m = model.lastNight?.minutes {
+                        HStack(alignment: .firstTextBaseline, spacing: NCSpace.s1) {
+                            Text("\(m)").ncText(NCText.numMd, .accentResult)
+                            Text("分").ncText(NCText.footnote, .accentResult)
+                        }
+                    } else {
+                        Text("まだ記録していません").ncText(NCText.body)
                     }
                 }
                 Spacer()
@@ -70,6 +75,12 @@ struct TonightView: View {
 
     @ViewBuilder private var candidates: some View {
         if let reserved = model.reservation(night: night) {
+            // 決めたあと、何が起きるかを書く(押しても、どうなったか分からないので)。
+            Label(night == 0
+                  ? "今夜聴く話に決めています。\(model.bedtimeText.map { "\($0)、" } ?? "寝る前に")アプリを開くと、夜の画面でこの話を用意します。"
+                  : "明日の夜に聴く話に決めています。明日になると、ここが「今夜」に変わります。",
+                  systemImage: "moon.stars")
+                .ncText(NCText.footnote, .textSub).fixedSize(horizontal: false, vertical: true)
             TonightCard(candidate: reserved, primaryTitle: "取り消す", primaryIcon: "xmark") {
                 model.cancelReservation(night: night)
             }
