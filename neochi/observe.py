@@ -50,11 +50,23 @@ def parse_observations(raw: str, cfg: dict | None = None) -> dict:
     dropped = 0
     emotion, worry, hook, follow, imagery, load = [], [], [], [], [], []
     for x in d.get("emotion") or []:
-        mi, q = _minute(x.get("min"), minutes), _quote(x.get("quote"))
-        if mi is None or q is None or x.get("kind") not in KINDS or x.get("strength") not in (1, 2):
+        q = _quote(x.get("quote"))
+        if x.get("kind") not in KINDS or q is None:
             dropped += 1
             continue
-        emotion.append({"min": mi, "kind": x["kind"], "strength": x["strength"], "quote": q})
+        if "from" in x or "to" in x:   # v2.2: 区間で書く。強さは区間の長さから決める(2分以上 = 2)
+            sp = _span(x, minutes)
+            if sp is None:
+                dropped += 1
+                continue
+            emotion.append({"from": sp[0], "to": sp[1], "min": sp[0], "kind": x["kind"],
+                            "strength": 2 if sp[1] - sp[0] + 1 >= 2 else 1, "quote": q})
+        else:                          # v2(round1・2): 1つの分と、AIが決めた強さ
+            mi = _minute(x.get("min"), minutes)
+            if mi is None or x.get("strength") not in (1, 2):
+                dropped += 1
+                continue
+            emotion.append({"min": mi, "kind": x["kind"], "strength": x["strength"], "quote": q})
     for x in d.get("worry") or []:
         mi, q = _minute(x.get("min"), minutes), _quote(x.get("quote"))
         if mi is None or q is None:
@@ -85,14 +97,19 @@ def _fw(minute: int, cfg: dict) -> float:
 
 
 def _event_weights(obs: dict, cfg: dict) -> list[float]:
-    """1分ごとの、感情と心配の観察の重みの合計(前半の重みは付けない)。"""
+    """1分ごとの、感情と心配の観察の重みの合計(前半の重みは付けない)。1分あたりの合計に上限(per_min_cap)を付ける。
+    感情の観察が区間(from/to)のときは、区間の各分に重みを足す。"""
     e = cfg["emotion"]
     w = [0.0] * cfg["minutes"]
     for x in obs["emotion"]:
-        w[x["min"]] += e["kind_weight"][x["kind"]] * e["strength_weight"][x["strength"]]
+        a, b = x.get("from", x["min"]), x.get("to", x["min"])
+        per = e["kind_weight"][x["kind"]] * (e["strength_weight"][x["strength"]] if "from" not in x else 1.0)
+        for m in range(a, b + 1):
+            w[m] += per
     for x in obs["worry"]:
         w[x["min"]] += cfg["worry_weight"]
-    return w
+    cap = e.get("per_min_cap")
+    return [min(cap, v) if cap else v for v in w]
 
 
 def calm_per_min(obs: dict, cfg: dict) -> list[float]:

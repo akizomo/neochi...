@@ -1,0 +1,146 @@
+[
+ {
+  "episode_id": "25275502-d964-527a-82d0-90fe8373d7f7",
+  "show": "朗読本箱【つかさの朗読館】",
+  "title": "【朗読】山本周五郎『紅扱帯一番首』",
+  "genre": "朗読",
+  "old": {
+   "calm": 1.2,
+   "interest": 4,
+   "ear": 4.7,
+   "final": 2.7
+  }
+ },
+ {
+  "episode_id": "ef598359-3f4c-57aa-85a1-8a7cf4b66cdf",
+  "show": "歴史を面白く学ぶコテンラジオ （COTEN RADIO）",
+  "title": "【68-4】最後に笑うのは誰だ！ギロチンの刃先が指し示す革命の代償【COTEN RADIOショート フランス革命と陰謀論編4】",
+  "genre": "教養",
+  "old": {
+   "calm": 1.0,
+   "interest": 7,
+   "ear": 4.9,
+   "final": 2.4
+  }
+ },
+ {
+  "episode_id": "53c7305f-b7ca-5941-9005-8875b19cb7ba",
+  "show": "入眠夜話",
+  "title": "【夜話４４２】犯罪組織に侵入せよ！ミステリークイズ集６",
+  "genre": "寝落ち用",
+  "old": {
+   "calm": 2.0,
+   "interest": 6,
+   "ear": 4.3,
+   "final": 3.1
+  }
+ },
+ {
+  "episode_id": "7cd4c83e-2dcd-5070-ad8f-38873cbef30e",
+  "show": "となりの雑談",
+  "title": "となりの雑談　EP.200「歩く種」",
+  "genre": "雑談",
+  "old": {
+   "calm": 4.2,
+   "interest": 3,
+   "ear": 4.2,
+   "final": 4.2
+  }
+ },
+ {
+  "episode_id": "976ffdc6-ef13-5095-9bba-f776e81a85a8",
+  "show": "金曜JUNK バナナマンのバナナムーンGOLD",
+  "title": "カンニング竹山さんの波瀾万丈すぎな芸人人生！設楽大好きびっくり亭？！",
+  "genre": "コメディ",
+  "old": {
+   "calm": 3.5,
+   "interest": 2,
+   "ear": 4.0,
+   "final": 3.6
+  }
+ },
+ {
+  "episode_id": "a3a9c374-2d1a-5c80-ba3a-29ac811fc05f",
+  "show": "藤村忠寿のひげ千夜一夜",
+  "title": "藤村忠寿のひげ千夜一夜(2026.10.28後半放送分)「次女、こんな夜は」第5回",
+  "genre": "雑談",
+  "old": {
+   "calm": 2.8,
+   "interest": 3,
+   "ear": 4.6,
+   "final": 3.5
+  }
+ },
+ {
+  "episode_id": "9cb3e0e1-6e8d-559c-8d5c-121acd0cba1f",
+  "show": "未消化な私たち",
+  "title": "#12 女芸人の立ち位置",
+  "genre": "コメディ",
+  "old": {
+   "calm": 2.8,
+   "interest": 5,
+   "ear": 4.7,
+   "final": 3.6
+  }
+ },
+ {
+  "episode_id": "35075894-f4a7-59c0-9ab7-1857bee5d9de",
+  "show": "植物最高Radio",
+  "title": "植物最高Radio #132「日本のお祭りと植物との深い繋がりについて」",
+  "genre": "雑談",
+  "old": {
+   "calm": 2.8,
+   "interest": 2,
+   "ear": 5.0,
+   "final": 3.4
+  }
+ },
+ {
+  "episode_id": "3c2495dc-9efb-5875-8cdb-17aeed5d93a9",
+  "show": "夜のおやすみなさいワイド",
+  "title": "#180 ふるさと納税の牛タンとサーモン切り身がすごい！",
+  "genre": "寝落ち用",
+  "old": {
+   "calm": 3.5,
+   "interest": 3,
+   "ear": 4.9,
+   "final": 3.9
+  }
+ },
+ {
+  "episode_id": "c1741caa-34f1-587b-be93-d2dc1c9ca27d",
+  "show": "おやすみむかしばなし｜昔話の読み聞かせ・寝かしつけ",
+  "title": "ゴルディロックスと三匹のくま｜昔話の読み聞かせ・寝かしつけ（約10分）",
+  "genre": "朗読",
+  "old": {
+   "calm": 4.2,
+   "interest": 2,
+   "ear": 4.3,
+   "final": 4.1
+  }
+ },
+ {
+  "episode_id": "36458262-048c-560f-97fc-35f9392bccf9",
+  "show": "しゃべり足りない部 - 30代会社員のゆる雑談ポッドキャスト",
+  "title": "S3E100 #しゃべ足り シーズン3完結！「30代会社員」の「ゆる雑談」について",
+  "genre": "雑談",
+  "old": {
+   "calm": 4.2,
+   "interest": 1,
+   "ear": 4.8,
+   "final": 4.1
+  }
+ },
+ {
+  "episode_id": "c46db365-075e-5c16-bacf-45943461788c",
+  "show": "聴く日経ヘッドライン",
+  "title": "聴く日経ヘッドライン（2026.10.2.配信分）",
+  "genre": "教養",
+  "old": {
+   "calm": 3.5,
+   "interest": 1,
+   "ear": 4.5,
+   "final": 3.6
+  }
+ }
+]

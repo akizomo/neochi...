@@ -8,7 +8,8 @@ front_weight: {from_min: 10, weight: 0.67}
 
 emotion:
   kind_weight: {negative: 1.0, conflict: 1.0, excitement: 0.5}   # 楽しい興奮は、根拠が弱いので小さく効かせる
-  strength_weight: {1: 1.0, 2: 2.0}
+  strength_weight: {1: 1.0, 2: 2.0}   # round1・2 の形式(1つの分 + 強さ)のとき。区間(from/to)の形式では、各分に 1.0 を足す
+  per_min_cap: 2.0                    # 1分あたりの加点の上限。同じ箇所を重ねて挙げても、1分で足せる量は決まっている
 worry_weight: 1.0
 
 # 頭の負荷: 頭の負荷が高い区間(観察 load)が、冒頭のうち cov_full を占めたら、max_points 点を加える。
