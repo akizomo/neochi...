@@ -98,14 +98,15 @@ def _fw(minute: int, cfg: dict) -> float:
 
 def _event_weights(obs: dict, cfg: dict) -> list[float]:
     """1分ごとの、感情と心配の観察の重みの合計(前半の重みは付けない)。1分あたりの合計に上限(per_min_cap)を付ける。
-    感情の観察が区間(from/to)のときは、区間の各分に重みを足す。"""
+    感情の観察が区間(from/to)のときは、**加点の合計が、区間の長さによらず決まる**(1分 = 弱、2分以上 = 強)ように、
+    区間の各分に等分する。区間の取り方の小さな差(8〜11分か、10〜11分か)で、点が増幅されないようにする。"""
     e = cfg["emotion"]
     w = [0.0] * cfg["minutes"]
     for x in obs["emotion"]:
         a, b = x.get("from", x["min"]), x.get("to", x["min"])
-        per = e["kind_weight"][x["kind"]] * (e["strength_weight"][x["strength"]] if "from" not in x else 1.0)
+        total = e["kind_weight"][x["kind"]] * e["strength_weight"][x["strength"]]
         for m in range(a, b + 1):
-            w[m] += per
+            w[m] += total / (b - a + 1)
     for x in obs["worry"]:
         w[x["min"]] += cfg["worry_weight"]
     cap = e.get("per_min_cap")

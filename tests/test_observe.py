@@ -98,7 +98,7 @@ def test_emotion_span_strength_comes_from_length_not_from_the_judge(ocfg):
     short = observe.parse_observations(raw(emotion=[{"from": 4, "to": 4, "kind": "negative", "quote": "a"}]), ocfg)
     long_ = observe.parse_observations(raw(emotion=[{"from": 4, "to": 6, "kind": "negative", "quote": "a"}]), ocfg)
     assert short["emotion"][0]["strength"] == 1 and long_["emotion"][0]["strength"] == 2
-    assert observe.calm_raw(long_, ocfg) > observe.calm_raw(short, ocfg)      # 区間が長いほど、起伏が大きい
+    assert observe.calm_raw(long_, ocfg) > observe.calm_raw(short, ocfg)      # 2分以上は、1分より強い
     assert len(observe.calm_per_min(long_, ocfg)) == 20 and observe.calm_per_min(long_, ocfg)[5] > 0
 
 
@@ -109,3 +109,10 @@ def test_per_minute_cap_limits_stacking_the_same_moment(ocfg):
                  {"from": 3, "to": 3, "kind": "negative", "quote": "c"}],
         worry=[{"min": 3, "topic": "money", "quote": "d"}]), ocfg)
     assert max(observe._event_weights(many, ocfg)) == ocfg["emotion"]["per_min_cap"]
+
+
+def test_emotion_total_does_not_depend_on_span_length_beyond_two_minutes(ocfg):
+    """区間の取り方の小さな差(2分か4分か)で、点が増幅されない。"""
+    two = observe.parse_observations(raw(emotion=[{"from": 4, "to": 5, "kind": "negative", "quote": "a"}]), ocfg)
+    four = observe.parse_observations(raw(emotion=[{"from": 4, "to": 7, "kind": "negative", "quote": "a"}]), ocfg)
+    assert abs(observe.calm_raw(two, ocfg) - observe.calm_raw(four, ocfg)) < 1e-9
