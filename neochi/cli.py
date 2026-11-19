@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from . import feeds, genre, pipeline, z_rank
+from . import feeds, genre, pipeline, versions, z_rank
 from .store import JsonStore, open_store
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -98,6 +98,40 @@ def update_ratings(store, show_ids, zcfg: dict) -> None:
         rank = z_rank.z_rank(s.get("show_star"), zcfg)
         store.update("show", sid, {"z_rank": rank, "listing_status": "listed" if rank else "researching"})
         logging.info("%s → %s", s["title"], rank or "掲載しない")
+
+
+def cmd_repending(a) -> int:
+    """保存した文字起こしから、判定待ちのファイルを作り直す。音声の取得と文字起こしはしない。
+    採点基準(config/rubric.md)を変えたあと、古い基準で判定した回(--stale)や、指定した回だけを判定し直すときに使う。
+    そのあとは、いつもどおり、セッションが work/pending を判定し、`python -m neochi apply` で取り込む。"""
+    cfg, store = load_config(), open_store(a.store)
+    eps = {e["id"]: e for e in store.rows("episode")}
+    shows = {s["id"]: s for s in store.rows("show")}
+    trs = {t["episode_id"]: t for t in store.rows("transcript")}
+    want = set(a.episodes.split(",")) if a.episodes else None
+    n = missing = 0
+    for row in store.rows("analysis"):
+        eid = row["episode_id"]
+        if want is not None and eid not in want:
+            continue
+        if a.stale and not versions.stale((row.get("reasons") or {}).get("versions"), ("rubric",), cfg):
+            continue
+        if not want and not a.stale:
+            continue
+        ep = eps.get(eid)
+        if ep is None:
+            continue
+        tr = trs.get(eid)
+        if tr is None:
+            missing += 1
+            continue
+        if a.limit and n >= a.limit:
+            break
+        spans = [(x, y, t) for x, y, t in tr["spans"]]
+        pipeline.write_pending(a.pending, eid, (shows.get(ep["show_id"]) or {}).get("title", ""), ep.get("title") or "", spans)
+        n += 1
+    print(f"判定待ちを {n} 件書き出しました({a.pending})。文字起こしが保存されていない回: {missing} 件(音声から取り直す必要があります)")
+    return 0
 
 
 def cmd_apply(a) -> int:
@@ -272,6 +306,12 @@ def main(argv=None) -> int:
     ap.add_argument("--file", default="work/judgements.jsonl")
     ap.add_argument("--pending", default="work/pending")
     ap.set_defaults(fn=cmd_apply)
+    rp = sub.add_parser("repending", help="保存した文字起こしから、判定待ちを作り直す(採点基準を変えたあとの判定し直し。音声は使わない)")
+    rp.add_argument("--stale", action="store_true", help="古い基準(config/rubric.md の版が違う、または記録がない)で判定した回")
+    rp.add_argument("--episodes", default="", help="回のIDをカンマ区切りで指定(確かめ用の回など)")
+    rp.add_argument("--limit", type=int, default=0, help="書き出す件数の上限(0 = 無制限)")
+    rp.add_argument("--pending", default="work/pending")
+    rp.set_defaults(fn=cmd_repending)
     m = sub.add_parser("remeasure", help="解析済みの回の音響(音量・突発音)だけを測り直す。測る範囲や基準を変えたあとに使う")
     m.add_argument("--max-new", type=int, default=0, help="1回の実行で測り直す件数の上限(0 = 無制限)")
     m.set_defaults(fn=cmd_remeasure)
