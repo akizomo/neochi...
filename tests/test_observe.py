@@ -91,3 +91,21 @@ def test_override_param_changes_scores_without_rejudging(ocfg):
     o = observe.parse_observations(raw(emotion=[{"min": 2, "kind": "negative", "strength": 2, "quote": "a"}]), ocfg)
     steeper = {**ocfg, "calm": {**ocfg["calm"], "slope": ocfg["calm"]["slope"] * 2}}
     assert observe.calm_star(o, steeper) < observe.calm_star(o, ocfg)
+
+
+def test_emotion_span_strength_comes_from_length_not_from_the_judge(ocfg):
+    """区間で書いた感情は、2分以上なら強さ2、1分なら強さ1。AIが強さを決めない(判定者による差を減らす)。"""
+    short = observe.parse_observations(raw(emotion=[{"from": 4, "to": 4, "kind": "negative", "quote": "a"}]), ocfg)
+    long_ = observe.parse_observations(raw(emotion=[{"from": 4, "to": 6, "kind": "negative", "quote": "a"}]), ocfg)
+    assert short["emotion"][0]["strength"] == 1 and long_["emotion"][0]["strength"] == 2
+    assert observe.calm_raw(long_, ocfg) > observe.calm_raw(short, ocfg)      # 区間が長いほど、起伏が大きい
+    assert len(observe.calm_per_min(long_, ocfg)) == 20 and observe.calm_per_min(long_, ocfg)[5] > 0
+
+
+def test_per_minute_cap_limits_stacking_the_same_moment(ocfg):
+    """同じ分に、感情と心配を重ねて挙げても、1分で足せる量には上限がある。"""
+    many = observe.parse_observations(raw(
+        emotion=[{"from": 3, "to": 3, "kind": "negative", "quote": "a"}, {"from": 3, "to": 3, "kind": "conflict", "quote": "b"},
+                 {"from": 3, "to": 3, "kind": "negative", "quote": "c"}],
+        worry=[{"min": 3, "topic": "money", "quote": "d"}]), ocfg)
+    assert max(observe._event_weights(many, ocfg)) == ocfg["emotion"]["per_min_cap"]
