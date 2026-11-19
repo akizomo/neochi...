@@ -23,8 +23,17 @@ final class PremiumStore {
 
     private var updates: Task<Void, Never>?
 
-    var isPremium: Bool { entitlement.isActive }
-    func allows(_ f: PremiumFeature) -> Bool { entitlement.allows(f) }
+    var isPremium: Bool { debugForced || entitlement.isActive }
+    func allows(_ f: PremiumFeature) -> Bool { debugForced || entitlement.allows(f) }
+
+    /// デバッグ時だけ、環境変数 NEOCHI_PREMIUM=1 でプレミアムの機能を出して、画面を確かめられる(購入なし)。
+    private var debugForced: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.environment["NEOCHI_PREMIUM"] == "1"
+        #else
+        return false
+        #endif
+    }
 
     /// 起動時に1回。購入情報の変化(別の端末での購入、更新、返金)を受け取り続ける。
     func start() {
