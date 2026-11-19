@@ -8,7 +8,7 @@ front_weight: {from_min: 10, weight: 0.67}
 
 emotion:
   kind_weight: {negative: 1.0, conflict: 1.0, excitement: 0.5}   # 楽しい興奮は、根拠が弱いので小さく効かせる
-  strength_weight: {1: 1.0, 2: 2.0}   # round1・2 の形式(1つの分 + 強さ)のとき。区間(from/to)の形式では、各分に 1.0 を足す
+  strength_weight: {1: 1.0, 2: 2.0}   # 1つの感情の加点の合計。区間(from/to)のときは、1分 = 1(弱)、2分以上 = 2(強)で、区間の各分に等分する
   per_min_cap: 2.0                    # 1分あたりの加点の上限。同じ箇所を重ねて挙げても、1分で足せる量は決まっている
 worry_weight: 1.0
 
