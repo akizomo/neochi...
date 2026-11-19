@@ -11,7 +11,7 @@ def ocfg():
 
 
 def raw(**k):
-    base = {"emotion": [], "worry": [], "hook": [], "follow": [], "imagery": [], "reason": "穏やかです"}
+    base = {"emotion": [], "worry": [], "hook": [], "follow": [], "imagery": [], "load": [], "reason": "穏やかです"}
     return json.dumps({**base, **k}, ensure_ascii=False)
 
 
@@ -35,14 +35,14 @@ def test_calm_star_goes_down_with_more_and_stronger_observations(ocfg):
     none = observe.parse_observations(raw(), ocfg)
     one = observe.parse_observations(raw(emotion=[{"min": 2, "kind": "negative", "strength": 1, "quote": "a"}]), ocfg)
     strong = observe.parse_observations(raw(emotion=[{"min": 2, "kind": "negative", "strength": 2, "quote": "a"}]), ocfg)
-    assert observe.calm_star(none, None, ocfg) == 5.0
-    assert observe.calm_star(none, None, ocfg) > observe.calm_star(one, None, ocfg) > observe.calm_star(strong, None, ocfg)
+    assert observe.calm_star(none, ocfg) == 5.0
+    assert observe.calm_star(none, ocfg) > observe.calm_star(one, ocfg) > observe.calm_star(strong, ocfg)
 
 
 def test_excitement_counts_less_than_negative_and_late_counts_less_than_early(ocfg):
     ev = lambda kind, m: observe.parse_observations(raw(emotion=[{"min": m, "kind": kind, "strength": 2, "quote": "a"}]), ocfg)
-    assert observe.calm_raw(ev("excitement", 2), None, ocfg) < observe.calm_raw(ev("negative", 2), None, ocfg)
-    assert observe.calm_raw(ev("negative", 15), None, ocfg) < observe.calm_raw(ev("negative", 2), None, ocfg)
+    assert observe.calm_raw(ev("excitement", 2), ocfg) < observe.calm_raw(ev("negative", 2), ocfg)
+    assert observe.calm_raw(ev("negative", 15), ocfg) < observe.calm_raw(ev("negative", 2), ocfg)
 
 
 def test_calm_per_min_comes_from_observations(ocfg):
@@ -75,3 +75,19 @@ def test_novelty_drops_when_the_same_talk_repeats():
              (120, 150, "全く別の話題として、山の天気と登山道の整備について詳しくお伝えしていきます。" * 2)]
     n = textfeatures.novelty_per_min(spans)
     assert n[0] == 1.0 and n[1] > 0.5 and n[2] < 0.1 and n[5] is None
+
+
+def test_load_spans_lower_the_calm_star_by_coverage(ocfg):
+    """頭の負荷が高い区間が長いほど、🌊★が下がる(冒頭のうち cov_full を占めたら、最大の加点)。"""
+    none = observe.parse_observations(raw(), ocfg)
+    some = observe.parse_observations(raw(load=[{"from": 0, "to": 4, "quote": "a"}]), ocfg)     # 5/20分
+    full = observe.parse_observations(raw(load=[{"from": 0, "to": 19, "quote": "a"}]), ocfg)    # 20/20分(cov_full を超える)
+    assert observe.calm_star(none, ocfg) == 5.0
+    assert observe.calm_star(none, ocfg) > observe.calm_star(some, ocfg) > observe.calm_star(full, ocfg)
+    assert observe.load_points(full, ocfg) == ocfg["load"]["max_points"]
+
+
+def test_override_param_changes_scores_without_rejudging(ocfg):
+    o = observe.parse_observations(raw(emotion=[{"min": 2, "kind": "negative", "strength": 2, "quote": "a"}]), ocfg)
+    steeper = {**ocfg, "calm": {**ocfg["calm"], "slope": ocfg["calm"]["slope"] * 2}}
+    assert observe.calm_star(o, steeper) < observe.calm_star(o, ocfg)

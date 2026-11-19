@@ -11,8 +11,9 @@ emotion:
   strength_weight: {1: 1.0, 2: 2.0}
 worry_weight: 1.0
 
-# 頭の負荷: 文字起こし1000字あたりの、数字・専門用語らしい語の数。best 以下は 0点、worst 以上は max_points 点。
-load: {best: 8, worst: 40, max_points: 2.0}
+# 頭の負荷: 頭の負荷が高い区間(観察 load)が、冒頭のうち cov_full を占めたら、max_points 点を加える。
+# (数字・専門用語の密度を機械で数える方法は、コメディを高く、言語学を低く出す誤りがあり、使えなかった。記録だけ残す)
+load: {cov_full: 0.5, max_points: 2.0}
 
 calm:
   slope: 0.5                # 🌊★ = 5 − 起伏の合計 × slope(下限 1.0)
