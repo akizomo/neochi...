@@ -170,30 +170,35 @@ def cmd_retranscribe(a) -> int:
     return 0
 
 
-def _v2_scores(raw: str, store, episode_id: str, ocfg: dict) -> dict:
+def _v2_scores(raw: str, ocfg: dict) -> dict:
+    """観察の JSON 1行から、v2 の点を計算する。DB は使わない(速く何度も回すため)。"""
     obs = observe.parse_observations(raw, ocfg)
-    tr = store.get("transcript", episode_id)
-    text = "".join(t for a, _b, t in (tr or {}).get("spans", []) if a < ocfg["minutes"] * 60)
-    dens = textfeatures.load_density(text)
-    return {"calm": observe.calm_star(obs, dens, ocfg), "interest": observe.interest_star(obs, ocfg), "load_density": dens,
-            "calm_raw": round(observe.calm_raw(obs, dens, ocfg), 2), "dropped": obs["dropped"],
-            "counts": {k: len(obs[k]) for k in ("emotion", "worry", "hook", "follow", "imagery")}}
+    return {"calm": observe.calm_star(obs, ocfg), "interest": observe.interest_star(obs, ocfg),
+            "calm_raw": round(observe.calm_raw(obs, ocfg), 2), "dropped": obs["dropped"],
+            "counts": {k: len(obs[k]) for k in ("emotion", "worry", "hook", "follow", "imagery", "load")}}
 
 
 def cmd_trial_v2(a) -> int:
-    """v2 の判定(JSONL)から、点を試算して、いまの点と並べる。2つ目のファイルがあれば、判定のぶれ(同じ回を別々に判定した差)も出す。
-    本番の点は変えない(何も保存しない)。"""
+    """v2 の判定(JSONL)から、点を試算して、いまの点と並べる(DB は使わない。数秒で終わる)。
+    2つ目のファイルがあれば、判定のぶれ(同じ回を別々に判定した差)も出す。--param で点の数値を変えて試せる(判定はやり直さない)。
+    本番の点は変えない(何も保存しない)。いまの点は、確かめ用の回の一覧(--set)に入っている。"""
     from statistics import mean
-    store, ocfg = open_store(a.store), observe.load_config()
+
     from . import scoring
-    cfg = load_config()
+    ocfg, cfg = observe.load_config(), load_config()
+    for kv in a.param or []:   # 点の数値を、その場で変えて試す。例: --param calm.slope=0.7
+        key, _, val = kv.partition("=")
+        d = ocfg
+        *path, last = key.split(".")
+        for k in path:
+            d = d[k]
+        d[last] = type(d[last])(float(val)) if isinstance(d[last], (int, float)) else val
 
     def load(path):
         out = {}
         for line in Path(path).read_text(encoding="utf-8").splitlines():
             if line.strip():
-                j = json.loads(line)
-                out[j["episode_id"]] = _v2_scores(line, store, j["episode_id"], ocfg)
+                out[json.loads(line)["episode_id"]] = _v2_scores(line, ocfg)
         return out
     r1 = load(a.file)
     r2 = load(a.file2) if a.file2 else {}
@@ -201,8 +206,9 @@ def cmd_trial_v2(a) -> int:
     rows = []
     print(f"{'番組':<22}{'🌊旧':>5}{'🌊v2':>6}{'🎯旧':>5}{'🎯v2':>6}" + ("   run間の差(🌊/🎯)" if r2 else ""))
     for eid, s in r1.items():
-        old = store.get("analysis", eid) or {}
-        ocal, oint = old.get("calm_star"), (scoring.interest_star(old["interest_score"], cfg) if old.get("interest_score") is not None else None)
+        old = (meta.get(eid) or {}).get("old") or {}
+        ocal = old.get("calm")
+        oint = scoring.interest_star(old["interest"], cfg) if old.get("interest") is not None else None
         name = (meta.get(eid) or {}).get("show", eid)[:20]
         d = f"   {abs(s['calm'] - r2[eid]['calm']):.1f} / {abs(s['interest'] - r2[eid]['interest']):.1f}" if eid in r2 else ""
         print(f"{name:<22}{ocal if ocal is not None else '-':>5}{s['calm']:>6}{oint if oint is not None else '-':>5}{s['interest']:>6}{d}")
@@ -404,6 +410,7 @@ def main(argv=None) -> int:
     tv.add_argument("--file2", default="", help="別の判定者が判定した同じ回のファイル。判定のぶれを出す")
     tv.add_argument("--set", default="data/check_set_v2.json")
     tv.add_argument("--out", default="")
+    tv.add_argument("--param", action="append", help="observe.yaml の数値を一時的に変える(a.b=値)。判定はやり直さず、点だけ計算し直す")
     tv.set_defaults(fn=cmd_trial_v2)
     rp = sub.add_parser("repending", help="保存した文字起こしから、判定待ちを作り直す(採点基準を変えたあとの判定し直し。音声は使わない)")
     rp.add_argument("--stale", action="store_true", help="古い基準(config/rubric.md の版が違う、または記録がない)で判定した回")

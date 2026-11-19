@@ -48,7 +48,7 @@ def parse_observations(raw: str, cfg: dict | None = None) -> dict:
         raise ValueError("JSON が見つかりません")
     d = json.loads(m.group(0))
     dropped = 0
-    emotion, worry, hook, follow, imagery = [], [], [], [], []
+    emotion, worry, hook, follow, imagery, load = [], [], [], [], [], []
     for x in d.get("emotion") or []:
         mi, q = _minute(x.get("min"), minutes), _quote(x.get("quote"))
         if mi is None or q is None or x.get("kind") not in KINDS or x.get("strength") not in (1, 2):
@@ -67,14 +67,14 @@ def parse_observations(raw: str, cfg: dict | None = None) -> dict:
             dropped += 1
             continue
         hook.append({"min": mi, "quote": q})
-    for name, dst in (("follow", follow), ("imagery", imagery)):
+    for name, dst in (("follow", follow), ("imagery", imagery), ("load", load)):
         for x in d.get(name) or []:
             sp, q = _span(x, minutes), _quote(x.get("quote"))
             if sp is None or q is None:
                 dropped += 1
                 continue
             dst.append({"from": sp[0], "to": sp[1], "quote": q})
-    return {"emotion": emotion, "worry": worry, "hook": hook, "follow": follow, "imagery": imagery, "dropped": dropped,
+    return {"emotion": emotion, "worry": worry, "hook": hook, "follow": follow, "imagery": imagery, "load": load, "dropped": dropped,
             "reason": str(d.get("reason", "")).strip(), "content_summary": llm.content_summary(d.get("content_summary")),
             "content_start": llm.content_start(d.get("content_start"))}
 
@@ -101,29 +101,27 @@ def calm_per_min(obs: dict, cfg: dict) -> list[float]:
     return [round(min(p["cap"], v * p["event_weight"]), 1) for v in _event_weights(obs, cfg)]
 
 
-def load_points(density: float | None, cfg: dict) -> float:
-    if density is None:
-        return 0.0
-    l = cfg["load"]
-    u = max(0.0, min(1.0, (density - l["best"]) / (l["worst"] - l["best"])))
-    return u * l["max_points"]
-
-
-def calm_raw(obs: dict, density: float | None, cfg: dict) -> float:
-    """起伏の合計(小さいほど穏やか)= 感情・心配の重み(前半を重く)+ 頭の負荷の点。"""
-    ev = sum(v * _fw(i, cfg) for i, v in enumerate(_event_weights(obs, cfg)))
-    return ev + load_points(density, cfg)
-
-
-def calm_star(obs: dict, density: float | None, cfg: dict) -> float:
-    return max(1.0, round(5 - cfg["calm"]["slope"] * calm_raw(obs, density, cfg), 1))
-
-
 def _coverage(spans: list[dict], cfg: dict) -> float:
     covered = set()
     for s in spans:
         covered.update(range(s["from"], s["to"] + 1))
     return len(covered) / cfg["minutes"]
+
+
+def load_points(obs: dict, cfg: dict) -> float:
+    """頭の負荷の点(0〜max_points)。頭の負荷が高い区間が、冒頭のうち cov_full を占めたら満点(= 最大の加点)。"""
+    l = cfg["load"]
+    return min(1.0, _coverage(obs["load"], cfg) / l["cov_full"]) * l["max_points"]
+
+
+def calm_raw(obs: dict, cfg: dict) -> float:
+    """起伏の合計(小さいほど穏やか)= 感情・心配の重み(前半を重く)+ 頭の負荷の点。"""
+    ev = sum(v * _fw(i, cfg) for i, v in enumerate(_event_weights(obs, cfg)))
+    return ev + load_points(obs, cfg)
+
+
+def calm_star(obs: dict, cfg: dict) -> float:
+    return max(1.0, round(5 - cfg["calm"]["slope"] * calm_raw(obs, cfg), 1))
 
 
 def interest_star(obs: dict, cfg: dict) -> float:

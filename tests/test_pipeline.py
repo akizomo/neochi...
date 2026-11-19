@@ -295,7 +295,7 @@ def test_trial_v2_prints_scores_next_to_old_ones(cfg, tmp_path, capsys):
     f1.write_text(json.dumps(j, ensure_ascii=False) + "\n", encoding="utf-8")
     f2.write_text(json.dumps({**j, "emotion": [{"min": 2, "kind": "negative", "strength": 2, "quote": "怖い"}]}, ensure_ascii=False) + "\n", encoding="utf-8")
     out = tmp_path / "o.json"
-    a = argparse.Namespace(store=str(tmp_path / "s.json"), file=str(f1), file2=str(f2), set="", out=str(out))
+    a = argparse.Namespace(file=str(f1), file2=str(f2), set="", out=str(out), param=["calm.slope=0.5"])
     assert cli.cmd_trial_v2(a) == 0
     text = capsys.readouterr().out
     assert "判定のぶれ" in text and json.loads(out.read_text(encoding="utf-8"))[0]["calm"] == 5.0
