@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from . import feeds, genre, pipeline, versions, z_rank
+from . import feeds, genre, observe, pipeline, textfeatures, versions, z_rank
 from .store import JsonStore, open_store
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -131,6 +131,93 @@ def cmd_repending(a) -> int:
         pipeline.write_pending(a.pending, eid, (shows.get(ep["show_id"]) or {}).get("title", ""), ep.get("title") or "", spans)
         n += 1
     print(f"判定待ちを {n} 件書き出しました({a.pending})。文字起こしが保存されていない回: {missing} 件(音声から取り直す必要があります)")
+    return 0
+
+
+def _ids_from(a) -> list[str]:
+    ids = [x for x in (a.episodes or "").split(",") if x]
+    if a.file:
+        ids += [r["episode_id"] for r in json.loads(Path(a.file).read_text(encoding="utf-8"))]
+    return ids
+
+
+def cmd_retranscribe(a) -> int:
+    """解析済みの回の文字起こしを取り直して、保存する(音声を取得して文字起こしする。点は変えない)。"""
+    cfg, store = load_config(), open_store(a.store)
+    eps = {e["id"]: e for e in store.rows("episode")}
+    shows = {s["id"]: s for s in store.rows("show")}
+    done = {t["episode_id"] for t in store.rows("transcript")}
+    ids = [i for i in _ids_from(a) if i in eps]
+    if a.shard:
+        i, n = (int(x) for x in a.shard.split("/"))
+        ids = [x for k, x in enumerate(ids) if k % n == i]
+    ok = 0
+    for eid in ids:
+        if eid in done and not a.force:
+            logging.info("保存済みのためスキップ: %s", eid)
+            continue
+        ep = eps[eid]
+        lang = (shows.get(ep["show_id"]) or {}).get("lang") or "ja"
+        try:
+            good = pipeline.retranscribe_episode(ep, lang, ((store.get("analysis", eid) or {}).get("features") or {}).get("duration_sec"), cfg, store)
+        except Exception as e:  # noqa: BLE001
+            logging.warning("取り直せませんでした: %s (%s)", ep.get("title"), e)
+            continue
+        ok += bool(good)
+        logging.info("%s %s", "保存" if good else "文字起こしなし", ep.get("title"))
+    store.save()
+    print(f"文字起こしを {ok} 件保存しました(対象 {len(ids)} 件)")
+    return 0
+
+
+def _v2_scores(raw: str, store, episode_id: str, ocfg: dict) -> dict:
+    obs = observe.parse_observations(raw, ocfg)
+    tr = store.get("transcript", episode_id)
+    text = "".join(t for a, _b, t in (tr or {}).get("spans", []) if a < ocfg["minutes"] * 60)
+    dens = textfeatures.load_density(text)
+    return {"calm": observe.calm_star(obs, dens, ocfg), "interest": observe.interest_star(obs, ocfg), "load_density": dens,
+            "calm_raw": round(observe.calm_raw(obs, dens, ocfg), 2), "dropped": obs["dropped"],
+            "counts": {k: len(obs[k]) for k in ("emotion", "worry", "hook", "follow", "imagery")}}
+
+
+def cmd_trial_v2(a) -> int:
+    """v2 の判定(JSONL)から、点を試算して、いまの点と並べる。2つ目のファイルがあれば、判定のぶれ(同じ回を別々に判定した差)も出す。
+    本番の点は変えない(何も保存しない)。"""
+    from statistics import mean
+    store, ocfg = open_store(a.store), observe.load_config()
+    from . import scoring
+    cfg = load_config()
+
+    def load(path):
+        out = {}
+        for line in Path(path).read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                j = json.loads(line)
+                out[j["episode_id"]] = _v2_scores(line, store, j["episode_id"], ocfg)
+        return out
+    r1 = load(a.file)
+    r2 = load(a.file2) if a.file2 else {}
+    meta = {m["episode_id"]: m for m in json.loads(Path(a.set).read_text(encoding="utf-8"))} if a.set else {}
+    rows = []
+    print(f"{'番組':<22}{'🌊旧':>5}{'🌊v2':>6}{'🎯旧':>5}{'🎯v2':>6}" + ("   run間の差(🌊/🎯)" if r2 else ""))
+    for eid, s in r1.items():
+        old = store.get("analysis", eid) or {}
+        ocal, oint = old.get("calm_star"), (scoring.interest_star(old["interest_score"], cfg) if old.get("interest_score") is not None else None)
+        name = (meta.get(eid) or {}).get("show", eid)[:20]
+        d = f"   {abs(s['calm'] - r2[eid]['calm']):.1f} / {abs(s['interest'] - r2[eid]['interest']):.1f}" if eid in r2 else ""
+        print(f"{name:<22}{ocal if ocal is not None else '-':>5}{s['calm']:>6}{oint if oint is not None else '-':>5}{s['interest']:>6}{d}")
+        rows.append({"episode_id": eid, "old_calm": ocal, "old_interest": oint, **s, **({"run2": r2[eid]} if eid in r2 else {})})
+    n = len(rows)
+    if n:
+        olds = [r['old_calm'] for r in rows if r['old_calm'] is not None]
+        old_txt = f"{mean(olds):.2f}" if olds else "-"
+        print(f"\n{n}回 | 🌊 v2 平均 {mean(r['calm'] for r in rows):.2f}(旧 {old_txt}) 4.8以上 {sum(r['calm'] >= 4.8 for r in rows)}回(旧 {sum((r['old_calm'] or 0) >= 4.8 for r in rows)}回)"
+              f" | 🎯 v2 平均 {mean(r['interest'] for r in rows):.2f} 4.8以上 {sum(r['interest'] >= 4.8 for r in rows)}回")
+        if r2:
+            both = [r for r in rows if "run2" in r]
+            print(f"判定のぶれ(2回の差の平均): 🌊 {mean(abs(r['calm'] - r['run2']['calm']) for r in both):.2f} / 🎯 {mean(abs(r['interest'] - r['run2']['interest']) for r in both):.2f}")
+    if a.out:
+        Path(a.out).write_text(json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
     return 0
 
 
@@ -306,6 +393,18 @@ def main(argv=None) -> int:
     ap.add_argument("--file", default="work/judgements.jsonl")
     ap.add_argument("--pending", default="work/pending")
     ap.set_defaults(fn=cmd_apply)
+    rt = sub.add_parser("retranscribe", help="解析済みの回の文字起こしを、音声から取り直して保存する(点は変えない)")
+    rt.add_argument("--episodes", default="", help="回のIDをカンマ区切りで指定")
+    rt.add_argument("--file", default="", help="回のID(episode_id)を持つ JSON(data/check_set_v2.json など)")
+    rt.add_argument("--shard", default="", help="i/n。並列に回すとき")
+    rt.add_argument("--force", action="store_true", help="保存済みの回も取り直す")
+    rt.set_defaults(fn=cmd_retranscribe)
+    tv = sub.add_parser("trial-v2", help="v2 の判定(JSONL)から点を試算して、いまの点と並べる(何も保存しない)")
+    tv.add_argument("--file", required=True)
+    tv.add_argument("--file2", default="", help="別の判定者が判定した同じ回のファイル。判定のぶれを出す")
+    tv.add_argument("--set", default="data/check_set_v2.json")
+    tv.add_argument("--out", default="")
+    tv.set_defaults(fn=cmd_trial_v2)
     rp = sub.add_parser("repending", help="保存した文字起こしから、判定待ちを作り直す(採点基準を変えたあとの判定し直し。音声は使わない)")
     rp.add_argument("--stale", action="store_true", help="古い基準(config/rubric.md の版が違う、または記録がない)で判定した回")
     rp.add_argument("--episodes", default="", help="回のIDをカンマ区切りで指定(確かめ用の回など)")

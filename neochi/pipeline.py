@@ -42,7 +42,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
                 text, minutes = res[0], res[1]
                 spans = res[2] if len(res) > 2 else []
                 if text.strip():
-                    _save_transcript(store, ep, show, minutes, spans, cfg)
+                    _save_transcript(store, ep.id, show.lang, minutes, spans, cfg)
                     rate, unit = features.speech_rate(text, show.lang, minutes)
                     feat["speech_rate"], feat["speech_rate_unit"] = rate, unit
                     if spans:  # 前半に重みを付けた速さと、速さのばらつき
@@ -107,6 +107,19 @@ def write_pending(pending_dir: str, episode_id: str, show_title: str, ep_title: 
     return path
 
 
+def retranscribe_episode(ep: dict, lang: str, duration_sec: float | None, cfg: dict, store, deps: Deps | None = None) -> bool:
+    """解析済みの回の文字起こしだけを取り直して保存する(解析の点は変えない)。保存できたら True。
+    文字起こしの保存を始める前に解析した回(文字起こしが残っていない回)を、判定し直せるようにする。"""
+    deps = deps or Deps()
+    with deps.download(ep["audio_url"]) as path:
+        res = deps.transcribe(path, duration_sec or ep.get("duration_sec") or 0, lang, cfg)
+    text, minutes, spans = res[0], res[1], (res[2] if len(res) > 2 else [])
+    if not text.strip() or not spans:
+        return False
+    _save_transcript(store, ep["id"], lang, minutes, spans, cfg)
+    return store.get("transcript", ep["id"]) is not None
+
+
 def _versions(reasons: dict, cfg: dict, judged: bool) -> dict:
     """この行を作った定義の版。判定した(rubric)ときだけ rubric を記録する(判定待ちの行は、まだ基準で採点していない)。"""
     cur = versions.current(cfg)
@@ -116,14 +129,14 @@ def _versions(reasons: dict, cfg: dict, judged: bool) -> dict:
     return v
 
 
-def _save_transcript(store, ep, show, minutes: float, spans, cfg: dict) -> None:
+def _save_transcript(store, episode_id: str, lang: str, minutes: float, spans, cfg: dict) -> None:
     """文字起こしを保存する(非公開の表)。定義を変えたとき、音声と文字起こしをやり直さず、判定だけやり直すため。
     保存に失敗しても、解析は続ける(0012 を流す前は、表がないので警告だけ出す)。"""
     if not spans:
         return
     try:
         store.upsert("transcript", {
-            "episode_id": ep.id, "lang": show.lang, "minutes": round(minutes, 1),
+            "episode_id": episode_id, "lang": lang, "minutes": round(minutes, 1),
             "spans": [[round(a, 1), round(b, 1), t] for a, b, t in spans],
             "version": versions.transcript_version(cfg)})
     except Exception as e:  # noqa: BLE001
