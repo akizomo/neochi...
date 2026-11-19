@@ -265,3 +265,37 @@ def test_judgement_records_rubric_version_and_repending_finds_stale(cfg, tmp_pat
     assert cli.cmd_repending(args()) == 0
     files = list(out.glob("*.json"))
     assert len(files) == 1 and "[1分]" in json.loads(files[0].read_text(encoding="utf-8"))["transcript"]
+
+
+def test_retranscribe_saves_transcript_without_changing_scores(cfg, tmp_path):
+    """文字起こしを保存する前に解析した回を、点を変えずに、判定し直せるようにする。"""
+    store = JsonStore(tmp_path / "s.json")
+    row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, make_deps(made_dirs=[]))   # spans なし = 文字起こしは保存されない
+    assert store.get("transcript", row["episode_id"]) is None
+    deps = _deps_with_spans()
+    e = {"id": row["episode_id"], "audio_url": "https://x/a.mp3", "duration_sec": 600}
+    assert pipeline.retranscribe_episode(e, "ja", 600, cfg, store, deps) is True
+    assert store.get("transcript", row["episode_id"])["spans"][0][2] == "こんばんは、今夜の話です。"
+    assert store.get("analysis", row["episode_id"])["final_star"] == row["final_star"]    # 点は変わらない
+
+
+def test_trial_v2_prints_scores_next_to_old_ones(cfg, tmp_path, capsys):
+    import argparse
+    import json
+
+    from neochi import cli
+    store = JsonStore(tmp_path / "s.json")
+    deps = _deps_with_spans()
+    deps.pending_dir = str(tmp_path / "pending")
+    row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, deps)
+    store.save()
+    j = {"episode_id": row["episode_id"], "emotion": [], "worry": [], "hook": [], "follow": [],
+         "imagery": [{"from": 0, "to": 19, "quote": "朝の市場です"}], "reason": "穏やかです"}
+    f1, f2 = tmp_path / "r1.jsonl", tmp_path / "r2.jsonl"
+    f1.write_text(json.dumps(j, ensure_ascii=False) + "\n", encoding="utf-8")
+    f2.write_text(json.dumps({**j, "emotion": [{"min": 2, "kind": "negative", "strength": 2, "quote": "怖い"}]}, ensure_ascii=False) + "\n", encoding="utf-8")
+    out = tmp_path / "o.json"
+    a = argparse.Namespace(store=str(tmp_path / "s.json"), file=str(f1), file2=str(f2), set="", out=str(out))
+    assert cli.cmd_trial_v2(a) == 0
+    text = capsys.readouterr().out
+    assert "判定のぶれ" in text and json.loads(out.read_text(encoding="utf-8"))[0]["calm"] == 5.0
