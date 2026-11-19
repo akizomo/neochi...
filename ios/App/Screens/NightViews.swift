@@ -82,7 +82,18 @@ struct NightView: View {
                 // 進捗。ドラッグで、聴き始める位置を選べる(ロック画面では動かせない)。
                 // 将来、この帯の背後に「寝落ちやすさ」のグラフを重ねる(PlaybackBar の background)。
                 if let ep = shown?.episode, isCurrent(ep), let total = totalSec(ep), total > 0 {
-                    PlaybackBar(elapsed: model.player.elapsedSec, total: total) { model.player.seek(to: $0) }
+                    if PremiumStore.shared.allows(.sleepGraph), let ease = SleepEase.estimate(from: model.analyses[ep.id] ?? EpisodeAnalysis(episodeID: ep.id)) {
+                        // プレミアム: 再生バーの背後に、寝落ちしやすい区間(AIの推定)を重ねる。
+                        VStack(alignment: .leading, spacing: NCSpace.s1) {
+                            PlaybackBar(elapsed: model.player.elapsedSec, total: total, height: 84, trackAtBottom: true,
+                                        onSeek: { model.player.seek(to: $0) }) {
+                                SleepGraph(ease: ease, totalSec: total).padding(.bottom, 14)
+                            }
+                            Text("帯は、寝落ちしやすい区間(AIの推定)").ncText(NCText.caption, .textSub)
+                        }
+                    } else {
+                        PlaybackBar(elapsed: model.player.elapsedSec, total: total) { model.player.seek(to: $0) }
+                    }
                 }
                 HStack(spacing: NCSpace.s6) {
                 skipButton("gobackward.15", label: "15秒戻る", by: -15)
@@ -199,10 +210,15 @@ private struct PlaybackBar<Background: View>: View {
     let total: Double
     let onSeek: (Double) -> Void
     let background: Background
+    /// 背後にグラフを置くときは、バーを下に寄せ、高くする。
+    var height: Double = NCSize.tapMin
+    var trackAtBottom = false
     @State private var dragFraction: Double?
 
-    init(elapsed: Double, total: Double, onSeek: @escaping (Double) -> Void, @ViewBuilder background: () -> Background = { EmptyView() }) {
-        self.elapsed = elapsed; self.total = total; self.onSeek = onSeek; self.background = background()
+    init(elapsed: Double, total: Double, height: Double = NCSize.tapMin, trackAtBottom: Bool = false,
+         onSeek: @escaping (Double) -> Void, @ViewBuilder background: () -> Background = { EmptyView() }) {
+        self.elapsed = elapsed; self.total = total; self.height = height; self.trackAtBottom = trackAtBottom
+        self.onSeek = onSeek; self.background = background()
     }
 
     private var fraction: Double { dragFraction ?? min(1, max(0, elapsed / total)) }
@@ -210,12 +226,15 @@ private struct PlaybackBar<Background: View>: View {
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
-            ZStack(alignment: .leading) {
+            ZStack(alignment: trackAtBottom ? .bottomLeading : .leading) {
                 background
                 Capsule().fill(Color.nc(.borderControl)).frame(height: 4)
+                    .padding(.bottom, trackAtBottom ? 4 : 0)
                 Capsule().fill(Color.nc(.accentResult).opacity(0.8)).frame(width: max(4, w * fraction), height: 4)
+                    .padding(.bottom, trackAtBottom ? 4 : 0)
                 Circle().fill(Color.nc(.textMain)).frame(width: dragFraction == nil ? 10 : 16, height: dragFraction == nil ? 10 : 16)
                     .offset(x: min(max(0, w * fraction - 5), w - 10))
+                    .padding(.bottom, trackAtBottom ? 1 : 0)
             }
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
@@ -226,7 +245,7 @@ private struct PlaybackBar<Background: View>: View {
                     dragFraction = nil
                 })
         }
-        .frame(height: NCSize.tapMin)
+        .frame(height: height)
         .animation(.linear(duration: 1), value: elapsed)
         .accessibilityElement()
         .accessibilityLabel("再生位置")
