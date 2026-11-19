@@ -1,0 +1,25 @@
+# 観察(config/rubric_v2.md)から点を計算する数値。数値はすべて仮。確かめ用の回(手順3)で、実データを見て決める。
+# まだ本番の採点には使わない(本番は config/scoring.yaml)。
+
+minutes: 20                 # 内容の評価範囲(冒頭からの分)
+
+# 前半を重く見る(いまの基準と同じ考え方): from_min 分以降は weight 倍
+front_weight: {from_min: 10, weight: 0.67}
+
+emotion:
+  kind_weight: {negative: 1.0, conflict: 1.0, excitement: 0.5}   # 楽しい興奮は、根拠が弱いので小さく効かせる
+  strength_weight: {1: 1.0, 2: 2.0}
+worry_weight: 1.0
+
+# 頭の負荷: 文字起こし1000字あたりの、数字・専門用語らしい語の数。best 以下は 0点、worst 以上は max_points 点。
+load: {best: 8, worst: 40, max_points: 2.0}
+
+calm:
+  slope: 0.5                # 🌊★ = 5 − 起伏の合計 × slope(下限 1.0)
+  per_min: {event_weight: 0.7, cap: 2.0}   # 1分ごとの起伏 = その分の観察の重みの合計 × event_weight(上限 cap)
+
+interest:
+  hook_penalty: 0.4         # 先が気になる 1件ごとの減点(前半を重く)
+  hook_max: 1.5
+  follow_penalty: 1.5       # 追い続ける必要が、冒頭のうち占める割合 × この値
+  boredom: {coverage_ok: 0.5, penalty: 2.5}   # 思い浮かぶ具体性の区間が、冒頭のうち coverage_ok に届かない分の割合 × penalty
