@@ -610,7 +610,9 @@ final class AppModel {
         persistSession()
         playing = candidate
         if let ep = candidate.episode {
-            player.start(url: ep.audioURL, title: ep.title, subtitle: candidate.show.title)
+            // プレミアム(本編から始める)。契約中で、本編の開始が分かっている回だけ、その位置から聴き始める。
+            let startAt = PremiumStore.shared.allows(.startAtContent) ? analyses[ep.id]?.contentStart : nil
+            player.start(url: ep.audioURL, title: ep.title, subtitle: candidate.show.title, startAt: startAt.map(Double.init))
         } else {
             player.start(url: nil, title: candidate.show.title)
         }

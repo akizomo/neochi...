@@ -28,6 +28,20 @@ actor SupabaseClient {
 
     enum ClientError: Error { case notConfigured, http(Int) }
 
+    /// いまのユーザー ID(アクセストークンの sub)。購入に付ける `appAccountToken` に使う(docs/PREMIUM.md §6)。
+    /// 接続先がない・まだログインしていないときは nil。
+    func currentUserUUID() async -> UUID? {
+        guard let s = try? await validSession() else { return nil }
+        let parts = s.accessToken.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        var b64 = String(parts[1]).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        while b64.count % 4 != 0 { b64 += "=" }
+        guard let data = Data(base64Encoded: b64),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let sub = obj["sub"] as? String else { return nil }
+        return UUID(uuidString: sub)
+    }
+
     // MARK: 認証
 
     private struct TokenResponse: Decodable {
@@ -219,6 +233,7 @@ actor SupabaseClient {
         let interest_level: String?; let interest_score: Int?; let input_depth: String?
         let reasons: Reasons?; let features: Features?
         let calm_per_min: [Double]?; let content_summary: String?
+        let content_start_sec: Int?; let content_start_anchor: String?
         struct Reasons: Decodable {
             let llm: String?; let moments: [M]?; let items: Items?
             struct M: Decodable { let min: Int; let note: String; let level: Int? }
@@ -247,8 +262,12 @@ actor SupabaseClient {
                                                   URLQueryItem(name: "order", value: "analyzed_at.desc")])
         }
         let data: Data
-        do { data = try await fetch(Self.analysisColumns + ",calm_per_min,content_summary") }
-        catch ClientError.http(400) { data = try await fetch(Self.analysisColumns) }
+        // 列が無い環境(migration 0007 / 0009 の前)では、その列を除いて読み直す。
+        do { data = try await fetch(Self.analysisColumns + ",calm_per_min,content_summary,content_start_sec,content_start_anchor") }
+        catch ClientError.http(400) {
+            do { data = try await fetch(Self.analysisColumns + ",calm_per_min,content_summary") }
+            catch ClientError.http(400) { data = try await fetch(Self.analysisColumns) }
+        }
         return try Self.decoder.decode([AnalysisRow].self, from: data).map { r in
             let f = r.features
             var a = EpisodeAnalysis(
@@ -266,6 +285,7 @@ actor SupabaseClient {
             a.moments = (r.reasons?.moments ?? []).map { Moment(minute: $0.min, note: $0.note, level: $0.level) }
             a.calmPerMin = r.calm_per_min ?? []
             a.contentSummary = r.content_summary
+            a.contentStartSec = r.content_start_sec; a.contentStartAnchor = r.content_start_anchor
             return a
         }
     }

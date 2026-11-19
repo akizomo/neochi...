@@ -32,6 +32,8 @@ final class PlayerService {
     var timerMinutes = 0 { didSet { restartTimer() } }
     /// 経過(秒)。1秒ごとに更新する。
     private(set) var elapsedSec: Double = 0
+    /// 本編から始めたときの位置(秒)。始めていない・動かしたあとは nil。
+    private(set) var startedAtSec: Double?
     /// 長さ(秒)。音声から分かったときだけ入る(番組の情報に長さがないときの補い)。
     private(set) var loadedDurationSec: Double?
 
@@ -70,8 +72,10 @@ final class PlayerService {
 
     /// 音声URLがない(サンプル)ときは、音を出さず、状態だけを進める。
     /// title は回のタイトル、subtitle は番組名(ロック画面の2行目)。
-    func start(url: URL?, title: String, subtitle: String? = nil) {
+    /// `startAt` は、本編から始めるときの秒。始めた位置を `startedAtSec` に覚え、`returnToStart()` で冒頭へ戻せる。
+    func start(url: URL?, title: String, subtitle: String? = nil, startAt: Double? = nil) {
         stop()
+        startedAtSec = (startAt ?? 0) > 0 ? startAt : nil
         lastURL = url; lastTitle = title; lastSubtitle = subtitle
         setUpNowPlaying(title: title, subtitle: subtitle)
         setUpRemoteCommands()
@@ -89,6 +93,10 @@ final class PlayerService {
         p.volume = 0
         player = p
         observe(p, item)
+        if let t = startedAtSec {
+            elapsedSec = t
+            p.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        }
         p.play()
         startWatchdog()
         restartTimer()
@@ -111,10 +119,14 @@ final class PlayerService {
         updateNowPlayingRate(1)
     }
 
+    /// 本編から始めたのを、冒頭へ戻す。
+    func returnToStart() { seek(to: 0) }
+
     func toggle() { isPlaying ? pause() : resume() }
 
     /// 指定の秒から聴く。再生中でも一時停止中でも使える。
     func seek(to seconds: Double) {
+        startedAtSec = nil   // 自分で動かしたら、「本編から」の案内は消す
         guard let player, state != .failed, state != .idle else { return }
         let t = max(0, seconds)
         elapsedSec = t

@@ -5,7 +5,10 @@ import NeochiCore
 struct NeochiApp: App {
     @State private var model = AppModel.launch()
 
-    init() { ArtworkLoader.configure() }
+    init() {
+        ArtworkLoader.configure()
+        Task { @MainActor in PremiumStore.shared.start() }   // 課金を出す版だけ動く(PremiumFeatureFlag)
+    }
 
     var body: some Scene {
         WindowGroup {

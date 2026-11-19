@@ -59,6 +59,19 @@ public struct EpisodeAnalysis: Hashable, Codable, Sendable {
     public var calmPerMin: [Double] = []
     /// 内容の要約(120字以内)。古い解析は nil。
     public var contentSummary: String?
+    /// 本編の開始(秒と、本編の最初の一言)。冒頭5分に見つからなければ nil。解析がない・古い回も nil。
+    public var contentStartSec: Int?
+    public var contentStartAnchor: String?
+
+    /// 本編から始めるときの再生位置(秒)。冒頭から本編なら nil(飛ばさない)。
+    /// 秒が 0、一言(anchor)がない、長さを超える、のどれかなら nil。
+    /// 動的広告挿入で秒がずれることがあるので、一言が付いているものだけを信じる(docs/PREMIUM.md §3.1)。
+    public var contentStart: Int? {
+        guard let s = contentStartSec, s > 0, s <= 300,
+              let a = contentStartAnchor, !a.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        if let d = durationSec, Double(s) >= d - 60 { return nil }
+        return s
+    }
 
     public init(episodeID: String, finalStar: Double? = nil, calmStar: Double? = nil, earStar: Double? = nil,
                 interest: InterestLevel? = nil, interestScore: Int? = nil, reason: String? = nil,

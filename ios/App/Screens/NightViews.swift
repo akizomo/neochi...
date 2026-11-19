@@ -109,6 +109,13 @@ struct NightView: View {
                 .accessibilityLabel(playLabel)
                 skipButton("goforward.15", label: "15秒進む", by: 15)
                 }
+                if model.player.startedAtSec != nil {
+                    HStack(spacing: NCSpace.s2) {
+                        Text("本編から再生しています").ncText(NCText.footnote, .textSub)
+                        Button("冒頭に戻す") { model.player.returnToStart() }
+                            .ncText(NCText.footnote, .textMain).buttonStyle(.pressable)
+                    }
+                }
                 // 失敗したときだけ、理由と次の一手を出す(ふだんは、番組名とボタンだけ)。
                 if model.player.state == .failed {
                     Text("再生できませんでした。通信を確かめて、もう一度押してください")
