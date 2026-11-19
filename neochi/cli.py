@@ -221,9 +221,49 @@ def cmd_trial_v2(a) -> int:
               f" | 🎯 v2 平均 {mean(r['interest'] for r in rows):.2f} 4.8以上 {sum(r['interest'] >= 4.8 for r in rows)}回")
         if r2:
             both = [r for r in rows if "run2" in r]
-            print(f"判定のぶれ(2回の差の平均): 🌊 {mean(abs(r['calm'] - r['run2']['calm']) for r in both):.2f} / 🎯 {mean(abs(r['interest'] - r['run2']['interest']) for r in both):.2f}")
+            from statistics import pstdev
+            cd = mean(abs(r['calm'] - r['run2']['calm']) for r in both)
+            idd = mean(abs(r['interest'] - r['run2']['interest']) for r in both)
+            wc = pstdev([r['calm'] for r in both] + [r['run2']['calm'] for r in both])
+            wi = pstdev([r['interest'] for r in both] + [r['run2']['interest'] for r in both])
+            print(f"判定のぶれ(2回の差の平均): 🌊 {cd:.2f} / 🎯 {idd:.2f}")
+            ratio = lambda a, b: f"{a / b:.2f}" if b else "-"   # 幅が0(全部同じ点)のときは割れない
+            print(f"点の幅(標準偏差): 🌊 {wc:.2f} / 🎯 {wi:.2f} | ぶれ ÷ 幅: 🌊 {ratio(cd, wc)} / 🎯 {ratio(idd, wi)}")
     if a.out:
         Path(a.out).write_text(json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
+    return 0
+
+
+def cmd_trial_v1(a) -> int:
+    """旧の基準(config/rubric.md)の判定(JSONL)から、点を計算して、2人の判定のぶれを出す(DB は使わない)。
+    v2 のぶれと、同じ見方で比べるための道具。ぶれの大きさは、点の幅(標準偏差)で割った割合も出す(基準によって点の刻みが違うため)。"""
+    from statistics import mean, pstdev
+
+    from . import llm, scoring
+    cfg = load_config()
+
+    def load(path):
+        out = {}
+        for line in Path(path).read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                v = llm.parse_judgement(line, cfg)
+                out[json.loads(line)["episode_id"]] = {"calm": v["calm_star"], "interest": scoring.interest_star(v["interest_score"], cfg)}
+        return out
+    r1, r2 = load(a.file), load(a.file2)
+    both = [e for e in r1 if e in r2]
+    meta = {m["episode_id"]: m for m in json.loads(Path(a.set).read_text(encoding="utf-8"))} if a.set else {}
+    print(f"{'番組':<22}{'🌊1':>5}{'🌊2':>5}{'🎯1':>5}{'🎯2':>5}")
+    for e in both:
+        print(f"{(meta.get(e) or {}).get('show', e)[:20]:<22}{r1[e]['calm']:>5}{r2[e]['calm']:>5}{r1[e]['interest']:>5}{r2[e]['interest']:>5}")
+    cd = [abs(r1[e]["calm"] - r2[e]["calm"]) for e in both]
+    idd = [abs(r1[e]["interest"] - r2[e]["interest"]) for e in both]
+    allc = [r1[e]["calm"] for e in both] + [r2[e]["calm"] for e in both]
+    alli = [r1[e]["interest"] for e in both] + [r2[e]["interest"] for e in both]
+    print(f"\n{len(both)}回 | 判定のぶれ(2回の差の平均): 🌊 {mean(cd):.2f} / 🎯 {mean(idd):.2f}"
+          f" | 点の幅(標準偏差): 🌊 {pstdev(allc):.2f} / 🎯 {pstdev(alli):.2f}"
+          f" | ぶれ ÷ 幅: 🌊 {(mean(cd) / pstdev(allc)) if pstdev(allc) else 0:.2f} / 🎯 {(mean(idd) / pstdev(alli)) if pstdev(alli) else 0:.2f}")
+    if a.out:
+        Path(a.out).write_text(json.dumps([{"episode_id": e, "run1": r1[e], "run2": r2[e]} for e in both], ensure_ascii=False, indent=1), encoding="utf-8")
     return 0
 
 
@@ -412,6 +452,12 @@ def main(argv=None) -> int:
     tv.add_argument("--out", default="")
     tv.add_argument("--param", action="append", help="observe.yaml の数値を一時的に変える(a.b=値)。判定はやり直さず、点だけ計算し直す")
     tv.set_defaults(fn=cmd_trial_v2)
+    t1 = sub.add_parser("trial-v1", help="旧の基準の判定(JSONL)から点を計算して、2人の判定のぶれを出す(何も保存しない)")
+    t1.add_argument("--file", required=True)
+    t1.add_argument("--file2", required=True)
+    t1.add_argument("--set", default="data/check_set_v2.json")
+    t1.add_argument("--out", default="")
+    t1.set_defaults(fn=cmd_trial_v1)
     rp = sub.add_parser("repending", help="保存した文字起こしから、判定待ちを作り直す(採点基準を変えたあとの判定し直し。音声は使わない)")
     rp.add_argument("--stale", action="store_true", help="古い基準(config/rubric.md の版が違う、または記録がない)で判定した回")
     rp.add_argument("--episodes", default="", help="回のIDをカンマ区切りで指定(確かめ用の回など)")

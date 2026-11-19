@@ -299,3 +299,20 @@ def test_trial_v2_prints_scores_next_to_old_ones(cfg, tmp_path, capsys):
     assert cli.cmd_trial_v2(a) == 0
     text = capsys.readouterr().out
     assert "判定のぶれ" in text and json.loads(out.read_text(encoding="utf-8"))[0]["calm"] == 5.0
+
+
+def test_trial_v1_reports_judge_spread(cfg, tmp_path, capsys):
+    """旧の基準の判定から、2人のぶれと、点の幅に対する割合を出す(v2 と同じ見方で比べるため)。"""
+    import argparse
+    import json
+
+    from neochi import cli
+    def j(eid, calm_scores, int_scores):
+        return json.dumps({"episode_id": eid, "calm": {k: {"score": v, "min": None} for k, v in zip("ABCD", calm_scores)},
+                           "interest": {k: {"score": v, "min": None} for k, v in zip("ABCDE", int_scores)}, "reason": "穏やかです"}, ensure_ascii=False)
+    f1, f2 = tmp_path / "a.jsonl", tmp_path / "b.jsonl"
+    f1.write_text(j("e1", [0, 0, 0, 0], [1, 1, 0, 1, 1]) + "\n" + j("e2", [2, 2, 1, 1], [0, 0, 0, 0, 1]) + "\n", encoding="utf-8")
+    f2.write_text(j("e1", [0, 1, 0, 0], [1, 1, 0, 1, 1]) + "\n" + j("e2", [2, 2, 1, 1], [0, 1, 0, 0, 1]) + "\n", encoding="utf-8")
+    assert cli.cmd_trial_v1(argparse.Namespace(file=str(f1), file2=str(f2), set="", out="")) == 0
+    out = capsys.readouterr().out
+    assert "判定のぶれ" in out and "ぶれ ÷ 幅" in out
