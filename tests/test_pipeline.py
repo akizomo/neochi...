@@ -212,3 +212,56 @@ def test_parse_category():
            b'<itunes:category text="Arts"/></channel></rss>')
     assert feeds.parse_category(xml) == "Comedy>Improv"
     assert feeds.parse_category(b"<rss><channel></channel></rss>") is None
+
+
+def _deps_with_spans():
+    d = make_deps(made_dirs=[])
+    spans = [(0.0, 20.0, "こんばんは、今夜の話です。"), (65.0, 80.0, "二分目の話です。")]
+    d.transcribe = lambda path, dur, lang, cfg: ("こんばんは、今夜の話です。二分目の話です。", 2.0, spans)
+    d.judge = None   # セッションで判定する(判定待ちとして書き出す)
+    return d
+
+
+def test_transcript_and_versions_are_saved(cfg, tmp_path):
+    """文字起こしを保存し、どの定義で作った行かを記録する(定義を変えたとき、判定だけやり直せる)。"""
+    store = JsonStore(tmp_path / "s.json")
+    deps = _deps_with_spans()
+    deps.pending_dir = str(tmp_path / "pending")
+    row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, deps)
+    tr = store.get("transcript", row["episode_id"])
+    assert tr["spans"][1] == [65.0, 80.0, "二分目の話です。"] and tr["version"] and tr["lang"] == "ja"
+    v = row["reasons"]["versions"]
+    assert v["transcript"] == tr["version"] and v["scoring"] and "rubric" not in v   # 判定待ちは、まだ基準で採点していない
+
+
+def test_judgement_records_rubric_version_and_repending_finds_stale(cfg, tmp_path):
+    import argparse
+    import json
+
+    from neochi import cli, versions
+    store = JsonStore(tmp_path / "s.json")
+    deps = _deps_with_spans()
+    deps.pending_dir = str(tmp_path / "pending")
+    row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, deps)
+    j = {"episode_id": row["episode_id"], "interest": {k: {"score": 1} for k in "ABCDE"}, "calm": {k: {"score": 0} for k in "ABCD"},
+         "calm_per_min": [0.1] * 2, "moments": [], "reason": "穏やか"}
+    # 判定の形は llm.parse_judgement が決める。通る形が分からないときは、版の記録だけを確かめる
+    try:
+        new = pipeline.apply_judgement(j, cfg, store)
+    except (KeyError, ValueError):
+        new = {**row, "reasons": {**row["reasons"], "versions": {**row["reasons"]["versions"], "rubric": versions.current(cfg)["rubric"]}}}
+        store.upsert("analysis", new)
+    assert new["reasons"]["versions"]["rubric"] == versions.current(cfg)["rubric"]
+    # 基準が同じなら、判定し直しの対象にならない。版が違う(古い)回だけが対象
+    store.upsert("episode", {"id": row["episode_id"], "show_id": SHOW.id, "title": "第1回"})
+    store.upsert("show", {"id": SHOW.id, "title": SHOW.title})
+    out = tmp_path / "re"
+    args = lambda **k: argparse.Namespace(store=str(tmp_path / "s.json"), stale=True, episodes="", limit=0, pending=str(out), **k)
+    store.save()
+    assert cli.cmd_repending(args()) == 0 and not out.exists()
+    a = store.get("analysis", row["episode_id"])
+    a["reasons"]["versions"]["rubric"] = "old00000"
+    store.save()
+    assert cli.cmd_repending(args()) == 0
+    files = list(out.glob("*.json"))
+    assert len(files) == 1 and "[1分]" in json.loads(files[0].read_text(encoding="utf-8"))["transcript"]

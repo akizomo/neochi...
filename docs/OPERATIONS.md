@@ -9,6 +9,7 @@
 | 1 | `supabase/migrations/0005_interest_score.sql` を実行 | Supabase の SQL Editor | `analysis` に `interest_score` 列がある |
 | 1b | `supabase/migrations/0007_detail_viz.sql` を実行(2026-11-15 実行済み) | Supabase の SQL Editor | `analysis` に `calm_per_min`・`content_summary` 列、view `show_sleep_points` がある |
 | 1c | `supabase/migrations/0008_show_cohort.sql` を実行し、続けて `python -m neochi sync-shows` を1回流す(2026-11-15 追加。**次の解析より前に**。未実行だと解析が `cohort` 列で失敗する) | Supabase の SQL Editor と、手元のターミナル(service key を入れて) | `show` に `cohort` 列があり、`cohort`・`apple_category` 列があり、`genre` が 寝落ち用・朗読・環境音・コメディ・雑談・教養 だけ |
+| 1d | `supabase/migrations/0012_transcript.sql` を実行(2026-11-19 追加。文字起こしを保存する非公開の表)。未実行でも解析は動くが、文字起こしが保存されず、警告が出る | Supabase の SQL Editor | `transcript` 表がある。解析のログに「文字起こしを保存できませんでした」が出ない |
 | 2 | 環境変数 `SUPABASE_URL` と `SUPABASE_SERVICE_KEY` を入れる | claude.ai/code → 環境の設定（歯車） | 名前は大文字小文字まで一致。引用符・`export`・前後の空白なし |
 | 3 | 手順2で変数を入れた**同じ環境**を選んでタスクを作る | claude.ai/code → スケジュールタスク → 新規 | タスクの詳細に環境名が出る |
 | 4 | 「今すぐ実行」で1回動かす | 同上 | 報告の「保存先」が Supabase |
@@ -77,3 +78,17 @@
 5. サイトは毎朝つくり直される(`.github/workflows/site.yml`)。すぐ見るときは Vercel で再デプロイする。
 
 戻すときは、設定を元に戻して、4 をもう一度流す(評点の元は保存済みの項目と特徴なので、計算し直せる)。項目の点を持たない古い解析は、🌊の幅が旧式のまま。
+
+## 7. 定義を変えたとき、どこからやり直すか
+
+解析は、①音声の取得 → ②文字起こし → ③LLM の判定 → ④点の計算、の4段階。②の結果(`transcript` 表、非公開)と、各行を作った定義の版(`analysis.reasons.versions` の `transcript` / `rubric` / `scoring`)を保存している。版は中身のハッシュなので、定義を直せば自動で変わる。
+
+| 変えたもの | やり直す段階 | 命令 |
+|---|---|---|
+| 重み、線、点への換算(`config/scoring.yaml`、`z_rank.yaml`) | ④だけ | `python -m neochi z-rank --rules-changed` |
+| 採点基準(`config/rubric.md`) | ③と④(音声・文字起こしは使わない) | `python -m neochi repending --stale` → セッションが `work/pending` を判定 → `python -m neochi apply` |
+| 🎧の音響の測り方 | 音響だけ | `python -m neochi remeasure` |
+| 文字起こしのやり方(モデル・範囲) | ①②③④すべて | `python -m neochi run --force` |
+
+- `repending` は、保存した文字起こしから判定待ちを作り直す。`--stale` は、古い基準(版が違う、または記録がない)で判定した回だけ。`--episodes ID,ID` で回を指定、`--limit N` で件数を絞る。確かめ用の少数の回で判定が安定するのを確かめてから、全体に広げる。
+- 版の記録がない回(2026-11-19 より前に解析した回)と、文字起こしが保存されていない回は、`run --force` で取り直すまで、`repending` の対象にならない(件数が最後に出る)。

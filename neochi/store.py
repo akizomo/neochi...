@@ -31,11 +31,12 @@ class JsonStore:
             self.data.update(json.loads(self.path.read_text(encoding="utf-8")))
 
     def _key(self, table: str, row: dict) -> str:
-        return row["episode_id"] if table == "analysis" else row["id"]
+        return row["episode_id"] if table in ("analysis", "transcript") else row["id"]
 
     def upsert(self, table: str, row: dict) -> None:
         k = self._key(table, row)
-        self.data[table][k] = {**self.data[table].get(k, {}), **row}
+        t = self.data.setdefault(table, {})   # transcript は、あとから足した表(TABLES には入れない)
+        t[k] = {**t.get(k, {}), **row}
 
     def update(self, table: str, key: str, fields: dict) -> None:
         """既存の行の一部の列だけを書き換える(行がなければ何もしない)。"""
@@ -43,10 +44,10 @@ class JsonStore:
             self.data[table][key].update(fields)
 
     def get(self, table: str, key: str) -> dict | None:
-        return self.data[table].get(key)
+        return self.data.get(table, {}).get(key)
 
     def rows(self, table: str) -> list[dict]:
-        return list(self.data[table].values())
+        return list(self.data.get(table, {}).values())
 
     def watch_latencies(self, sid: str) -> list[float]:
         eps = {e["id"] for e in self.rows("episode") if e["show_id"] == sid}
@@ -78,7 +79,7 @@ class JsonStore:
 class SupabaseStore:
     """PostgREST を直接叩く(依存を増やさない)。service key はサーバー側バッチ専用。"""
 
-    CONFLICT = {"show": "id", "episode": "id", "analysis": "episode_id"}
+    CONFLICT = {"show": "id", "episode": "id", "analysis": "episode_id", "transcript": "episode_id"}
 
     def __init__(self, url: str, key: str):
         self.base = url.rstrip("/") + "/rest/v1"

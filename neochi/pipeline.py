@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
-from . import audio, feeds, features, llm, scoring, transcribe
+from . import audio, feeds, features, llm, scoring, transcribe, versions
 
 log = logging.getLogger("neochi.pipeline")
 
@@ -42,6 +42,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
                 text, minutes = res[0], res[1]
                 spans = res[2] if len(res) > 2 else []
                 if text.strip():
+                    _save_transcript(store, ep, show, minutes, spans, cfg)
                     rate, unit = features.speech_rate(text, show.lang, minutes)
                     feat["speech_rate"], feat["speech_rate_unit"] = rate, unit
                     if spans:  # 前半に重みを付けた速さと、速さのばらつき
@@ -56,13 +57,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
 
     calm, level, reason, j = None, None, "", None
     if input_depth == "transcript" and deps.judge is None:
-        d = Path(deps.pending_dir)
-        d.mkdir(parents=True, exist_ok=True)
-        (d / f"{_safe(ep.id)}.json").write_text(json.dumps({
-            "episode_id": ep.id, "show": show.title, "title": ep.title,
-            "transcript": with_minute_marks(spans) if spans else text,
-            "opening": with_second_marks(spans) if spans else "",   # 本編の開始を秒で答えるための、冒頭5分
-        }, ensure_ascii=False, indent=1), encoding="utf-8")
+        write_pending(deps.pending_dir, ep.id, show.title, ep.title, spans, text)
     elif input_depth == "transcript":
         try:
             j = deps.judge(ep.title, show.title, text, cfg)
@@ -94,8 +89,45 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
     if interest_score is not None:
         row["interest_score"] = interest_score
     row.update(_new_outputs(j))
+    row["reasons"] = {**row["reasons"], "versions": _versions(row["reasons"], cfg, judged=bool(j))}
     store.upsert("analysis", row)
     return row
+
+
+def write_pending(pending_dir: str, episode_id: str, show_title: str, ep_title: str, spans, text: str = "") -> Path:
+    """判定待ちのファイル(セッションが読んで判定する)を書く。解析の直後と、保存した文字起こしからの判定し直しで共通。"""
+    d = Path(pending_dir)
+    d.mkdir(parents=True, exist_ok=True)
+    path = d / f"{_safe(episode_id)}.json"
+    path.write_text(json.dumps({
+        "episode_id": episode_id, "show": show_title, "title": ep_title,
+        "transcript": with_minute_marks(spans) if spans else text,
+        "opening": with_second_marks(spans) if spans else "",   # 本編の開始を秒で答えるための、冒頭5分
+    }, ensure_ascii=False, indent=1), encoding="utf-8")
+    return path
+
+
+def _versions(reasons: dict, cfg: dict, judged: bool) -> dict:
+    """この行を作った定義の版。判定した(rubric)ときだけ rubric を記録する(判定待ちの行は、まだ基準で採点していない)。"""
+    cur = versions.current(cfg)
+    v = {**(reasons.get("versions") or {}), "transcript": cur["transcript"], "scoring": cur["scoring"]}
+    if judged:
+        v["rubric"] = cur["rubric"]
+    return v
+
+
+def _save_transcript(store, ep, show, minutes: float, spans, cfg: dict) -> None:
+    """文字起こしを保存する(非公開の表)。定義を変えたとき、音声と文字起こしをやり直さず、判定だけやり直すため。
+    保存に失敗しても、解析は続ける(0012 を流す前は、表がないので警告だけ出す)。"""
+    if not spans:
+        return
+    try:
+        store.upsert("transcript", {
+            "episode_id": ep.id, "lang": show.lang, "minutes": round(minutes, 1),
+            "spans": [[round(a, 1), round(b, 1), t] for a, b, t in spans],
+            "version": versions.transcript_version(cfg)})
+    except Exception as e:  # noqa: BLE001
+        log.warning("文字起こしを保存できませんでした(supabase/migrations/0012_transcript.sql は実行済みですか): %s", e)
 
 
 def _reasons(base: dict, v: dict) -> dict:
@@ -232,5 +264,6 @@ def apply_judgement(j: dict, cfg: dict, store) -> dict:
            "interest_score": v["interest_score"],
            "total_star": total, "final_star": final, "final_reason": final_reason,
            "reasons": _reasons(row.get("reasons") or {}, v), **_new_outputs(v)}
+    new["reasons"]["versions"] = _versions(new["reasons"], cfg, judged=True)
     store.upsert("analysis", new)
     return new
