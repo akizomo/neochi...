@@ -55,5 +55,6 @@ def test_rank_shares_match_policy(cfg, zcfg):
     ranks = [z_rank(_show_total(o, cfg), zcfg) for o in DATA]
     n = len(ranks)
     assert 0.08 <= ranks.count("ZZZ") / n <= 0.22                              # 上位約15%(以前は 73%)
-    assert 0.35 <= (ranks.count("ZZZ") + ranks.count("ZZ")) / n <= 0.55        # 上位約45%
+    # 上位約45%。2026-11-19 に重みを 🌊 0.5 / 🎧 0.3 に変えて、ZZ がやや増えた(本番の試算で ZZ 以上 51%)ので、上限を 0.60 にした(docs/SCORE.md「重みの変更」)
+    assert 0.35 <= (ranks.count("ZZZ") + ranks.count("ZZ")) / n <= 0.60
     assert 0.10 <= ranks.count(None) / n <= 0.30                               # 残りの約2割は載せない
