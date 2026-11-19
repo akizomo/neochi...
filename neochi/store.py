@@ -13,6 +13,25 @@ import requests
 from .scoring import is_judged
 
 
+def _http(method: str, url: str, **kw):
+    """requests.request に、一時的な失敗(通信の途切れ・タイムアウト・429・5xx)の再試行を付ける(最大5回、1・2・4・8秒あけて)。
+    長い処理(全番組の再計算など)が、1回の通信の途切れで止まらないようにする。"""
+    import time
+    last = None
+    for attempt in range(5):
+        try:
+            r = requests.request(method, url, **kw)
+            if r.status_code in (429, 500, 502, 503, 504) and attempt < 4:
+                time.sleep(2 ** attempt)
+                continue
+            return r
+        except (requests.ConnectionError, requests.Timeout) as e:
+            last = e
+            if attempt < 4:
+                time.sleep(2 ** attempt)
+    raise last
+
+
 def _votes_from_rows(rows: list[dict]) -> tuple[list[int], list[int], list[int]]:
     calm = [r["calm_vote"] for r in rows if r.get("calm_vote") is not None]
     rating = [r["interest_rating"] for r in rows if r.get("interest_rating") is not None]
@@ -86,7 +105,7 @@ class SupabaseStore:
         self.h = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
     def upsert(self, table: str, row: dict) -> None:
-        r = requests.post(f"{self.base}/{table}?on_conflict={self.CONFLICT[table]}",
+        r = _http("POST", f"{self.base}/{table}?on_conflict={self.CONFLICT[table]}",
                           headers={**self.h, "Prefer": "resolution=merge-duplicates"},
                           data=json.dumps(row, ensure_ascii=False).encode(), timeout=30)
         r.raise_for_status()
@@ -94,30 +113,30 @@ class SupabaseStore:
     def update(self, table: str, key: str, fields: dict) -> None:
         """一部の列だけの更新は PATCH で行う。upsert だと、省いた NOT NULL の列(title など)で拒否される。"""
         col = self.CONFLICT[table]
-        r = requests.patch(f"{self.base}/{table}?{col}=eq.{key}", headers=self.h,
+        r = _http("PATCH", f"{self.base}/{table}?{col}=eq.{key}", headers=self.h,
                            data=json.dumps(fields, ensure_ascii=False).encode(), timeout=30)
         r.raise_for_status()
 
     def get(self, table: str, key: str) -> dict | None:
         col = self.CONFLICT[table]
-        r = requests.get(f"{self.base}/{table}?{col}=eq.{key}&select=*", headers=self.h, timeout=30)
+        r = _http("GET", f"{self.base}/{table}?{col}=eq.{key}&select=*", headers=self.h, timeout=30)
         r.raise_for_status()
         rows = r.json()
         return rows[0] if rows else None
 
     def rows(self, table: str) -> list[dict]:
-        r = requests.get(f"{self.base}/{table}?select=*", headers=self.h, timeout=30)
+        r = _http("GET", f"{self.base}/{table}?select=*", headers=self.h, timeout=30)
         r.raise_for_status()
         return r.json()
 
     def final_stars(self, sid: str) -> list[float]:
-        r = requests.get(f"{self.base}/analysis?select=final_star,calm_star,interest_score,interest_level,episode!inner(show_id)"
+        r = _http("GET", f"{self.base}/analysis?select=final_star,calm_star,interest_score,interest_level,episode!inner(show_id)"
                          f"&episode.show_id=eq.{sid}&final_star=not.is.null&calm_star=not.is.null", headers=self.h, timeout=30)
         r.raise_for_status()
         return [x["final_star"] for x in r.json() if is_judged(x)]
 
     def watch_latencies(self, sid: str) -> list[float]:
-        r = requests.get(
+        r = _http("GET", 
             f"{self.base}/sleep_log?select=latency_min,episode!inner(show_id)"
             f"&source=eq.watch&episode.show_id=eq.{sid}&latency_min=not.is.null",
             headers=self.h, timeout=30)
@@ -125,13 +144,13 @@ class SupabaseStore:
         return [x["latency_min"] for x in r.json()]
 
     def episode_watch_latencies(self, episode_id: str) -> list[float]:
-        r = requests.get(f"{self.base}/sleep_log?select=latency_min&episode_id=eq.{episode_id}"
+        r = _http("GET", f"{self.base}/sleep_log?select=latency_min&episode_id=eq.{episode_id}"
                          f"&source=eq.watch&latency_min=not.is.null", headers=self.h, timeout=30)
         r.raise_for_status()
         return [x["latency_min"] for x in r.json()]
 
     def votes(self, episode_id: str) -> tuple[list[int], list[int], list[int]]:
-        r = requests.get(f"{self.base}/sleep_log?select=calm_vote,interest_rating,interest_vote&episode_id=eq.{episode_id}",
+        r = _http("GET", f"{self.base}/sleep_log?select=calm_vote,interest_rating,interest_vote&episode_id=eq.{episode_id}",
                          headers=self.h, timeout=30)
         r.raise_for_status()
         return _votes_from_rows(r.json())
