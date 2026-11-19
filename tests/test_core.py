@@ -271,3 +271,31 @@ def test_below_standard_shows_are_skipped_but_unrated_are_not():
     s.upsert("show", {"id": "new", "title": "評点なし", "show_star": None, "z_rank": None, "listing_status": "researching"})
     s.upsert("show", {"id": "ok", "title": "掲載中", "show_star": 4.2, "z_rank": "ZZ", "listing_status": "listed"})
     assert cli.below_standard_ids(s) == {"low"}
+
+
+def test_supabase_http_retries_transient_failures(monkeypatch):
+    """通信の途切れや 5xx は、再試行する(長い処理が、1回の途切れで止まらない)。"""
+    import requests
+
+    from neochi import store as st
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    calls = {"n": 0}
+
+    class R:
+        def __init__(self, code): self.status_code = code
+
+    def fake(method, url, **kw):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise requests.ConnectionError("Remote end closed connection")
+        if calls["n"] == 2:
+            return R(503)
+        return R(200)
+    monkeypatch.setattr(requests, "request", fake)
+    assert st._http("GET", "https://x/y").status_code == 200 and calls["n"] == 3
+    calls["n"] = -10   # 5回続けて途切れたら、最後のエラーを返す
+    def always(method, url, **kw): raise requests.ConnectionError("down")
+    monkeypatch.setattr(requests, "request", always)
+    import pytest
+    with pytest.raises(requests.ConnectionError):
+        st._http("GET", "https://x/y")
