@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
-from . import audio, feeds, features, llm, scoring, transcribe, versions
+from . import audio, feeds, features, llm, observe, scoring, transcribe, versions
 
 log = logging.getLogger("neochi.pipeline")
 
@@ -70,7 +70,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
     if ear is not None:
         feat["ear_parts"] = scoring.ear_parts(feat, show.lang, cfg)
     interest_score = j.get("interest_score") if j else None
-    total, final, final_reason = _stars(calm, ear, level, ep.id, cfg, store, interest_score)
+    total, final, final_reason = _stars(calm, ear, level, ep.id, cfg, store, interest_score, j.get("interest_obs") if j else None)
 
     store.upsert("show", {"id": show.id, "title": show.title, "publisher": show.publisher,
                           "rss_url": show.rss_url, "genre": show.genre, "cohort": show.cohort, "apple_category": show.apple_category, "lang": show.lang,
@@ -151,6 +151,9 @@ def _reasons(base: dict, v: dict) -> dict:
     if v.get("items"):
         out["items"] = v["items"]
     out["moments"] = v.get("moments") or []
+    out.pop("interest_obs", None)   # 前の判定の観察を、引き継がない
+    if v.get("interest_obs"):
+        out["interest_obs"] = v["interest_obs"]
     return out
 
 
@@ -191,12 +194,24 @@ def _safe(eid: str) -> str:
     return "".join(c if c.isalnum() or c in "-_" else "_" for c in eid)[:120]
 
 
-def _stars(calm, ear, level, episode_id: str, cfg: dict, store, interest_score=None):
+def interest_obs_of(row: dict) -> dict | None:
+    """保存済みの行から、🎯の観察(hook・follow・imagery)を取り出す。旧の形式(1〜10の点)の行は None。"""
+    return (row.get("reasons") or {}).get("interest_obs")
+
+
+def _interest_star_value(interest_obs: dict | None) -> float | None:
+    """🎯の観察から、🎯★を計算する(観察がなければ None = 旧の1〜10の点を使う)。点は、保存せず、そのつど計算するので、
+    config/observe.yaml の数値を直せば、判定をやり直さずに、全部の回に反映される。"""
+    return observe.interest_star({**{"hook": [], "follow": [], "imagery": []}, **interest_obs}, observe.load_config()) if interest_obs else None
+
+
+def _stars(calm, ear, level, episode_id: str, cfg: dict, store, interest_score=None, interest_obs=None):
     """(AI解析だけの点, 総合評点, final_reason)。総合評点 = みんなの評価を🌊🎯に足した点に、実測を足したもの。"""
-    total = scoring.total_star(calm, ear, level, cfg, interest_score)
+    istar = _interest_star_value(interest_obs)
+    total = scoring.total_star(calm, ear, level, cfg, interest_score, interest_star_value=istar)
     calm_votes, interest_votes, legacy_votes = store.votes(episode_id)
     interest_votes = interest_votes + [scoring.interest_rating_from_vote(v, cfg) for v in legacy_votes]
-    with_crowd = scoring.total_star(calm, ear, level, cfg, interest_score, calm_votes, interest_votes)
+    with_crowd = scoring.total_star(calm, ear, level, cfg, interest_score, calm_votes, interest_votes, interest_star_value=istar)
     watch = store.episode_watch_latencies(episode_id)
     median = statistics.median(watch) if watch else None
     final, final_reason = scoring.final_star(with_crowd, cfg, median, len(watch), ai_total=total)
@@ -224,7 +239,7 @@ def remeasure_acoustics(row: dict, audio_url: str, lang: str, cfg: dict, store, 
     if ear is not None:
         feat["ear_parts"] = scoring.ear_parts(feat, lang, cfg)
     total, final, reason = _stars(row.get("calm_star"), ear, row.get("interest_level"), row["episode_id"], cfg, store,
-                                  row.get("interest_score"))
+                                  row.get("interest_score"), interest_obs_of(row))
     out = {**row, "features": feat, "ear_star": ear, "total_star": total, "final_star": final, "final_reason": reason}
     store.upsert("analysis", out)
     return out
@@ -252,13 +267,13 @@ def reear(row: dict, lang: str, cfg: dict) -> dict:
 def restar_ai(row: dict, cfg: dict) -> float | None:
     """保存済みの解析から、AI解析だけの点(total_star)を計算し直す。"""
     return scoring.total_star(row.get("calm_star"), row.get("ear_star"), row.get("interest_level"), cfg,
-                              row.get("interest_score"))
+                              row.get("interest_score"), interest_star_value=_interest_star_value(interest_obs_of(row)))
 
 
 def restar(row: dict, cfg: dict, store) -> tuple[float | None, str | None]:
     """保存済みの解析から、総合評点と final_reason を計算し直す(実測・みんなの評価が増えたとき、ルールを変えたとき)。"""
     _, final, reason = _stars(row.get("calm_star"), row.get("ear_star"), row.get("interest_level"),
-                              row["episode_id"], cfg, store, row.get("interest_score"))
+                              row["episode_id"], cfg, store, row.get("interest_score"), interest_obs_of(row))
     return final, reason
 
 
@@ -272,7 +287,7 @@ def apply_judgement(j: dict, cfg: dict, store) -> dict:
     if row is None:
         raise KeyError(f"解析が見つかりません: {j['episode_id']}")
     total, final, final_reason = _stars(v["calm_star"], row.get("ear_star"), v["interest_level"], j["episode_id"],
-                                        cfg, store, v["interest_score"])
+                                        cfg, store, v["interest_score"], v.get("interest_obs"))
     new = {**row, "calm_star": v["calm_star"], "interest_level": v["interest_level"],
            "interest_score": v["interest_score"],
            "total_star": total, "final_star": final, "final_reason": final_reason,

@@ -658,6 +658,26 @@ def part_rows(parts: list[dict]) -> str:
         f'<span class="num fac">{n1(p["star"])}</span></li>' for p in parts) + "</ul>"
 
 
+def interest_obs_body(obs: dict, minutes: int = 20) -> str:
+    """🎯の観察(v2)を、件数・分数と、引用つきで見せる。点は、この観察から計算している(クリックすると根拠が分かる)。"""
+    def covered(spans):
+        return len({m for x in spans for m in range(x["from"], x["to"] + 1)})
+
+    def quotes(entries, fmt):
+        if not entries:
+            return ""
+        return '<ul class="moments">' + "".join(f'<li><b class="num fac">{fmt(x)}</b> {escape(x["quote"])}</li>' for x in entries) + "</ul>"
+    span = lambda x: f'{x["from"]}分' if x["from"] == x["to"] else f'{x["from"]}〜{x["to"]}分'
+    hook, follow, imagery = obs.get("hook") or [], obs.get("follow") or [], obs.get("imagery") or []
+    rows = (f'<ul class="items"><li><span>思い浮かぶ具体的な話</span><span class="cap">{covered(imagery)}分 / {minutes}分</span></li></ul>'
+            + quotes(imagery, span)
+            + f'<ul class="items"><li><span>前を覚えていないと分からない筋</span><span class="cap">{covered(follow)}分</span></li></ul>'
+            + quotes(follow, span)
+            + f'<ul class="items"><li><span>先を引っぱる場面</span><span class="cap">{len(hook)}件</span></li></ul>'
+            + quotes(hook, lambda x: f'{x["min"]}分'))
+    return rows + '<p class="cap">具体的な話が続き、筋や引っぱりが少ないほど、★が多くなります(観察の数から計算)</p>'
+
+
 def interest_scale(total: int) -> str:
     cells = "".join(f'<span class="{"zone " if 4 <= i <= 6 else ""}{"on" if i == total else ""}"><i></i><b>{i}</b></span>'
                     for i in range(1, 11))
@@ -700,13 +720,16 @@ def evidence(e: dict, a: dict, cfg: dict, lang: str) -> str:
     # 程よい興味: 内容の要約 → 5項目 → 10段の目盛り
     lv = a.get("interest_level")
     if lv:
-        total = a.get("interest_score") or max(1, sum(i["score"] for i in int_items))
         body = ""
         if a.get("content_summary"):
             body += f'<div class="summary"><p class="cap">この話の内容(AIの要約)</p><p>{escape(a["content_summary"])}</p></div>'
-        if int_items:
-            body += item_rows(int_items, INTEREST_LABELS)
-        body += interest_scale(int(total))
+        if r.get("interest_obs") is not None:   # 観察で判定した回(v2)
+            body += interest_obs_body(r["interest_obs"])
+        else:                                   # 旧の判定(5項目と、1〜10の目盛り)
+            total = a.get("interest_score") or max(1, sum(i["score"] for i in int_items))
+            if int_items:
+                body += item_rows(int_items, INTEREST_LABELS)
+            body += interest_scale(int(total))
         rows.append(axis_row("程よい興味", f'<span class="fac">{INTEREST_WORD.get(lv, lv)}</span>', body))
     else:
         rows.append(f'<div class="axis pending"><span>程よい興味</span><span class="cap">判定待ち</span></div>')

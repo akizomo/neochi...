@@ -26,6 +26,8 @@ SOURCES = [
      "Sleep Health 3(1):6-19, 2017", "https://pubmed.ncbi.nlm.nih.gov/28346153/"),
     ("Jespersen KV ほか", "Listening to music for insomnia in adults",
      "Cochrane Database of Systematic Reviews, CD010459, 2022", "https://www.cochrane.org/CD010459"),
+    ("Baselgia S ほか", "Pre-sleep suspenseful TV series and sleep (50 healthy young adults, sleep laboratory)",
+     "Sleep Medicine 102:186-198, 2023", "https://folia.unifr.ch/global/documents/323530"),
 ]
 
 INFER = "◯ 関連研究"
@@ -93,13 +95,13 @@ def explainer_html(cfg: dict, rank_min: dict, english: str, mark: str, extra: st
 </dl>
 
 <h2>程よい興味</h2>
-<p>5項目を 0〜2 点で採点し、合計を引き込み力(1〜10)とします。{zone_lo}〜{zone_hi} を最良とし、外れるほど下がります。</p>
+<p>冒頭20分を読み、聴き流しても置いていかれず、思い浮かべられる話が続いているかを、見つけた箇所(分と引用)の数から計算します。思い浮かぶ具体的な話が少ないほど、前を覚えていないと分からない筋や、先を引っぱる場面が多いほど、点が下がります。</p>
 <dl>
-{_item("穏やかに気をひく話", INFER,
-       f"寝る前に穏やかな想像で気をそらすと、自己申告の寝つきが短くなりました{_ref(4)}。想像の課題で、番組を聴いた研究ではありません。")}
-{_item("追い続ける必要", INFER, "頭の負荷と同じ考え方です。")}
-{_item(f"{zone_lo}〜{zone_hi} の範囲、未解決の問い、驚き、笑い、聴き手への働きかけ", HYPO,
-       f"研究に基づく値ではありません。サスペンスが注意を狭めることは、脳の研究で示されています{_ref(5)}。寝つきは測られていません。")}
+{_item("思い浮かぶ具体的な話(少ないと下がる)", INFER,
+       f"寝る前に穏やかな想像で気をそらすと、自己申告の寝つきが短くなりました{_ref(4)}。想像の課題で、番組を聴いた研究ではありません。内容が薄いと考えごとに戻りやすい、という見方と、退屈だと聴くのをやめる、という使われ方からも、少ないものを下げています。")}
+{_item("前を覚えていないと分からない筋(多いと下がる)", INFER, "頭の負荷と同じ考え方です。")}
+{_item("先を引っぱる場面(多いと下がる)", HYPO,
+       f"サスペンスが注意を狭めることは、脳の研究で示されています{_ref(5)}。一方、サスペンスのドラマを見たあとの寝つきは、早くなりました{_ref(9)}(見終わってから寝る実験で、聴きながらではありません)。そのため、下げる量は小さくしています。")}
 </dl>
 
 <h2>耳のゆるさ</h2>

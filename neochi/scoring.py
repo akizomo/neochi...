@@ -103,7 +103,8 @@ def blend_axis(ai: float | None, crowd: float | None, n: int, cfg: dict) -> floa
 
 def total_star(calm: float | None, ear: float | None, interest_level: str | None, cfg: dict,
                interest_score: float | None = None,
-               calm_votes: list[int] | None = None, interest_votes: list[int] | None = None) -> float | None:
+               calm_votes: list[int] | None = None, interest_votes: list[int] | None = None,
+               interest_star_value: float | None = None) -> float | None:
     """😴 総合の元になる点(🎯🌊🎧)。欠けた要素は除いて重みを再配分する。
 
     calm_votes(1〜5) / interest_votes(🎯 引き込み力の10段階 1〜10)を渡すと、その軸にみんなの評価を足してから重み付けする(🎧には足さない)。
@@ -111,7 +112,9 @@ def total_star(calm: float | None, ear: float | None, interest_level: str | None
     """
     t = cfg["total"]
     vals = {}
-    if interest_score is not None:
+    if interest_star_value is not None:   # 観察から計算した🎯★(v2)。1〜10の点(interest_score)は使わない
+        vals["interest"] = float(interest_star_value)
+    elif interest_score is not None:
         vals["interest"] = interest_star(interest_score, cfg)
     elif interest_level in t["interest_star"]:  # 旧形式(3段階だけ)の判定
         vals["interest"] = float(t["interest_star"][interest_level])

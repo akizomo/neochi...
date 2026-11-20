@@ -316,3 +316,72 @@ def test_trial_v1_reports_judge_spread(cfg, tmp_path, capsys):
     assert cli.cmd_trial_v1(argparse.Namespace(file=str(f1), file2=str(f2), set="", out="")) == 0
     out = capsys.readouterr().out
     assert "判定のぶれ" in out and "ぶれ ÷ 幅" in out
+
+
+def _v2_interest_judgement(eid, imagery=True):
+    """🌊は旧の項目(A〜D)、🎯は観察(hook・follow・imagery)で出す、いまの判定の形式。"""
+    return {"episode_id": eid,
+            "hook": [], "follow": [{"from": 5, "to": 9, "quote": "前回の続きですが"}],
+            "imagery": [{"from": 0, "to": 19, "quote": "朝の市場に着くと"}] if imagery else [],
+            "calm": {k: {"score": 0, "min": None} for k in "ABCD"},
+            "calm_per_min": [0.1] * 20, "moments": [], "reason": "穏やかです", "content_summary": "市場の朝の話です。"}
+
+
+def test_interest_judged_by_observations_is_stored_and_scored_from_them(cfg, tmp_path):
+    """🎯を観察で判定した回: 観察を reasons に残し、1〜10の点は付けず、🎯★は観察から計算して総合に入る。"""
+    import json
+
+    from neochi import observe
+    store = JsonStore(tmp_path / "s.json")
+    deps = _deps_with_spans()
+    deps.pending_dir = str(tmp_path / "pending")
+    row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, deps)
+    new = pipeline.apply_judgement(_v2_interest_judgement(row["episode_id"]), cfg, store)
+    assert new["interest_score"] is None and new["interest_level"] in ("low", "mid", "high")
+    obs = new["reasons"]["interest_obs"]
+    assert obs["imagery"][0]["quote"] == "朝の市場に着くと" and obs["follow"][0]["from"] == 5
+    ocfg = observe.load_config()
+    istar = observe.interest_star(obs, ocfg)
+    w = cfg["total"]["weights"]
+    expect = round((w["interest"] * istar + w["calm"] * new["calm_star"] + w["ear"] * new["ear_star"]) / sum(w.values()), 1)
+    assert new["total_star"] == expect
+    # 保存済みの観察から、点を計算し直せる(observe.yaml の数値を直したときの、判定のやり直し不要の再計算)
+    assert pipeline.restar_ai(new, cfg) == new["total_star"]
+    assert new["reasons"]["versions"]["rubric"]
+
+
+def test_missing_interest_arrays_are_rejected_not_scored_as_boring(cfg):
+    """imagery を書き忘れた判定を、退屈として減点しない(空の配列で書かせる)。"""
+    import json
+
+    import pytest
+
+    from neochi import llm
+    j = _v2_interest_judgement("e1")
+    del j["imagery"]
+    with pytest.raises(ValueError):
+        llm.parse_judgement(json.dumps(j, ensure_ascii=False), cfg)
+    j["imagery"] = []
+    assert llm.parse_judgement(json.dumps(j, ensure_ascii=False), cfg)["interest_level"] == "low"   # 具体的な話がない = 退屈側
+
+
+def test_rejudging_with_old_format_drops_stale_observations(cfg, tmp_path):
+    """旧の形式(項目 A〜E)で判定し直したときは、前の観察を引き継がない。"""
+    import json
+    store = JsonStore(tmp_path / "s.json")
+    deps = _deps_with_spans()
+    deps.pending_dir = str(tmp_path / "pending")
+    row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, deps)
+    pipeline.apply_judgement(_v2_interest_judgement(row["episode_id"]), cfg, store)
+    old = {"episode_id": row["episode_id"], "interest": {k: {"score": 1, "min": None} for k in "ABCDE"},
+           "calm": {k: {"score": 0, "min": None} for k in "ABCD"}, "calm_per_min": [0.1] * 20, "moments": [], "reason": "穏やかです"}
+    new = pipeline.apply_judgement(old, cfg, store)
+    assert "interest_obs" not in new["reasons"] and new["interest_score"] == 5
+
+
+def test_site_shows_interest_observations_with_quotes():
+    from neochi import site
+    h = site.interest_obs_body({"hook": [{"min": 2, "quote": "実はこのあと"}],
+                                "follow": [{"from": 5, "to": 9, "quote": "前回の続きですが"}],
+                                "imagery": [{"from": 0, "to": 9, "quote": "朝の市場に着くと"}]})
+    assert "10分 / 20分" in h and "5分" in h and "1件" in h and "朝の市場に着くと" in h and "5〜9分" in h

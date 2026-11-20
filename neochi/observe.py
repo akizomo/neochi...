@@ -142,11 +142,40 @@ def calm_star(obs: dict, cfg: dict) -> float:
     return max(1.0, round(5 - cfg["calm"]["slope"] * calm_raw(obs, cfg), 1))
 
 
-def interest_star(obs: dict, cfg: dict) -> float:
-    """🎯★ = 5 − 引き込まれすぎの減点(先が気になる・追い続ける必要)− 退屈の減点(思い浮かぶ具体性が少ない)。下限 1.0。"""
+def interest_parts(obs: dict, cfg: dict) -> tuple[float, float, float]:
+    """🎯の減点の内訳 (先が気になる, 追い続ける必要, 退屈)。"""
     i = cfg["interest"]
     hooks = min(i["hook_max"], sum(i["hook_penalty"] * _fw(x["min"], cfg) for x in obs["hook"]))
     follow = i["follow_penalty"] * _coverage(obs["follow"], cfg)
     b = i["boredom"]
     short = max(0.0, b["coverage_ok"] - _coverage(obs["imagery"], cfg)) / b["coverage_ok"]
-    return max(1.0, round(5 - hooks - follow - b["penalty"] * short, 1))
+    return hooks, follow, b["penalty"] * short
+
+
+def interest_star(obs: dict, cfg: dict) -> float:
+    """🎯★ = 5 − 引き込まれすぎの減点(先が気になる・追い続ける必要)− 退屈の減点(思い浮かぶ具体性が少ない)。下限 1.0。"""
+    hooks, follow, boredom = interest_parts(obs, cfg)
+    return max(1.0, round(5 - hooks - follow - boredom, 1))
+
+
+def interest_level(obs: dict, cfg: dict) -> str:
+    """🎯のレベル。low = 退屈側、mid = 程よい、high = 引き込まれすぎ側(旧の interest_level と同じ意味)。"""
+    hooks, follow, boredom = interest_parts(obs, cfg)
+    if interest_star(obs, cfg) >= 4.0:
+        return "mid"
+    return "high" if hooks + follow >= boredom else "low"
+
+
+def parse_interest(raw: str, cfg: dict | None = None) -> dict:
+    """判定の JSON から、🎯の観察(hook・follow・imagery)を取り出す。3つの配列が、そろっていなければ ValueError
+    (imagery を書き忘れると、退屈として減点されるので、省略を許さない)。"""
+    cfg = cfg or load_config()
+    m = re.search(r"\{.*\}", raw, re.S)
+    if not m:
+        raise ValueError("JSON が見つかりません")
+    d = json.loads(m.group(0))
+    for k in ("hook", "follow", "imagery"):
+        if not isinstance(d.get(k), list):
+            raise ValueError(f"{k} がありません(観察がないときは、空の配列にする)")
+    o = parse_observations(raw, cfg)
+    return {"hook": o["hook"], "follow": o["follow"], "imagery": o["imagery"], "dropped": o["dropped"]}
