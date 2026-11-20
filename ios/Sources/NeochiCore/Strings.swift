@@ -63,6 +63,9 @@ public enum NCString {
     public static let noResultNote = "寝落ちの記録を確認中です"
     /// ヘルスケアに睡眠データが入る人(ウォッチなど)の朝。反映が遅れて、まだ入っていないとき。
     public static let awaitingHealthNote = "ヘルスケアへの反映には、時間がかかることがあります。反映されたら、記録に自動で追記します。"
+    /// 入眠はあったが、音が止まってから30分より後だったとき(`SleepAttribution`)。
+    public static let notWhileListeningNote = "再生が止まってから30分以上あとに眠っていました"
+    public static let selfReportFooterNotWhileListening = "聴きながらの寝落ちではないので、時間は記録しません。覚えている範囲で選んでください。番組の評点には入れません。"
     public static let researching = "調査中"
     /// 検索で見つからないとき。理由は書かず、評点も出さない。
     public static let notListed = "まだ掲載していません"

@@ -34,6 +34,8 @@ final class PlayerService {
     private(set) var elapsedSec: Double = 0
     /// 長さ(秒)。音声から分かったときだけ入る(番組の情報に長さがないときの補い)。
     private(set) var loadedDurationSec: Double?
+    /// 音が鳴っている間、1秒ごとに呼ぶ(朝の振り返りで、音が最後に鳴っていた時刻を知るため)。
+    var onAudible: ((Date) -> Void)?
 
     private var player: AVPlayer?
     private var observers: [NSKeyValueObservation] = []
@@ -152,6 +154,7 @@ final class PlayerService {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 if t.seconds.isFinite { self.elapsedSec = t.seconds }
+                if self.state == .playing { self.onAudible?(Date()) }
                 let d = item.duration.seconds
                 if d.isFinite, d > 0, self.loadedDurationSec == nil { self.loadedDurationSec = d }
             }
