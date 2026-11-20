@@ -31,7 +31,12 @@ final class AppModel {
     var logs: [SleepLog] = LogStore.load()
     /// 今夜の再生の入眠(確認できたときだけ)と、再生開始の時刻・回。
     var onsetAt: Date?
+    /// ヘルスケアに入眠はあったが、音が止まってから30分より後だった(聴きながらの寝落ちではない)。
+    var onsetAfterPlayback = false
     var playStartedAt: Date?
+    /// 音が最後に鳴っていた時刻。入眠を寝落ちとみなすかに使う(`SleepAttribution`)。
+    var playLastAudibleAt: Date?
+    private var lastAudibleSavedAt: Date?
     var playEpisodeID: String?
     var playShowID: String?
 
@@ -165,11 +170,24 @@ final class AppModel {
         self.queue = queue; self.currentShowID = currentShowID; self.lastNight = lastNight
         self.genreStreakNights = genreStreakNights; self.pendingMorning = pendingMorning
         restorePendingNight()
+        player.onAudible = { [weak self] t in self?.noteAudible(t) }
+    }
+
+    /// 音が鳴っている。端末への保存は1分ごと(夜のうちにアプリが終了されても、朝に分かるように)。
+    private func noteAudible(_ t: Date) {
+        guard playStartedAt != nil else { return }
+        playLastAudibleAt = t
+        if lastAudibleSavedAt.map({ t.timeIntervalSince($0) >= 60 }) ?? true {
+            lastAudibleSavedAt = t
+            savePendingNight()
+        }
     }
 
     /// 再生した晩のこと。夜のうちにアプリが終了されても、朝に振り返りを出せるよう、端末に残す。
     private struct PendingNight: Codable {
         var startedAt: Date; var episodeID: String?; var showID: String?
+        /// 前の版で残った晩には無い(nil)。
+        var lastAudibleAt: Date?
     }
     private static let pendingNightKey = "pendingNight"
 
@@ -177,7 +195,7 @@ final class AppModel {
         guard pendingMorning, let s = playStartedAt else {
             UserDefaults.standard.removeObject(forKey: Self.pendingNightKey); return
         }
-        let v = PendingNight(startedAt: s, episodeID: playEpisodeID, showID: playShowID)
+        let v = PendingNight(startedAt: s, episodeID: playEpisodeID, showID: playShowID, lastAudibleAt: playLastAudibleAt)
         UserDefaults.standard.set(try? JSONEncoder().encode(v), forKey: Self.pendingNightKey)
     }
 
@@ -185,6 +203,7 @@ final class AppModel {
         guard let data = UserDefaults.standard.data(forKey: Self.pendingNightKey),
               let v = try? JSONDecoder().decode(PendingNight.self, from: data) else { return }
         playStartedAt = v.startedAt; playEpisodeID = v.episodeID; playShowID = v.showID
+        playLastAudibleAt = v.lastAudibleAt
         pendingMorning = true
     }
 
@@ -255,9 +274,10 @@ final class AppModel {
                        preferredGenres: preferredGenres)
     }
 
-    /// 朝の振り返りに出す寝落ちまでの分。ヘルスケアから確認できなければ nil。
+    /// 朝の振り返りに出す寝落ちまでの分。ヘルスケアから確認できなければ nil(前の晩の分数は出さない)。
     var pendingLatency: Int? {
-        guard let s = playStartedAt, let o = onsetAt else { return lastNight?.minutes }
+        guard let s = playStartedAt else { return lastNight?.minutes }   // 見本
+        guard let o = onsetAt else { return nil }
         return max(0, Int((o.timeIntervalSince(s) / 60).rounded()))
     }
 
@@ -289,7 +309,8 @@ final class AppModel {
         let from = now().addingTimeInterval(-3 * 86400)
         var changed = false
         for i in logs.indices where logs[i].source == .selfReport && logs[i].sleepOnsetAt == nil && logs[i].startedAt > from {
-            guard let onset = try? await health.sleepOnset(after: logs[i].startedAt) else { continue }
+            let raw = try? await health.sleepOnset(after: logs[i].startedAt)
+            guard case .onset(let onset) = SleepAttribution.judge(onset: raw, lastAudible: logs[i].lastAudibleAt) else { continue }
             logs[i].sleepOnsetAt = onset
             logs[i].source = .watch
             logs[i].selfReport = nil
@@ -303,9 +324,12 @@ final class AppModel {
 
     func refreshOnset() async {
         guard let s = playStartedAt else { return }
-        do {
-            onsetAt = try await health.sleepOnset(after: s)
-        } catch { onsetAt = nil }
+        let raw = try? await health.sleepOnset(after: s)
+        switch SleepAttribution.judge(onset: raw, lastAudible: playLastAudibleAt) {
+        case .onset(let d): onsetAt = d; onsetAfterPlayback = false
+        case .afterPlayback: onsetAt = nil; onsetAfterPlayback = true
+        case .unknown: onsetAt = nil; onsetAfterPlayback = false
+        }
     }
 
     /// 「記録する」で保存。入力は任意。
@@ -318,11 +342,11 @@ final class AppModel {
         let log = SleepLog(id: UUID().uuidString, episodeID: ep, showID: show, startedAt: s, sleepOnsetAt: onsetAt,
                            source: onsetAt == nil ? .selfReport : .watch, interestRating: interest, calmVote: calm,
                            note: trimmed.isEmpty ? nil : trimmed, listenNo: max(1, listenNo),
-                           selfReport: onsetAt == nil ? selfReport : nil)
+                           selfReport: onsetAt == nil ? selfReport : nil, lastAudibleAt: playLastAudibleAt)
         logs.append(log)
         if let m = log.latencyMinutes { lastNight = LastNight(showID: show, episodeID: ep, minutes: m) }
         pendingMorning = false
-        playStartedAt = nil; onsetAt = nil
+        playStartedAt = nil; onsetAt = nil; onsetAfterPlayback = false; playLastAudibleAt = nil
         savePendingNight()
         LogStore.save(logs)
         persistSession()
@@ -603,7 +627,8 @@ final class AppModel {
             history.append(PlayRecord(episodeID: ep.id, showID: candidate.show.id, playedAt: Date()))
         }
         currentShowID = candidate.show.id
-        playStartedAt = Date(); onsetAt = nil
+        playStartedAt = Date(); onsetAt = nil; onsetAfterPlayback = false
+        playLastAudibleAt = playStartedAt; lastAudibleSavedAt = nil
         playEpisodeID = candidate.episode?.id; playShowID = candidate.show.id
         pendingMorning = true
         savePendingNight()

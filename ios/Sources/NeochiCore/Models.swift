@@ -114,13 +114,16 @@ public struct SleepLog: Identifiable, Hashable, Codable, Sendable {
     public var selfReport: SelfReportLatency?
     /// その回を何回目に聴いたか。番組の実績は1回目だけで集計する。
     public var listenNo: Int
+    /// 音が最後に鳴っていた時刻(端末内だけ。あとから入眠を埋めるときに、寝落ちとみなすかに使う)。
+    public var lastAudibleAt: Date?
 
     public init(id: String, episodeID: String, showID: String, startedAt: Date, sleepOnsetAt: Date? = nil,
                 source: SleepSource = .watch, interestRating: Int? = nil, interestVote: Int? = nil, calmVote: Int? = nil,
-                note: String? = nil, listenNo: Int = 1, selfReport: SelfReportLatency? = nil) {
+                note: String? = nil, listenNo: Int = 1, selfReport: SelfReportLatency? = nil, lastAudibleAt: Date? = nil) {
         self.id = id; self.episodeID = episodeID; self.showID = showID; self.startedAt = startedAt
         self.sleepOnsetAt = sleepOnsetAt; self.source = source; self.interestRating = interestRating; self.interestVote = interestVote
         self.calmVote = calmVote; self.note = note; self.listenNo = listenNo; self.selfReport = selfReport
+        self.lastAudibleAt = lastAudibleAt
     }
 
     /// 送信する、寝落ちまでの分。実測はそのまま、自己申告は選択肢のおおよその分数。
