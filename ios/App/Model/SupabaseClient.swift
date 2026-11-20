@@ -220,8 +220,14 @@ actor SupabaseClient {
         let reasons: Reasons?; let features: Features?
         let calm_per_min: [Double]?; let content_summary: String?
         struct Reasons: Decodable {
-            let llm: String?; let moments: [M]?; let items: Items?
+            let llm: String?; let moments: [M]?; let items: Items?; let interest_obs: InterestObs?
             struct M: Decodable { let min: Int; let note: String; let level: Int? }
+            /// 🎯の観察(観察で判定した回だけ)。hook は1つの分、follow と imagery は区間。
+            struct InterestObs: Decodable {
+                let hook: [Hook]?; let follow: [Span]?; let imagery: [Span]?
+                struct Hook: Decodable { let min: Int; let quote: String }
+                struct Span: Decodable { let from: Int; let to: Int; let quote: String }
+            }
             struct Item: Decodable { let score: Int; let min: Int? }
             struct Items: Decodable { let interest: [String: Item]?; let calm: [String: Item]? }
         }
@@ -259,6 +265,12 @@ actor SupabaseClient {
                 speechRate: f?.speech_rate, volumeStdDB: f?.volume_std_db, suddenPer10Min: f?.sudden_per_10min)
             a.speechRateCV = f?.speech_rate_cv
             a.interestItems = Self.items(r.reasons?.items?.interest)
+            if let o = r.reasons?.interest_obs {
+                a.interestObs = InterestObservations(
+                    hook: (o.hook ?? []).map { InterestObservation(fromMinute: $0.min, toMinute: $0.min, quote: $0.quote) },
+                    follow: (o.follow ?? []).map { InterestObservation(fromMinute: $0.from, toMinute: $0.to, quote: $0.quote) },
+                    imagery: (o.imagery ?? []).map { InterestObservation(fromMinute: $0.from, toMinute: $0.to, quote: $0.quote) })
+            }
             a.calmItems = Self.items(r.reasons?.items?.calm)
             a.ratePerMin = f?.timeline?.rate_per_min ?? []
             a.volumePerMin = f?.timeline?.volume_db ?? []

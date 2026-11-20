@@ -35,8 +35,7 @@ struct EvidenceView: View {
                 }
                 Divider().overlay(Color.nc(.line))
                 if let l = a.interest {
-                    let total = a.interestScore ?? Explain.interestTotal(a.interestItems)
-                    axis("程よい興味", text: interestWord(l)) { interestDetail(a, total: total) }
+                    axis("程よい興味", text: interestWord(l)) { interestDetail(a) }
                 } else {
                     pendingAxis("程よい興味")
                 }
@@ -94,7 +93,7 @@ struct EvidenceView: View {
     }
 
     // 程よい興味: 内容の要約 → 5項目の行 → 10段の目盛り(と注記)。
-    private func interestDetail(_ a: EpisodeAnalysis, total: Int) -> some View {
+    private func interestDetail(_ a: EpisodeAnalysis) -> some View {
         VStack(alignment: .leading, spacing: NCSpace.s3) {
             if let summary = a.contentSummary {
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
@@ -106,10 +105,43 @@ struct EvidenceView: View {
                 .background(RoundedRectangle(cornerRadius: NCRadius.sm, style: .continuous).fill(Color.nc(.bgBase)))
                 .accessibilityElement(children: .combine)
             }
-            if !a.interestItems.isEmpty {
-                itemRows(a.interestItems, labels: Explain.interestLabels)
+            if let obs = a.interestObs {
+                // 観察で判定した回: 件数・分数と、引用。点は、観察の数から計算している。
+                interestObservationRows(obs)
+            } else {
+                if !a.interestItems.isEmpty {
+                    itemRows(a.interestItems, labels: Explain.interestLabels)
+                }
+                InterestScale(total: a.interestScore ?? Explain.interestTotal(a.interestItems))
             }
-            InterestScale(total: total)
+        }
+    }
+
+    /// 🎯の観察を、種類ごとに: 見出しと数(分 / 件)、そのあとに、分と引用。
+    private func interestObservationRows(_ o: InterestObservations) -> some View {
+        VStack(alignment: .leading, spacing: NCSpace.s2) {
+            observationGroup(NCString.interestObsImagery, value: "\(o.imagery.coveredMinutes)分 / 20分", items: o.imagery)
+            observationGroup(NCString.interestObsFollow, value: "\(o.follow.coveredMinutes)分", items: o.follow)
+            observationGroup(NCString.interestObsHook, value: "\(o.hook.count)件", items: o.hook)
+            Text(NCString.interestObsNote).ncText(NCText.caption, .textSub)
+        }
+    }
+
+    private func observationGroup(_ title: String, value: String, items: [InterestObservation]) -> some View {
+        VStack(alignment: .leading, spacing: NCSpace.s1) {
+            HStack(spacing: NCSpace.s2) {
+                Text(title).ncText(NCText.footnote)
+                Spacer()
+                Text(value).ncText(NCText.caption, .textSub)
+            }
+            .frame(minHeight: 32)
+            ForEach(Array(items.enumerated()), id: \.offset) { _, it in
+                HStack(alignment: .firstTextBaseline, spacing: NCSpace.s2) {
+                    Text(it.fromMinute == it.toMinute ? "\(it.fromMinute)分" : "\(it.fromMinute)〜\(it.toMinute)分")
+                        .ncText(NCText.caption, .accentFactor)
+                    Text(it.quote).ncText(NCText.caption, .textSub).fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
     }
 

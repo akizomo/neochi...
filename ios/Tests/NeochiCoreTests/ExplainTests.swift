@@ -49,4 +49,12 @@ final class ExplainTests: XCTestCase {
     func testPartsOmittedWhenNoData() {
         XCTAssertTrue(Explain.earParts(analysis()).isEmpty)
     }
+
+    func testInterestObservationCoveredMinutesCountsOverlapOnce() {
+        let spans = [InterestObservation(fromMinute: 0, toMinute: 4, quote: "a"),
+                     InterestObservation(fromMinute: 3, toMinute: 6, quote: "b"),
+                     InterestObservation(fromMinute: 10, toMinute: 10, quote: "c")]
+        XCTAssertEqual(spans.coveredMinutes, 8)   // 0〜6 の7分と、10 の1分
+        XCTAssertEqual([InterestObservation]().coveredMinutes, 0)
+    }
 }
