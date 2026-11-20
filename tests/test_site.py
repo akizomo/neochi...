@@ -253,7 +253,7 @@ def test_explainer_page_cites_every_source_and_marks_strength(tmp_path):
     h = (tmp_path / "about" / "index.html").read_text(encoding="utf-8")
     cited = set(re.findall(r'href="#ref(\d+)"', h))
     listed = set(re.findall(r'<li id="ref(\d+)">', h))
-    assert cited and cited <= listed and len(listed) == 8
+    assert cited and cited <= listed and len(listed) == 9
     items = re.findall(r"<dt>(.*?)</dt>", h)
     scored = [i for i in items if 'class="tag' in i]
     assert len(scored) >= 10 and all(("◯ 関連研究" in i) or ("△ 仮説" in i) for i in scored)
