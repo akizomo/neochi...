@@ -58,8 +58,8 @@ struct NightView: View {
                 if model.nightScreenAuto && model.playing == nil {
                     VStack(spacing: NCSpace.s1) {
                         Text("おやすみの時間です").ncText(NCText.headline)
-                        Text(model.reservation(night: 0) != nil ? "今夜聴くに決めた話を用意しました。再生を押すと聴き始めます"
-                                                                 : "今夜のおすすめを用意しました。再生を押すと聴き始めます")
+                        Text(model.reservation(night: 0) != nil ? "今夜聴くに決めた話を用意しました"
+                                                                 : "今夜のおすすめを用意しました")
                             .ncText(NCText.footnote, .textSub).multilineTextAlignment(.center)
                     }
                     .accessibilityElement(children: .combine)
