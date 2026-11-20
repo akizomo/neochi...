@@ -27,6 +27,38 @@ public struct ScoredItem: Hashable, Codable, Sendable {
     public init(key: String, score: Int, minute: Int? = nil) { self.key = key; self.score = score; self.minute = minute }
 }
 
+/// 🎯の観察の1件(分と引用)。1つの分は fromMinute == toMinute。
+public struct InterestObservation: Hashable, Codable, Sendable {
+    public var fromMinute: Int
+    public var toMinute: Int
+    public var quote: String
+    public init(fromMinute: Int, toMinute: Int, quote: String) {
+        self.fromMinute = fromMinute; self.toMinute = toMinute; self.quote = quote
+    }
+}
+
+public extension Array where Element == InterestObservation {
+    /// 観察がおおう分の数(重なりは1回)。
+    var coveredMinutes: Int {
+        var minutes = Set<Int>()
+        for o in self where o.fromMinute <= o.toMinute { for m in o.fromMinute...o.toMinute { minutes.insert(m) } }
+        return minutes.count
+    }
+}
+
+/// 🎯(程よい興味)の観察。観察で判定した回だけにある(旧の判定の回は nil。`neochi/observe.py`)。
+public struct InterestObservations: Hashable, Codable, Sendable {
+    /// 先を引っぱる場面。
+    public var hook: [InterestObservation]
+    /// 前を覚えていないと分からない筋。
+    public var follow: [InterestObservation]
+    /// 思い浮かぶ具体的な話。
+    public var imagery: [InterestObservation]
+    public init(hook: [InterestObservation] = [], follow: [InterestObservation] = [], imagery: [InterestObservation] = []) {
+        self.hook = hook; self.follow = follow; self.imagery = imagery
+    }
+}
+
 /// 1回ぶんの解析(★と、根拠になったデータ)。無い項目は nil(古い解析には timeline などがない)。
 public struct EpisodeAnalysis: Hashable, Codable, Sendable {
     public var episodeID: String
@@ -59,6 +91,8 @@ public struct EpisodeAnalysis: Hashable, Codable, Sendable {
     public var calmPerMin: [Double] = []
     /// 内容の要約(120字以内)。古い解析は nil。
     public var contentSummary: String?
+    /// 🎯の観察(分と引用)。観察で判定した回だけ。旧の判定の回は nil で、interestScore と interestItems を使う。
+    public var interestObs: InterestObservations?
 
     public init(episodeID: String, finalStar: Double? = nil, calmStar: Double? = nil, earStar: Double? = nil,
                 interest: InterestLevel? = nil, interestScore: Int? = nil, reason: String? = nil,

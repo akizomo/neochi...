@@ -75,6 +75,11 @@ public enum NCString {
     public static func momentLabel(minute: Int) -> String { "\(minute)分の山" }
     public static func analyzedEpisode(_ number: Int?) -> String { number.map { "\($0)話の解析" } ?? "この話の解析" }
     public static let summaryHeader = "この話の内容(AIの要約)"
+    /// 🎯を観察で判定した回の、注記。点は、観察の数から計算している。
+    public static let interestObsNote = "具体的な話が続き、筋や引っぱりが少ないほど、★が多くなります(観察の数から計算)"
+    public static let interestObsImagery = "思い浮かぶ具体的な話"
+    public static let interestObsFollow = "前を覚えていないと分からない筋"
+    public static let interestObsHook = "先を引っぱる場面"
     public static let interestZoneNote = "4〜6が寝落ち向き"
     public static let analyzing = "解析中"
     /// 起伏・興味の AI の判定が、まだ済んでいない観点。
