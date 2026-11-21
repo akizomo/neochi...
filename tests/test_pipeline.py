@@ -428,6 +428,11 @@ def test_calm_observations_make_star_curve_and_moments_together(cfg, tmp_path):
     obs = new["reasons"]["calm_obs"]
     assert len(obs["emotion"]) == 1 and len(obs["worry"]) == 1 and obs["load"][0]["from"] == 6
     assert not new["reasons"].get("items")   # 4項目の点は、付けない(観察から作るので)
+    # 旧形式で判定した回を、観察で判定し直したとき、前の4項目の点は残さない
+    old = {**row, "reasons": {**(row.get("reasons") or {}), "items": {"calm": {"A": {"score": 1, "min": 2}}, "interest": None}}}
+    store.upsert("analysis", old)
+    again = pipeline.apply_judgement(_calm_obs_judgement(row["episode_id"]), cfg, store)
+    assert "items" not in again["reasons"]
     assert new["calm_per_min"][3] > 0 and new["calm_per_min"][5] > 0 and new["calm_per_min"][0] == 0
     assert [m["min"] for m in new["reasons"]["moments"]] == [3, 5] and new["reasons"]["moments"][0]["level"] == 2
     assert 1.0 <= new["calm_star"] < 5.0

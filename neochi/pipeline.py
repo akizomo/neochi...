@@ -160,6 +160,7 @@ def _reasons(base: dict, v: dict) -> dict:
     out.pop("calm_obs", None)
     if v.get("calm_obs") is not None:
         out["calm_obs"] = v["calm_obs"]
+        out.pop("items", None)   # 前の判定の4項目の点を、引き継がない(観察から作る★・線・山と、食い違うので)
     return out
 
 
