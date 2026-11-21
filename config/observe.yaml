@@ -21,7 +21,7 @@ calm:
   per_min: {event_weight: 0.7, cap: 2.0}   # 1分ごとの起伏 = その分の観察の重みの合計 × event_weight(上限 cap)
 
 interest:
-  hook_penalty: 0.4         # 先が気になる 1件ごとの減点(前半を重く)
+  hook_penalty: {1: 0.2, 2: 0.5}   # 先が気になる 1件ごとの減点(前半を重く)。1 = 予告、2 = 謎・引っぱり(試し。2026-11-21)
   hook_max: 1.5
   follow_penalty: 1.5       # 追い続ける必要が、冒頭のうち占める割合 × この値
   boredom: {coverage_ok: 0.5, penalty: 2.5}   # 思い浮かぶ具体性の区間が、冒頭のうち coverage_ok に届かない分の割合 × penalty

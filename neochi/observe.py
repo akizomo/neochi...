@@ -78,7 +78,8 @@ def parse_observations(raw: str, cfg: dict | None = None) -> dict:
         if mi is None or q is None:
             dropped += 1
             continue
-        hook.append({"min": mi, "quote": q})
+        st = x.get("strength")   # 1 = 予告(あとで来る中身を先に並べる)、2 = 謎・引っぱり。書かれていなければ 2(旧の形式)
+        hook.append({"min": mi, "strength": st if st in (1, 2) else 2, "quote": q})
     for name, dst in (("follow", follow), ("imagery", imagery), ("load", load)):
         for x in d.get(name) or []:
             sp, q = _span(x, minutes), _quote(x.get("quote"))
@@ -145,7 +146,8 @@ def calm_star(obs: dict, cfg: dict) -> float:
 def interest_parts(obs: dict, cfg: dict) -> tuple[float, float, float]:
     """🎯の減点の内訳 (先が気になる, 追い続ける必要, 退屈)。"""
     i = cfg["interest"]
-    hooks = min(i["hook_max"], sum(i["hook_penalty"] * _fw(x["min"], cfg) for x in obs["hook"]))
+    hp = i["hook_penalty"]   # 強さ(1 = 予告、2 = 謎・引っぱり)ごとの減点
+    hooks = min(i["hook_max"], sum(hp[x.get("strength", 2)] * _fw(x["min"], cfg) for x in obs["hook"]))
     follow = i["follow_penalty"] * _coverage(obs["follow"], cfg)
     b = i["boredom"]
     short = max(0.0, b["coverage_ok"] - _coverage(obs["imagery"], cfg)) / b["coverage_ok"]

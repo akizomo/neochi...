@@ -116,3 +116,13 @@ def test_emotion_total_does_not_depend_on_span_length_beyond_two_minutes(ocfg):
     two = observe.parse_observations(raw(emotion=[{"from": 4, "to": 5, "kind": "negative", "quote": "a"}]), ocfg)
     four = observe.parse_observations(raw(emotion=[{"from": 4, "to": 7, "kind": "negative", "quote": "a"}]), ocfg)
     assert abs(observe.calm_raw(two, ocfg) - observe.calm_raw(four, ocfg)) < 1e-9
+
+
+def test_hook_strength_teaser_is_lighter_than_mystery(ocfg):
+    """予告(強さ1)は、謎・引っぱり(強さ2)より、減点が小さい。強さがなければ 2 として数える(旧の形式)。"""
+    img = [{"from": 0, "to": 19, "quote": "a"}]
+    teaser = observe.parse_observations(raw(imagery=img, hook=[{"min": 0, "strength": 1, "quote": "c"}]), ocfg)
+    mystery = observe.parse_observations(raw(imagery=img, hook=[{"min": 0, "strength": 2, "quote": "c"}]), ocfg)
+    legacy = observe.parse_observations(raw(imagery=img, hook=[{"min": 0, "quote": "c"}]), ocfg)
+    assert legacy["hook"][0]["strength"] == 2
+    assert observe.interest_star(teaser, ocfg) > observe.interest_star(mystery, ocfg) == observe.interest_star(legacy, ocfg)
