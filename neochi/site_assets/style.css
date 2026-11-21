@@ -290,8 +290,8 @@ body.nofab .to-top { bottom: calc(16px + env(safe-area-inset-bottom)); }
 .cv { position: relative; display: block; }
 .art-c { width: 100%; aspect-ratio: 1; height: auto; border-radius: 10px; }
 .cv .bd { position: absolute; top: 6px; right: 6px; }
-.cv .no { position: absolute; left: 0; top: 0; right: 0; padding: 4px 0 30px 8px; border-radius: 10px 10px 0 0; pointer-events: none;
-  background: linear-gradient(to bottom, rgba(11, 13, 18, 0.62), rgba(11, 13, 18, 0));
+.cv .no { position: absolute; left: 0; top: 0; right: 0; padding: 4px 0 40px 8px; border-radius: 10px 10px 0 0; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(11, 13, 18, 0.74), rgba(11, 13, 18, 0));
   color: #F6F7F9; font: 800 44px/1 var(--mono); letter-spacing: -0.02em; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
 .pt-title { font-weight: 600; font-size: 14px; line-height: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .score-s { font-size: 13px; }

@@ -25,7 +25,7 @@ struct ArtworkView: View {
                 initial
             }
             if let n = rankNumber {
-                LinearGradient(colors: [.black.opacity(0.62), .clear], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.6))
+                LinearGradient(colors: [.black.opacity(0.7), .clear], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.7))
                 RankNumeral(rank: n, size: size * 0.38)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .padding(.leading, NCSpace.s2)
