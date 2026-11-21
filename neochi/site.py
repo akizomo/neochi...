@@ -658,8 +658,8 @@ def part_rows(parts: list[dict]) -> str:
         f'<span class="num fac">{n1(p["star"])}</span></li>' for p in parts) + "</ul>"
 
 
-def interest_obs_body(obs: dict, minutes: int = 20) -> str:
-    """🎯の観察(v2)を、件数・分数と、引用つきで見せる。点は、この観察から計算している(クリックすると根拠が分かる)。"""
+def interest_obs_body(obs: dict, minutes: int = 20, level: str | None = None) -> str:
+    """🎯の観察(v2)を、ゲージ(3つのゾーンと、観察ごとの横棒)と、分・引用つきで見せる。点は、この観察から計算している。"""
     def covered(spans):
         return len({m for x in spans for m in range(x["from"], x["to"] + 1)})
 
@@ -667,15 +667,18 @@ def interest_obs_body(obs: dict, minutes: int = 20) -> str:
         if not entries:
             return ""
         return '<ul class="moments">' + "".join(f'<li><b class="num fac">{fmt(x)}</b> {escape(x["quote"])}</li>' for x in entries) + "</ul>"
+
+    def bar(title, short, fill):
+        return (f'<ul class="parts"><li aria-label="{title}。{short}"><span>{title}</span><span class="num">{short}</span>'
+                f'<span class="gauge"><span style="width:{max(4, min(1.0, fill) * 100):.0f}%"></span></span><span></span></li></ul>')
     span = lambda x: f'{x["from"]}分' if x["from"] == x["to"] else f'{x["from"]}〜{x["to"]}分'
     hook, follow, imagery = obs.get("hook") or [], obs.get("follow") or [], obs.get("imagery") or []
-    rows = (f'<ul class="items"><li><span>思い浮かぶ具体的な話</span><span class="cap">{covered(imagery)}分 / {minutes}分</span></li></ul>'
-            + quotes(imagery, span)
-            + f'<ul class="items"><li><span>前を覚えていないと分からない筋</span><span class="cap">{covered(follow)}分</span></li></ul>'
-            + quotes(follow, span)
-            + f'<ul class="items"><li><span>先を引っぱる場面</span><span class="cap">{len(hook)}件</span></li></ul>'
-            + quotes(hook, lambda x: f'{x["min"]}分'))
-    return rows + '<p class="cap">具体的な話が続き、筋や引っぱりが少ないほど、★が多くなります(観察の数から計算)</p>'
+    zones = "".join(f'<span class="{"on" if k == level else ""}">{INTEREST_WORD[k]}</span>' for k in ("low", "mid", "high"))
+    body = f'<div class="zone3" role="img" aria-label="いまの位置: {INTEREST_WORD.get(level, "")}">{zones}</div>' if level in INTEREST_WORD else ""
+    body += (bar("具体的な話", f"{covered(imagery)}分 / {minutes}分", covered(imagery) / minutes) + quotes(imagery, span)
+             + bar("筋を追う", f"{covered(follow)}分", covered(follow) / minutes) + quotes(follow, span)
+             + bar("引っぱり", f"{len(hook)}件", len(hook) / 3) + quotes(hook, lambda x: f'{x["min"]}分'))
+    return body + '<p class="cap">具体的な話が続き、筋や引っぱりが少ないほど、★が多くなります(観察の数から計算)</p>'
 
 
 def interest_scale(total: int) -> str:
@@ -724,7 +727,7 @@ def evidence(e: dict, a: dict, cfg: dict, lang: str) -> str:
         if a.get("content_summary"):
             body += f'<div class="summary"><p class="cap">この話の内容(AIの要約)</p><p>{escape(a["content_summary"])}</p></div>'
         if r.get("interest_obs") is not None:   # 観察で判定した回(v2)
-            body += interest_obs_body(r["interest_obs"])
+            body += interest_obs_body(r["interest_obs"], level=lv)
         else:                                   # 旧の判定(5項目と、1〜10の目盛り)
             total = a.get("interest_score") or max(1, sum(i["score"] for i in int_items))
             if int_items:

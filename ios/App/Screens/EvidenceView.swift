@@ -107,7 +107,7 @@ struct EvidenceView: View {
             }
             if let obs = a.interestObs {
                 // 観察で判定した回: 件数・分数と、引用。点は、観察の数から計算している。
-                interestObservationRows(obs)
+                interestObservationRows(obs, level: a.interest)
             } else {
                 if !a.interestItems.isEmpty {
                     itemRows(a.interestItems, labels: Explain.interestLabels)
@@ -117,22 +117,48 @@ struct EvidenceView: View {
         }
     }
 
-    /// 🎯の観察を、種類ごとに: 見出しと数(分 / 件)、そのあとに、分と引用。
-    private func interestObservationRows(_ o: InterestObservations) -> some View {
+    /// 🎯の観察を、いまの位置(3つのゾーン)と、種類ごとの横棒(ゲージ)で。そのあとに、分と引用。
+    private func interestObservationRows(_ o: InterestObservations, level: InterestLevel?) -> some View {
         VStack(alignment: .leading, spacing: NCSpace.s2) {
-            observationGroup(NCString.interestObsImagery, value: "\(o.imagery.coveredMinutes)分 / 20分", items: o.imagery)
-            observationGroup(NCString.interestObsFollow, value: "\(o.follow.coveredMinutes)分", items: o.follow)
-            observationGroup(NCString.interestObsHook, value: "\(o.hook.count)件", items: o.hook)
+            if let level { interestZones(level) }
+            observationGroup(NCString.interestObsImagery, value: "\(o.imagery.coveredMinutes)分 / 20分",
+                             fill: Double(o.imagery.coveredMinutes) / 20, items: o.imagery)
+            observationGroup(NCString.interestObsFollow, value: "\(o.follow.coveredMinutes)分",
+                             fill: Double(o.follow.coveredMinutes) / 20, items: o.follow)
+            observationGroup(NCString.interestObsHook, value: "\(o.hook.count)件",
+                             fill: Double(o.hook.count) / 3, items: o.hook)
             Text(NCString.interestObsNote).ncText(NCText.caption, .textSub)
         }
     }
 
-    private func observationGroup(_ title: String, value: String, items: [InterestObservation]) -> some View {
+    /// 退屈寄り / ちょうどよい / 引き込まれすぎ の3つ。いまの位置だけ色が付く。
+    private func interestZones(_ level: InterestLevel) -> some View {
+        HStack(spacing: 3) {
+            ForEach([InterestLevel.low, .mid, .high], id: \.self) { l in
+                Text(NCString.interestWord(l))
+                    .ncText(NCText.caption, l == level ? .bgBase : .textSub)
+                    .frame(maxWidth: .infinity, minHeight: 28)
+                    .background(RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(l == level ? Color.nc(.accentFactor) : Color.nc(.line)))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("いまの位置 \(NCString.interestWord(level))")
+    }
+
+    private func observationGroup(_ title: String, value: String, fill: Double, items: [InterestObservation]) -> some View {
         VStack(alignment: .leading, spacing: NCSpace.s1) {
             HStack(spacing: NCSpace.s2) {
                 Text(title).ncText(NCText.footnote)
                 Spacer()
                 Text(value).ncText(NCText.caption, .textSub)
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.nc(.line))
+                        Capsule().fill(Color.nc(.accentFactor)).frame(width: max(4, g.size.width * CGFloat(min(1, fill))))
+                    }
+                }
+                .frame(width: 56, height: 6)
             }
             .frame(minHeight: 32)
             ForEach(Array(items.enumerated()), id: \.offset) { _, it in

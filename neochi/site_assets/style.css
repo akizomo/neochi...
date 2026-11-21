@@ -164,6 +164,9 @@ nav a:hover { color: var(--text); }
 .gauge span { display: block; height: 100%; background: var(--factor); border-radius: inherit; }
 .moments li { font-size: 13px; color: var(--sub); }
 .summary { background: var(--bg); border-radius: 8px; padding: 12px; font-size: 13px; line-height: 21px; display: grid; gap: 4px; }
+.zone3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin: 0 0 8px; }
+.zone3 span { padding: 6px 0; text-align: center; font-size: 12px; color: var(--sub); background: var(--line); border-radius: 4px; }
+.zone3 span.on { background: var(--factor); color: var(--bg); }
 .scale { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
 .scale span { display: grid; gap: 4px; padding: 4px 0; justify-items: center; }
 .scale span.zone { background: var(--surface-pressed); }

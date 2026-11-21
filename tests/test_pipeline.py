@@ -385,3 +385,10 @@ def test_site_shows_interest_observations_with_quotes():
                                 "follow": [{"from": 5, "to": 9, "quote": "前回の続きですが"}],
                                 "imagery": [{"from": 0, "to": 9, "quote": "朝の市場に着くと"}]})
     assert "10分 / 20分" in h and "5分" in h and "1件" in h and "朝の市場に着くと" in h and "5〜9分" in h
+
+
+def test_site_interest_gauge_marks_current_zone_and_bars():
+    from neochi import site
+    h = site.interest_obs_body({"hook": [], "follow": [], "imagery": [{"from": 0, "to": 9, "quote": "朝の市場に着くと"}]}, level="mid")
+    assert 'class="zone3"' in h and '<span class="on">ちょうどよい</span>' in h
+    assert h.count('class="gauge"') == 3 and "width:50%" in h   # 具体的な話 10分 / 20分
