@@ -151,15 +151,14 @@ private struct BestCard: View {
     }
 }
 
-/// 棚の1枚。左上に順位の数字、カバー、番組名、評点。
+/// 棚の1枚。カバーの左上に、大きな順位の数字。そのあとに番組名、評点。
 private struct ShelfCard: View {
     let rank: Int
     let show: Show
 
     var body: some View {
         VStack(alignment: .leading, spacing: NCSpace.s2) {
-            Text("\(rank)").ncText(NCText.numMd, .textSub)
-            ArtworkView(show: show, size: NCSize.artworkL, radius: NCRadius.md, showsRank: true)
+            ArtworkView(show: show, size: NCSize.artworkL, radius: NCRadius.md, showsRank: true, rankNumber: rank)
             Text(show.title).ncText(NCText.footnote).lineLimit(2, reservesSpace: true).multilineTextAlignment(.leading)
             StarScore(star: show.star, style: NCText.headline)
         }

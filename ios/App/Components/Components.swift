@@ -10,6 +10,8 @@ struct ArtworkView: View {
     var radius: CGFloat = NCRadius.md
     /// 寝落ち格付けのバッジを、右上に重ねる(評点の数字の横には置かない)。
     var showsRank = false
+    /// 順位の数字を、左上に大きく重ねる(ランキングの棚)。上端に薄い影を敷いて、どのカバーでも読めるようにする。
+    var rankNumber: Int?
 
     var body: some View {
         ZStack {
@@ -21,6 +23,12 @@ struct ArtworkView: View {
                 }
             } else {
                 initial
+            }
+            if let n = rankNumber {
+                LinearGradient(colors: [.black.opacity(0.7), .clear], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.7))
+                RankNumeral(rank: n, size: size * 0.38)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.leading, NCSpace.s2)
             }
         }
         .frame(width: size, height: size)
@@ -168,6 +176,21 @@ struct RankBadge: View {
                 .overlay(Capsule().strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
                 .accessibilityLabel("寝落ち格付け \(rank.rawValue)")
         }
+    }
+}
+
+/// ランキングの順位の数字。格付けのバッジと同じ、金属の光沢で、大きく出す(カバーの上に重ねる)。
+/// 順位は数字だけで書く(「位」とは書かない。`docs/VOICE.md`)。読み上げでだけ「位」を付ける。
+struct RankNumeral: View {
+    let rank: Int
+    var size: CGFloat = 44
+
+    var body: some View {
+        Text("\(rank)")
+            .font(.system(size: size, weight: .heavy, design: .monospaced))
+            .foregroundStyle(LinearGradient(colors: [Color.white, Color(red: 0.73, green: 0.80, blue: 0.90)], startPoint: .top, endPoint: .bottom))
+            .shadow(color: .black.opacity(0.5), radius: 6, y: 2)
+            .accessibilityLabel("\(rank)位")
     }
 }
 
