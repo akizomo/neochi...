@@ -392,3 +392,18 @@ def test_site_interest_gauge_marks_current_zone_and_bars():
     h = site.interest_obs_body({"hook": [], "follow": [], "imagery": [{"from": 0, "to": 9, "quote": "朝の市場に着くと"}]}, level="mid")
     assert 'class="zone3"' in h and '<span class="on">ちょうどよい</span>' in h
     assert h.count('class="gauge"') == 3 and "width:50%" in h   # 具体的な話 10分 / 20分
+
+
+def test_transcript_is_saved_after_the_episode_exists(cfg, tmp_path):
+    """transcript 表は episode を参照する(本番の DB)。新しい回で、先に文字起こしを保存すると、参照先がなく失敗する。
+    回を登録したあとに保存することを、参照の制約つきの保存先で確かめる。"""
+    class FkStore(JsonStore):
+        def upsert(self, table, row):
+            if table == "transcript" and self.get("episode", row["episode_id"]) is None:
+                raise RuntimeError("foreign key violation")
+            return super().upsert(table, row)
+    store = FkStore(tmp_path / "s.json")
+    deps = _deps_with_spans()
+    deps.pending_dir = str(tmp_path / "pending")
+    row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, deps)
+    assert store.get("transcript", row["episode_id"]) is not None

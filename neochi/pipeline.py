@@ -28,6 +28,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
     deps = deps or Deps()
     feat: dict = {}
     text, minutes, spans = "", 0.0, []
+    keep_transcript = False   # 文字起こしの保存は、回(episode)を登録したあと。transcript 表は episode を参照するので、先だと新しい回で失敗する
     input_depth = "meta"
 
     try:
@@ -42,7 +43,7 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
                 text, minutes = res[0], res[1]
                 spans = res[2] if len(res) > 2 else []
                 if text.strip():
-                    _save_transcript(store, ep.id, show.lang, minutes, spans, cfg)
+                    keep_transcript = True
                     rate, unit = features.speech_rate(text, show.lang, minutes)
                     feat["speech_rate"], feat["speech_rate_unit"] = rate, unit
                     if spans:  # 前半に重みを付けた速さと、速さのばらつき
@@ -78,6 +79,8 @@ def analyze_episode(show: feeds.Show, ep: feeds.Episode, cfg: dict, store, deps:
     store.upsert("episode", {"id": ep.id, "show_id": show.id, "title": ep.title, "audio_url": ep.audio_url,
                              "duration_sec": ep.duration_sec or (int(feat["duration_sec"]) if feat.get("duration_sec") else None),
                              "published_at": ep.published_at, "link_url": ep.link_url})
+    if keep_transcript:
+        _save_transcript(store, ep.id, show.lang, minutes, spans, cfg)
     row = {
         "episode_id": ep.id, "input_depth": input_depth, "interest_level": level,
         "calm_star": calm, "ear_star": ear, "total_star": total,
