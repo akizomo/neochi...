@@ -36,6 +36,8 @@ final class AppModel {
     var playStartedAt: Date?
     /// 音が最後に鳴っていた時刻。入眠を寝落ちとみなすかに使う(`SleepAttribution`)。
     var playLastAudibleAt: Date?
+    /// 再生の終わり方(自分で止めた晩は、聴きながら眠った晩ではない)。
+    var playEnding: PlaybackEnding?
     private var lastAudibleSavedAt: Date?
     var playEpisodeID: String?
     var playShowID: String?
@@ -146,13 +148,13 @@ final class AppModel {
             persistSession()
         }
         let nightOver = nightScreenNight.map { $0 < tonight } ?? false
-        if nightScreen != nil && nightOver && !inBedtimeWindow { endPlayback() }
+        if nightScreen != nil && nightOver && !inBedtimeWindow { endPlayback(manual: false) }
         // 朝の振り返りを自動で出すのは、1日1回まで(「あとで」で閉じたら、その日はもう出さない。今夜タブの「昨夜の結果」からは開ける)。
         // 就寝の時間帯(また夜になった)には出さない。夜の画面を優先する。
         let autoShown = UserDefaults.standard.object(forKey: Self.morningAutoKey) as? Date
         if morningDue && !morningOpen && !onboardingOpen && !inBedtimeWindow && autoShown != tonight {
             let wasOpen = nightScreen != nil
-            if wasOpen { endPlayback() }
+            if wasOpen { endPlayback(manual: false) }
             UserDefaults.standard.set(tonight, forKey: Self.morningAutoKey)
             // 全画面の画面は、同時に2つ出せない。夜の画面が閉じてから出す。
             Task { @MainActor in
@@ -171,12 +173,21 @@ final class AppModel {
         self.genreStreakNights = genreStreakNights; self.pendingMorning = pendingMorning
         restorePendingNight()
         player.onAudible = { [weak self] t in self?.noteAudible(t) }
+        player.onEnding = { [weak self] e in self?.noteEnding(e) }
+    }
+
+    /// 再生の終わり方。再生が終わっても、また鳴り出したら(一時停止から再開した)、取り消す。
+    private func noteEnding(_ e: PlaybackEnding) {
+        guard playStartedAt != nil else { return }
+        playEnding = e
+        savePendingNight()
     }
 
     /// 音が鳴っている。端末への保存は1分ごと(夜のうちにアプリが終了されても、朝に分かるように)。
     private func noteAudible(_ t: Date) {
         guard playStartedAt != nil else { return }
         playLastAudibleAt = t
+        playEnding = nil
         if lastAudibleSavedAt.map({ t.timeIntervalSince($0) >= 60 }) ?? true {
             lastAudibleSavedAt = t
             savePendingNight()
@@ -188,6 +199,8 @@ final class AppModel {
         var startedAt: Date; var episodeID: String?; var showID: String?
         /// 前の版で残った晩には無い(nil)。
         var lastAudibleAt: Date?
+        /// 再生の終わり方。前の版で残った晩と、アプリが落ちた晩には無い(nil)。
+        var ending: PlaybackEnding?
     }
     private static let pendingNightKey = "pendingNight"
 
@@ -195,7 +208,7 @@ final class AppModel {
         guard pendingMorning, let s = playStartedAt else {
             UserDefaults.standard.removeObject(forKey: Self.pendingNightKey); return
         }
-        let v = PendingNight(startedAt: s, episodeID: playEpisodeID, showID: playShowID, lastAudibleAt: playLastAudibleAt)
+        let v = PendingNight(startedAt: s, episodeID: playEpisodeID, showID: playShowID, lastAudibleAt: playLastAudibleAt, ending: playEnding)
         UserDefaults.standard.set(try? JSONEncoder().encode(v), forKey: Self.pendingNightKey)
     }
 
@@ -203,7 +216,7 @@ final class AppModel {
         guard let data = UserDefaults.standard.data(forKey: Self.pendingNightKey),
               let v = try? JSONDecoder().decode(PendingNight.self, from: data) else { return }
         playStartedAt = v.startedAt; playEpisodeID = v.episodeID; playShowID = v.showID
-        playLastAudibleAt = v.lastAudibleAt
+        playLastAudibleAt = v.lastAudibleAt; playEnding = v.ending
         pendingMorning = true
     }
 
@@ -326,14 +339,17 @@ final class AppModel {
     /// 振り返りは出さずに、その晩を捨てる。入眠がまだ分からないときは、そのまま(あとで、もう一度確かめる)。
     func settleMorning() async {
         guard morningDue, !morningOpen else { return }
+        if healthHasData == nil { await refreshHealthAccess() }
         await refreshOnset()
         dropNightIfNotWhileListening()
     }
 
     private func dropNightIfNotWhileListening() {
-        guard onsetAfterPlayback, !morningOpen else { return }
+        guard !morningOpen else { return }
+        let noOnset = onsetAt == nil && !onsetAfterPlayback
+        guard onsetAfterPlayback || (noOnset && SleepAttribution.dropsWithoutOnset(ending: playEnding, hasHealthData: hasHealthSleepData)) else { return }
         pendingMorning = false
-        playStartedAt = nil; onsetAt = nil; onsetAfterPlayback = false; playLastAudibleAt = nil
+        playStartedAt = nil; onsetAt = nil; onsetAfterPlayback = false; playLastAudibleAt = nil; playEnding = nil
         savePendingNight()
         persistSession()
     }
@@ -362,7 +378,7 @@ final class AppModel {
         logs.append(log)
         if let m = log.latencyMinutes { lastNight = LastNight(showID: show, episodeID: ep, minutes: m) }
         pendingMorning = false
-        playStartedAt = nil; onsetAt = nil; onsetAfterPlayback = false; playLastAudibleAt = nil
+        playStartedAt = nil; onsetAt = nil; onsetAfterPlayback = false; playLastAudibleAt = nil; playEnding = nil
         savePendingNight()
         LogStore.save(logs)
         persistSession()
@@ -630,7 +646,9 @@ final class AppModel {
     }
 
     /// 夜の画面を閉じて、再生を止める。朝の振り返りは、そのまま残る。
-    func endPlayback() {
+    /// 自分で終わらせたとき(`manual`)は、聴きながら眠った晩ではないと分かるよう、記録する。朝にアプリを開いて閉じるときは、記録しない。
+    func endPlayback(manual: Bool = true) {
+        if manual, playing != nil { noteEnding(.manual) }
         player.stop()
         playing = nil
         nightScreen = nil
@@ -644,7 +662,7 @@ final class AppModel {
         }
         currentShowID = candidate.show.id
         playStartedAt = Date(); onsetAt = nil; onsetAfterPlayback = false
-        playLastAudibleAt = playStartedAt; lastAudibleSavedAt = nil
+        playLastAudibleAt = playStartedAt; lastAudibleSavedAt = nil; playEnding = nil
         playEpisodeID = candidate.episode?.id; playShowID = candidate.show.id
         pendingMorning = true
         savePendingNight()
