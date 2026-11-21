@@ -235,7 +235,7 @@ final class AppModel {
     /// 読み込めなかったときは、いまの内容のまま(画面は変えない)。
     func refresh() async {
         await loadRemote()
-        if pendingMorning { await refreshOnset() }
+        if pendingMorning { await refreshOnset(); dropNightIfNotWhileListening() }
         await backfillOnsets()
     }
 
@@ -320,6 +320,22 @@ final class AppModel {
             changed = true
         }
         if changed { LogStore.save(logs); persistSession() }
+    }
+
+    /// 朝、振り返りを出す前に、ヘルスケアで確かめる。聴きながら眠った晩でなければ(夕方に試しで聴いただけ、など)、
+    /// 振り返りは出さずに、その晩を捨てる。入眠がまだ分からないときは、そのまま(あとで、もう一度確かめる)。
+    func settleMorning() async {
+        guard morningDue, !morningOpen else { return }
+        await refreshOnset()
+        dropNightIfNotWhileListening()
+    }
+
+    private func dropNightIfNotWhileListening() {
+        guard onsetAfterPlayback, !morningOpen else { return }
+        pendingMorning = false
+        playStartedAt = nil; onsetAt = nil; onsetAfterPlayback = false; playLastAudibleAt = nil
+        savePendingNight()
+        persistSession()
     }
 
     func refreshOnset() async {
