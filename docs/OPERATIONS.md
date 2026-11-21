@@ -39,7 +39,7 @@
 1. GitHub の akizomo/neochi... をクローンし（main）、`pip install -e '.[asr,dev]' --break-system-packages` で準備する。`python -m pytest -q` が通ることを確認する。
 2. `python -m neochi run --limit 100 --max-new 6 --judge session` を実行する。解析済みの回は自動でスキップされる。時間がかかるので、タイムアウトは長めにする。
 3. config/rubric.md を最初に読み、その基準どおりに work/pending/*.json を1件ずつ判定する。ジャンルや番組名では判断せず、聞いた内容の観察項目だけで採点する。冒頭の広告やお知らせは採点に含めない。
-4. 判定を work/judgements.jsonl に1行1件で書く。rubric.md の出力形式（hook・follow・imagery の観察、calm A〜D、calm_per_min、moments、content_summary、content_start、reason）に episode_id を加えたJSON。★や合計は書かない。
+4. 判定を work/judgements.jsonl に1行1件で書く。rubric.md の出力形式（emotion・worry・hook・follow・load・imagery の6つの観察の配列(空でも必ず書く)、content_summary、content_start、reason）に episode_id を加えたJSON。🌊の項目(calm A〜D)、calm_per_min、moments は書かない(観察から、コードが作る)。★や合計は書かない。
 5. `python -m neochi apply` で取り込む。コミットはしない。
 6. 最後に、今回採点した回を表で報告する（番組 / 回 / 🎯点数(1〜10) / 🌊★ / 🎧★ / 最終★ / 根拠 / 保存先）。保存先が Supabase か data/store.json かを必ず書く。
 

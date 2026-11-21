@@ -17,7 +17,7 @@ worry_weight: 1.0
 load: {cov_full: 0.5, max_points: 2.0}
 
 calm:
-  slope: 0.5                # 🌊★ = 5 − 起伏の合計 × slope(下限 1.0)
+  slope: 0.7                # 🌊★ = 5 − 起伏の合計 × slope(下限 1.0)。0.7 = 確かめ用の29回で、いまの本番と、格付けの割合が近くなる値(2026-11-21)
   per_min: {event_weight: 0.7, cap: 2.0}   # 1分ごとの起伏 = その分の観察の重みの合計 × event_weight(上限 cap)
 
 interest:

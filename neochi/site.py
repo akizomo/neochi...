@@ -658,26 +658,46 @@ def part_rows(parts: list[dict]) -> str:
         f'<span class="num fac">{n1(p["star"])}</span></li>' for p in parts) + "</ul>"
 
 
+def _obs_covered(spans: list[dict]) -> int:
+    return len({m for x in spans for m in range(x["from"], x["to"] + 1)})
+
+
+def _obs_quotes(entries: list[dict], fmt) -> str:
+    if not entries:
+        return ""
+    return '<ul class="moments">' + "".join(f'<li><b class="num fac">{fmt(x)}</b> {escape(x["quote"])}</li>' for x in entries) + "</ul>"
+
+
+def _obs_bar(title: str, short: str, fill: float) -> str:
+    return (f'<ul class="parts"><li aria-label="{title}。{short}"><span>{title}</span><span class="num">{short}</span>'
+            f'<span class="gauge"><span style="width:{max(4, min(1.0, fill) * 100):.0f}%"></span></span><span></span></li></ul>')
+
+
+def _obs_span(x: dict) -> str:
+    return f'{x["from"]}分' if x["from"] == x["to"] else f'{x["from"]}〜{x["to"]}分'
+
+
+EMOTION_KIND = {"negative": "不安・緊迫", "conflict": "対立", "excitement": "盛り上がり"}
+
+
+def calm_obs_body(obs: dict, minutes: int = 20) -> str:
+    """🌊の観察(感情の昂り・心配の種・頭の負荷)を、横棒のゲージと、分・引用つきで見せる。★・山・1分ごとの線は、この観察から計算している。"""
+    emotion, worry, load = obs.get("emotion") or [], obs.get("worry") or [], obs.get("load") or []
+    body = (_obs_bar("感情の昂り", f"{len(emotion)}件", len(emotion) / 4)
+            + _obs_quotes(emotion, lambda x: f'{x["min"]}分 {EMOTION_KIND.get(x["kind"], "")}')
+            + _obs_bar("心配の種", f"{len(worry)}件", len(worry) / 3) + _obs_quotes(worry, lambda x: f'{x["min"]}分')
+            + _obs_bar("頭の負荷", f"{_obs_covered(load)}分 / {minutes}分", _obs_covered(load) / (minutes / 2)) + _obs_quotes(load, _obs_span))
+    return body + '<p class="cap">昂らせる要素が少ないほど、★が多くなります(観察の数から計算)</p>'
+
+
 def interest_obs_body(obs: dict, minutes: int = 20, level: str | None = None) -> str:
     """🎯の観察(v2)を、ゲージ(3つのゾーンと、観察ごとの横棒)と、分・引用つきで見せる。点は、この観察から計算している。"""
-    def covered(spans):
-        return len({m for x in spans for m in range(x["from"], x["to"] + 1)})
-
-    def quotes(entries, fmt):
-        if not entries:
-            return ""
-        return '<ul class="moments">' + "".join(f'<li><b class="num fac">{fmt(x)}</b> {escape(x["quote"])}</li>' for x in entries) + "</ul>"
-
-    def bar(title, short, fill):
-        return (f'<ul class="parts"><li aria-label="{title}。{short}"><span>{title}</span><span class="num">{short}</span>'
-                f'<span class="gauge"><span style="width:{max(4, min(1.0, fill) * 100):.0f}%"></span></span><span></span></li></ul>')
-    span = lambda x: f'{x["from"]}分' if x["from"] == x["to"] else f'{x["from"]}〜{x["to"]}分'
     hook, follow, imagery = obs.get("hook") or [], obs.get("follow") or [], obs.get("imagery") or []
     zones = "".join(f'<span class="{"on" if k == level else ""}">{INTEREST_WORD[k]}</span>' for k in ("low", "mid", "high"))
     body = f'<div class="zone3" role="img" aria-label="いまの位置: {INTEREST_WORD.get(level, "")}">{zones}</div>' if level in INTEREST_WORD else ""
-    body += (bar("具体的な話", f"{covered(imagery)}分 / {minutes}分", covered(imagery) / minutes) + quotes(imagery, span)
-             + bar("筋を追う", f"{covered(follow)}分", covered(follow) / minutes) + quotes(follow, span)
-             + bar("引っぱり", f"{len(hook)}件", len(hook) / 3) + quotes(hook, lambda x: f'{x["min"]}分'))
+    body += (_obs_bar("具体的な話", f"{_obs_covered(imagery)}分 / {minutes}分", _obs_covered(imagery) / minutes) + _obs_quotes(imagery, _obs_span)
+             + _obs_bar("筋を追う", f"{_obs_covered(follow)}分", _obs_covered(follow) / minutes) + _obs_quotes(follow, _obs_span)
+             + _obs_bar("引っぱり", f"{len(hook)}件", len(hook) / 3) + _obs_quotes(hook, lambda x: f'{x["min"]}分'))
     return body + '<p class="cap">具体的な話が続き、筋や引っぱりが少ないほど、★が多くなります(観察の数から計算)</p>'
 
 
@@ -705,11 +725,14 @@ def evidence(e: dict, a: dict, cfg: dict, lang: str) -> str:
         per = [float(v) for v in (a.get("calm_per_min") or [])]
         body = ""
         if per:
-            body += f'<p>{calm_curve_verdict(moments, len(per))}</p><p class="cap">起伏の強さ(1分ごと、AIの推定)</p>'
+            body += (f'<p>{calm_curve_verdict(moments, len(per))}</p>'
+                     f'<p class="cap">起伏の強さ(1分ごと、{"観察から計算" if r.get("calm_obs") is not None else "AIの推定"})</p>')
             body += calm_chart(per, [m for m in moments if m["min"] < len(per)])
         elif calm_items:
             body += f"<p>{calm_verdict(calm_items)}</p>"
-        if calm_items:
+        if r.get("calm_obs") is not None:   # 観察で判定した回
+            body += calm_obs_body(r["calm_obs"])
+        elif calm_items:
             body += item_rows(calm_items, CALM_LABELS) + '<p class="cap">項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.75)</p>'
         if not per and moments:
             body += '<ul class="moments">' + "".join(f'<li><b class="num fac">{m["min"]}分</b> {escape(m["note"])}</li>' for m in moments) + "</ul>"
