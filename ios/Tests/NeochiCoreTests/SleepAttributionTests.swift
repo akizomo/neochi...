@@ -28,4 +28,17 @@ final class SleepAttributionTests: XCTestCase {
         // 前の版で残った晩は、止まった時刻が分からないので、入眠をそのまま使う。
         XCTAssertEqual(SleepAttribution.judge(onset: at(312), lastAudible: nil), .onset(at(312)))
     }
+
+    func testManualStopWithoutHealthDataIsDropped() {
+        XCTAssertTrue(SleepAttribution.dropsWithoutOnset(ending: .manual, hasHealthData: false))
+    }
+
+    func testManualStopWithHealthDataWaitsForOnset() {
+        XCTAssertFalse(SleepAttribution.dropsWithoutOnset(ending: .manual, hasHealthData: true))
+    }
+
+    func testNaturalEndOrUnknownEndIsKept() {
+        XCTAssertFalse(SleepAttribution.dropsWithoutOnset(ending: .natural, hasHealthData: false))
+        XCTAssertFalse(SleepAttribution.dropsWithoutOnset(ending: nil, hasHealthData: false))
+    }
 }

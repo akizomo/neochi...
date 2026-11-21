@@ -1,5 +1,6 @@
 import AVFoundation
 import MediaPlayer
+import NeochiCore
 import Observation
 import UIKit
 import os
@@ -36,6 +37,8 @@ final class PlayerService {
     private(set) var loadedDurationSec: Double?
     /// 音が鳴っている間、1秒ごとに呼ぶ(朝の振り返りで、音が最後に鳴っていた時刻を知るため)。
     var onAudible: ((Date) -> Void)?
+    /// 再生が終わったとき(最後まで流れた、スリープタイマーが切れた)と、自分で一時停止したときに呼ぶ。
+    var onEnding: ((PlaybackEnding) -> Void)?
 
     private var player: AVPlayer?
     private var observers: [NSKeyValueObservation] = []
@@ -101,6 +104,7 @@ final class PlayerService {
         state = .paused
         player?.pause()
         updateNowPlayingRate(0)
+        onEnding?(.manual)
     }
 
     func resume() {
@@ -173,7 +177,7 @@ final class PlayerService {
         let nc = NotificationCenter.default
         itemNotifications = [
             nc.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
-                Task { @MainActor in self?.stop() }
+                Task { @MainActor in self?.onEnding?(.natural); self?.stop() }
             },
             nc.addObserver(forName: .AVPlayerItemFailedToPlayToEndTime, object: item, queue: .main) { [weak self] _ in
                 Task { @MainActor in self?.fail() }
@@ -255,6 +259,7 @@ final class PlayerService {
     private func fadeOutAndStop() async {
         fade(to: 0, seconds: 8)
         try? await Task.sleep(for: .seconds(8))
+        onEnding?(.natural)
         stop()
     }
 
