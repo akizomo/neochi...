@@ -147,7 +147,10 @@ def cmd_retranscribe(a) -> int:
     eps = {e["id"]: e for e in store.rows("episode")}
     shows = {s["id"]: s for s in store.rows("show")}
     done = {t["episode_id"] for t in store.rows("transcript")}
-    ids = [i for i in _ids_from(a) if i in eps]
+    ids = _ids_from(a)
+    if a.all:   # 文字起こしまで解析した回すべて。並び順を固定して、並列(--shard)の分担が、回ごとにずれないようにする
+        ids = sorted(r["episode_id"] for r in store.rows("analysis") if r.get("input_depth") in ("transcript", "audio"))
+    ids = [i for i in ids if i in eps]
     if a.shard:
         i, n = (int(x) for x in a.shard.split("/"))
         ids = [x for k, x in enumerate(ids) if k % n == i]
@@ -442,6 +445,7 @@ def main(argv=None) -> int:
     rt = sub.add_parser("retranscribe", help="解析済みの回の文字起こしを、音声から取り直して保存する(点は変えない)")
     rt.add_argument("--episodes", default="", help="回のIDをカンマ区切りで指定")
     rt.add_argument("--file", default="", help="回のID(episode_id)を持つ JSON(data/check_set_v2.json など)")
+    rt.add_argument("--all", action="store_true", help="文字起こしまで解析した回すべて(保存済みはスキップ)")
     rt.add_argument("--shard", default="", help="i/n。並列に回すとき")
     rt.add_argument("--force", action="store_true", help="保存済みの回も取り直す")
     rt.set_defaults(fn=cmd_retranscribe)
