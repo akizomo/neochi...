@@ -114,16 +114,24 @@ final class AppModel {
         if openNight { openNightIfBedtime() }
     }
 
+    /// 就寝の時間帯の元にする時刻は、実際に眠った晩だけ: ヘルスケアの就寝時刻と、朝の振り返りで保存した晩の再生開始。
+    /// 再生した記録(`history`)は使わない。試しに聴いただけの再生が多く、混ぜると時間帯が昼や夕方まで広がる。
     var inBedtimeWindow: Bool {
-        BedtimeWindow.isInWindow(now: now(), starts: history.map(\.playedAt) + healthStarts, fallback: bedtimeFallback, calendar: .current)
+        BedtimeWindow.isInWindow(now: now(), starts: logs.map(\.startedAt) + healthStarts, fallback: bedtimeFallback, calendar: .current)
     }
 
     /// 就寝の時間帯にアプリを開いたら、昼の画面ではなく夜の画面を出す。
     func openNightIfBedtime() {
-        guard nightScreen == nil, !morningOpen, inBedtimeWindow else { return }
+        guard nightScreen == nil, !morningOpen, inBedtimeWindow, !nightDismissedByUser else { return }
         nightScreenNight = nightDay(0)
         nightScreenAuto = playing == nil
         nightScreen = playing == nil ? .ready : .playing
+    }
+
+    /// 今夜、自分で夜の画面を閉じた(「閉じる」「終わる」)。その晩は、アプリに戻っても、自動では出さない。
+    private static let nightDismissedKey = "nightScreenDismissedNight"
+    private var nightDismissedByUser: Bool {
+        UserDefaults.standard.object(forKey: Self.nightDismissedKey) as? Date == nightDay(0)
     }
 
     enum NightScreen: String, Identifiable { case ready, playing; var id: String { rawValue } }
@@ -157,8 +165,10 @@ final class AppModel {
             if wasOpen { endPlayback(manual: false) }
             UserDefaults.standard.set(tonight, forKey: Self.morningAutoKey)
             // 全画面の画面は、同時に2つ出せない。夜の画面が閉じてから出す。
+            // 出す前に、聴きながら眠った晩かをヘルスケアで確かめる(先に開くと、捨てるべき晩でも振り返りが出てしまう)。
             Task { @MainActor in
                 if wasOpen { try? await Task.sleep(for: .milliseconds(600)) }
+                await settleMorning()
                 if morningDue && !morningOpen && nightScreen == nil { morningOpen = true }
             }
         }
@@ -648,6 +658,7 @@ final class AppModel {
     /// 夜の画面を閉じて、再生を止める。朝の振り返りは、そのまま残る。
     /// 自分で終わらせたとき(`manual`)は、聴きながら眠った晩ではないと分かるよう、記録する。朝にアプリを開いて閉じるときは、記録しない。
     func endPlayback(manual: Bool = true) {
+        if manual { UserDefaults.standard.set(nightDay(0), forKey: Self.nightDismissedKey) }
         if manual, playing != nil { noteEnding(.manual) }
         player.stop()
         playing = nil

@@ -30,8 +30,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.neochi
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"   # iPhone のみ。iPad の画面は、まだ確かめていない
-        MARKETING_VERSION: "1.0.1"
-        CURRENT_PROJECT_VERSION: "16"
+        MARKETING_VERSION: "1.0.2"
+        CURRENT_PROJECT_VERSION: "17"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_CFBundleDisplayName: NeochiPickzz   # ホーム画面の名前。xcodegen は Info.plist を作り直すので、ここに置く
@@ -56,3 +56,22 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+  NeochiAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AppTests
+    dependencies:
+      - target: Neochi
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+schemes:
+  Neochi:
+    build:
+      targets:
+        Neochi: all
+    test:
+      targets:
+        - NeochiAppTests

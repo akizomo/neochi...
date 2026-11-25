@@ -91,3 +91,22 @@ final class BedtimeWindowTests: XCTestCase {
         XCTAssertNil(BedtimeWindow.typicalMinute(starts: Array(s.prefix(4)), calendar: cal))
     }
 }
+
+/// 昼や朝に聴いた記録を、就寝時刻に混ぜない(18時に夜の画面が出た不具合)。
+final class BedtimeWindowDaytimeTests: XCTestCase {
+    private var cal: Calendar = { var c = Calendar(identifier: .gregorian); c.timeZone = TimeZone(identifier: "Asia/Tokyo")!; return c }()
+    private func d(_ day: Int, _ h: Int, _ m: Int = 0) -> Date { cal.date(from: DateComponents(year: 2026, month: 11, day: day, hour: h, minute: m))! }
+    private var nights: [Date] { [(2,22,30),(3,23,0),(4,23,30),(9,22,45),(10,23,15),(11,23,40),(12,22,30),(16,23,0)].map { d($0.0, $0.1, $0.2) } }
+
+    func testDaytimePlaysDoNotWidenTheWindow() {
+        let w = BedtimeWindow.make(starts: nights + [d(17, 15), d(18, 14), d(19, 7)], weekendNight: false, calendar: cal)
+        let base = BedtimeWindow.make(starts: nights, weekendNight: false, calendar: cal)
+        XCTAssertEqual(w, base)
+        XCTAssertFalse(BedtimeWindow.isInWindow(now: d(18, 18), starts: nights + [d(17, 15)], fallback: nil, calendar: cal), "18時に夜の画面を出さない")
+    }
+
+    func testDaytimeOnlyDoesNotCountAsSamples() {
+        let days = (2...8).map { d($0, 15) }
+        XCTAssertNil(BedtimeWindow.make(starts: days, weekendNight: false, calendar: cal))
+    }
+}

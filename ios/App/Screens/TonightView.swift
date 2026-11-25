@@ -6,15 +6,6 @@ import NeochiCore
 struct TonightView: View {
     @Environment(AppModel.self) private var model
     @State private var night = 0
-    /// 候補カードの横スクロールの中身の枠(スクロールの枠の座標。端まで来ているかを、位置から知るため)。
-    @State private var carouselContent: CGRect = .zero
-    /// スワイプを始めたときの、カードの端の状態。終わった時点では、カードがもう動いているので、始めの値を使う。
-    @State private var swipeStart: SwipeStart?
-    private struct SwipeStart { let atStart: Bool; let atEnd: Bool }
-    /// 候補カードの横スクロールの枠(スワイプが、カードの上で始まったかを知るため)。
-    @State private var carouselFrame: CGRect = .zero
-    private static let space = "tonight"
-    private static let carousel = "tonightCarousel"
     private let labels = ["今夜", "明日"]
     private let verbs = ["今夜聴く", "明日聴く"]
 
@@ -28,18 +19,6 @@ struct TonightView: View {
                 }
                 .padding(.horizontal, NCSpace.s5)
                 .padding(.bottom, NCSpace.s8)
-                .coordinateSpace(name: Self.space)
-                // 横にスワイプで、今夜と明日を切り替える(縦のスクロールは、そのまま動く)。
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 20, coordinateSpace: .named(Self.space))
-                        .onChanged { _ in
-                            if swipeStart == nil {
-                                swipeStart = SwipeStart(atStart: carouselContent.minX >= -2,
-                                                        atEnd: carouselContent.maxX <= carouselFrame.width + 2)
-                            }
-                        }
-                        .onEnded { v in swipe(v); swipeStart = nil }
-                )
             }
             .refreshable { await model.refresh() }
             .task { await model.settleMorning() }
@@ -56,20 +35,6 @@ struct TonightView: View {
             }
 
         }
-    }
-
-    /// 横のスワイプ。カードの上で始まったときは、カードを動かすのが先。カードが端まで来ているときだけ、晩を切り替える。
-    private func swipe(_ v: DragGesture.Value) {
-        let dx = v.translation.width, dy = v.translation.height
-        guard abs(dx) > 40, abs(dx) > abs(dy) * 1.2 else { return }
-        let dir = dx < 0 ? 1 : -1
-        let next = night + dir
-        guard labels.indices.contains(next) else { return }
-        if model.reservation(night: night) == nil, carouselFrame.contains(v.startLocation) {
-            // 始めたときに、カードがその向きの端にいたときだけ(途中のカードを送るスワイプでは、切り替えない)。
-            guard let start = swipeStart, dir > 0 ? start.atEnd : start.atStart else { return }
-        }
-        withAnimation { night = next }
     }
 
     /// 矢印は常に2つ出す。行けない方向は押せなくする(標準のツールバーボタン)。
@@ -122,9 +87,7 @@ struct TonightView: View {
                         }
                     }
                     .scrollTargetLayout()
-                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.carousel)) } action: { carouselContent = $0 }
                 }
-                .coordinateSpace(name: Self.carousel)
                 // 晩を切り替えたら、カードを先頭から見せる(前の晩のスクロールの位置を引き継がない)。
                 .onChange(of: night) { _, new in
                     if let first = model.slate(night: new).first { proxy.scrollTo(first.stableID, anchor: .leading) }
@@ -133,7 +96,6 @@ struct TonightView: View {
             .scrollClipDisabled()   // 影が、スクロール枠で切れないように
             .scrollTargetBehavior(.viewAligned)
             .contentMargins(.horizontal, 0, for: .scrollContent)
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { carouselFrame = $0 }
         }
     }
 

@@ -98,13 +98,15 @@ struct SettingsView: View {
     }
 
     /// ヘルスケア(睡眠データ)の連携。ほかの項目と同じ並びで、左に今の状態(未連携 / 連携中)、右に入口(連携 / 変更)。
-    /// 読み取りの許可が「あるか」は、アプリからは分からない。聞いていなければ許可画面を出す。聞いたあとは、実際に睡眠データを
-    /// 受け取れているか(過去30日)で連携中かを決め、入口は設定アプリのこのアプリの画面(ヘルスケア → 睡眠)へ
-    /// (許可をつなぎ直す・切るのは、iOS の設定でしかできない)。
+    /// 読み取りの許可が「あるか」は、アプリからは分からない。聞いていなければ未連携で、許可画面を出す。
+    /// 聞いたあとは、睡眠データを受け取れていれば連携中。受け取れていなければ「データなし」(拒否したのか、記録がまだないのかは、
+    /// アプリからは区別できないので、連携中とも未連携とも言わず、確かめる入口を出す)。
+    /// 入口は設定アプリのこのアプリの画面(ヘルスケア → 睡眠)へ(許可をつなぎ直す・切るのは、iOS の設定でしかできない)。
     @ViewBuilder private var healthRow: some View {
         if model.healthAccess != .unavailable {
             let notAsked = model.healthAccess == .notAsked
             let linked = model.healthHasData == true
+            let noData = !notAsked && model.healthHasData == false
             Button {
                 if notAsked { Task { await model.requestHealth() } }
                 else { healthGuide = true }   // 許可の画面へ直接行く方法はないので、手順を見せて、ヘルスケアを開く
@@ -112,12 +114,13 @@ struct SettingsView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: NCSpace.s1) {
                         Text("ヘルスケア(睡眠データ)").ncText(NCText.footnote, .textSub)
-                        Text(linked ? "連携中" : "未連携").ncText(NCText.body)
-                        Text("寝落ちまでの時間を、自動で記録します").ncText(NCText.footnote, .textSub)
+                        Text(linked ? "連携中" : (noData ? "睡眠データなし" : "未連携")).ncText(NCText.body)
+                        Text(noData ? "許可していないか、睡眠の記録がまだありません。許可は「変更」で確かめられます"
+                                    : "寝落ちまでの時間を、自動で記録します").ncText(NCText.footnote, .textSub)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer()
-                    if linked {
+                    if linked || noData {
                         HStack(spacing: NCSpace.s1) { Text("変更"); Image(systemName: "chevron.right") }
                             .ncText(NCText.footnote, .textSub)
                     } else {
