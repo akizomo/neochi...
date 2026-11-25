@@ -57,3 +57,42 @@ final class MorningFlowTests: XCTestCase {
         XCTAssertFalse(m.pendingMorning)
     }
 }
+
+/// 就寝の時間帯は、眠った晩だけから決める(試しの再生で、夕方に夜の画面が出ないこと)。
+@MainActor
+final class BedtimeWindowFromRecordsTests: XCTestCase {
+    private let cal = Calendar.current
+    private func date(_ day: Int, _ hour: Int) -> Date { cal.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour))! }
+
+    override func setUp() {
+        for k in ["bedtimeFallback", "bedtimeAsked"] { UserDefaults.standard.removeObject(forKey: k) }
+    }
+
+    /// 就寝時刻を 23:00 と決めた人が、22:30 に開く。閉じたら、その晩はもう自動では出さない。翌晩はまた出る。
+    func testNightScreenStaysClosedAfterUserClosesIt() {
+        UserDefaults.standard.removeObject(forKey: "nightScreenDismissedNight")
+        let m = AppModel(shows: [], episodes: [:])
+        m.bedtimeFallback = date(1, 23)
+        m.now = { self.date(18, 22) }   // 22:00(時間帯は 22:00〜00:30)
+        m.openNightIfBedtime()
+        XCTAssertNotNil(m.nightScreen, "就寝の時間帯に開いたら、夜の画面が出る")
+        m.endPlayback()   // 「閉じる」
+        XCTAssertNil(m.nightScreen)
+        m.openNightIfBedtime()   // アプリに戻った
+        XCTAssertNil(m.nightScreen, "自分で閉じた晩は、もう出さない")
+        m.now = { self.date(19, 22) }   // 翌晩
+        m.openNightIfBedtime()
+        XCTAssertNotNil(m.nightScreen, "翌晩は、また出る")
+        UserDefaults.standard.removeObject(forKey: "nightScreenDismissedNight")
+    }
+
+    func testTrialPlaysDoNotOpenTheNightScreenInTheEvening() {
+        // 平日の夕方〜夜に、試しで8回再生(夜の19時・20時も含む)。眠った晩の記録はない。
+        let trials = [(2,19),(3,20),(4,19),(9,20),(10,19),(11,21),(12,19),(16,20)]
+        let history = trials.map { PlayRecord(episodeID: "e\($0.0)", showID: "s", playedAt: date($0.0, $0.1)) }
+        let m = AppModel(shows: [], episodes: [:], history: history)
+        m.logs = []
+        m.now = { self.date(18, 18) }   // 水曜の18時
+        XCTAssertFalse(m.inBedtimeWindow)
+    }
+}

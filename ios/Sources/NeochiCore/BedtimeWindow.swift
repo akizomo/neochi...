@@ -1,7 +1,7 @@
 import Foundation
 
 /// 就寝の時間帯。この時間帯にアプリを開いたら、昼の画面ではなく夜の画面を出す。
-/// 再生開始の記録から決める: 早い側(下位1割)の60分前から、遅い側(上位1割)の90分後まで。
+/// 眠った晩の記録(ヘルスケアの就寝時刻、保存した晩の再生開始)から決める。18時〜翌6時の分だけ数える。早い側(下位1割)の60分前から、遅い側(上位1割)の90分後まで。
 /// 平日の晩と週末の晩は分ける。記録が足りないうちは、初回に聞いた就寝時刻の前後。
 public struct BedtimeWindow: Hashable, Sendable {
     /// 正午からの分(0..<1440)。夜をまたぐので、日の境目を正午に置く。
@@ -30,7 +30,8 @@ public struct BedtimeWindow: Hashable, Sendable {
     }
 
     public static func make(starts: [Date], weekendNight: Bool, calendar: Calendar, fallback: Date? = nil) -> BedtimeWindow? {
-        let mins = starts.filter { isWeekendNight($0, calendar: calendar) == weekendNight }
+        // 昼や朝に聴いた記録は、就寝時刻ではない(混ぜると、時間帯の始まり・終わりが昼や朝まで延びる)。夜の分だけを使う。
+        let mins = starts.filter { isNightHour($0, calendar: calendar) && isWeekendNight($0, calendar: calendar) == weekendNight }
             .map { minuteSinceNoon($0, calendar: calendar) }.sorted()
         if mins.count >= minimumSamples {
             let low = mins[Int((Double(mins.count - 1) * 0.1).rounded(.down))]
@@ -42,13 +43,19 @@ public struct BedtimeWindow: Hashable, Sendable {
         return BedtimeWindow(lower: max(0, t - leadMinutes), upper: min(1439, t + tailMinutes))
     }
 
+    /// 夜に始めたか(18時〜翌6時)。昼寝や、昼の試し聴きを除くのに使う。
+    public static func isNightHour(_ date: Date, calendar: Calendar) -> Bool {
+        let h = calendar.component(.hour, from: date)
+        return h >= 18 || h < 6
+    }
+
     /// 睡眠の記録(眠っていた区間の開始時刻)から、晩ごとの就寝時刻を取り出す。
     /// 18時〜翌6時に始まったものだけを数え(昼寝は除く)、同じ晩のうち最も早いものを、その晩の就寝時刻とする。
     public static func nightlyStarts(from sleepStarts: [Date], calendar: Calendar) -> [Date] {
         var byNight: [Date: Date] = [:]
         for d in sleepStarts {
+            guard isNightHour(d, calendar: calendar) else { continue }
             let h = calendar.component(.hour, from: d)
-            guard h >= 18 || h < 6 else { continue }
             let evening = h < 6 ? (calendar.date(byAdding: .day, value: -1, to: d) ?? d) : d
             let key = calendar.startOfDay(for: evening)
             if let cur = byNight[key], cur <= d { continue }
