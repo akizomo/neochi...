@@ -157,8 +157,10 @@ final class AppModel {
             if wasOpen { endPlayback(manual: false) }
             UserDefaults.standard.set(tonight, forKey: Self.morningAutoKey)
             // 全画面の画面は、同時に2つ出せない。夜の画面が閉じてから出す。
+            // 出す前に、聴きながら眠った晩かをヘルスケアで確かめる(先に開くと、捨てるべき晩でも振り返りが出てしまう)。
             Task { @MainActor in
                 if wasOpen { try? await Task.sleep(for: .milliseconds(600)) }
+                await settleMorning()
                 if morningDue && !morningOpen && nightScreen == nil { morningOpen = true }
             }
         }

@@ -98,13 +98,14 @@ struct SettingsView: View {
     }
 
     /// ヘルスケア(睡眠データ)の連携。ほかの項目と同じ並びで、左に今の状態(未連携 / 連携中)、右に入口(連携 / 変更)。
-    /// 読み取りの許可が「あるか」は、アプリからは分からない。聞いていなければ許可画面を出す。聞いたあとは、実際に睡眠データを
-    /// 受け取れているか(過去30日)で連携中かを決め、入口は設定アプリのこのアプリの画面(ヘルスケア → 睡眠)へ
-    /// (許可をつなぎ直す・切るのは、iOS の設定でしかできない)。
+    /// 読み取りの許可が「あるか」は、アプリからは分からない。聞いていなければ未連携で、許可画面を出す。
+    /// 聞いたあとは連携中とする(許可の画面で選んだ人を、未連携と出さない)。睡眠データがまだ届いていなければ、そう書き添える。
+    /// 入口は設定アプリのこのアプリの画面(ヘルスケア → 睡眠)へ(許可をつなぎ直す・切るのは、iOS の設定でしかできない)。
     @ViewBuilder private var healthRow: some View {
         if model.healthAccess != .unavailable {
             let notAsked = model.healthAccess == .notAsked
-            let linked = model.healthHasData == true
+            let linked = !notAsked
+            let noData = linked && model.healthHasData == false
             Button {
                 if notAsked { Task { await model.requestHealth() } }
                 else { healthGuide = true }   // 許可の画面へ直接行く方法はないので、手順を見せて、ヘルスケアを開く
@@ -113,7 +114,8 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: NCSpace.s1) {
                         Text("ヘルスケア(睡眠データ)").ncText(NCText.footnote, .textSub)
                         Text(linked ? "連携中" : "未連携").ncText(NCText.body)
-                        Text("寝落ちまでの時間を、自動で記録します").ncText(NCText.footnote, .textSub)
+                        Text(noData ? "睡眠データがまだ届いていません。Apple Watch などで睡眠を記録すると、寝落ちまでの時間を自動で記録します"
+                                    : "寝落ちまでの時間を、自動で記録します").ncText(NCText.footnote, .textSub)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer()
