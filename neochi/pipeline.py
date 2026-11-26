@@ -157,6 +157,10 @@ def _reasons(base: dict, v: dict) -> dict:
     out.pop("interest_obs", None)   # 前の判定の観察を、引き継がない
     if v.get("interest_obs"):
         out["interest_obs"] = v["interest_obs"]
+    out.pop("calm_obs", None)
+    if v.get("calm_obs") is not None:
+        out["calm_obs"] = v["calm_obs"]
+        out.pop("items", None)   # 前の判定の4項目の点を、引き継がない(観察から作る★・線・山と、食い違うので)
     return out
 
 
@@ -249,7 +253,21 @@ def remeasure_acoustics(row: dict, audio_url: str, lang: str, cfg: dict, store, 
 
 
 def recalm(row: dict, cfg: dict) -> dict:
-    """保存済みの項目の点から、🌊★を計算し直す(calm_slope を変えたとき)。項目がない古い解析は、そのまま。"""
+    """保存済みの項目の点から、🌊★を計算し直す(calm_slope を変えたとき)。項目がない古い解析は、そのまま。
+    観察(reasons.calm_obs / interest_obs)で判定した回は、観察から、🌊★・1分ごとの線・山・🎯のレベルを計算し直す(observe.yaml を変えたとき)。"""
+    r = row.get("reasons") or {}
+    if r.get("calm_obs") is not None:
+        ocfg = observe.load_config()
+        obs = {"emotion": [], "worry": [], "load": [], "hook": [], "follow": [], "imagery": [], **r["calm_obs"], **(r.get("interest_obs") or {})}
+        out = {**row, "calm_star": observe.calm_star(obs, ocfg), "calm_per_min": observe.calm_per_min(obs, ocfg),
+               "reasons": {**r, "moments": observe.calm_moments(obs, ocfg)}}
+        if r.get("interest_obs") is not None:
+            out["interest_level"] = observe.interest_level(obs, ocfg)
+        return out
+    if r.get("interest_obs") is not None:   # 🌊は旧の項目、🎯だけ観察の回: 🎯のレベルを、観察から計算し直す
+        ocfg = observe.load_config()
+        obs = {"hook": [], "follow": [], "imagery": [], **r["interest_obs"]}
+        row = {**row, "interest_level": observe.interest_level(obs, ocfg)}
     items = ((row.get("reasons") or {}).get("items") or {}).get("calm")
     if not items:
         return row

@@ -138,6 +138,17 @@ def calm_raw(obs: dict, cfg: dict) -> float:
     return ev + load_points(obs, cfg)
 
 
+def calm_moments(obs: dict, cfg: dict, limit: int = 3, strong: float = 1.5) -> list[dict]:
+    """起伏の山(moments)を、感情と心配の観察から作る。[{min, note, level}](分の順、最大 limit 件)。
+    重みの大きい観察から limit 件(同じ重みなら、早い分)。note は引用の先頭20字。重み strong 以上は level 2(多い)、未満は 1(少し)。
+    山は、★・1分ごとの線と、同じ観察から作る(別々に書かないので、食い違わない)。"""
+    e = cfg["emotion"]
+    cands = [(e["kind_weight"][x["kind"]] * e["strength_weight"][x["strength"]], x["min"], x["quote"]) for x in obs["emotion"]]
+    cands += [(cfg["worry_weight"], x["min"], x["quote"]) for x in obs["worry"]]
+    top = sorted(cands, key=lambda c: (-c[0], c[1]))[:limit]
+    return sorted(({"min": m, "note": q[:20], "level": 2 if w >= strong else 1} for w, m, q in top), key=lambda x: x["min"])
+
+
 def calm_star(obs: dict, cfg: dict) -> float:
     return max(1.0, round(5 - cfg["calm"]["slope"] * calm_raw(obs, cfg), 1))
 

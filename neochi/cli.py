@@ -109,10 +109,16 @@ def cmd_repending(a) -> int:
     shows = {s["id"]: s for s in store.rows("show")}
     trs = {t["episode_id"]: t for t in store.rows("transcript")}
     want = set(a.episodes.split(",")) if a.episodes else None
+    mine = None
+    if getattr(a, "shard", ""):   # 並列に判定するときの分担。回のIDだけで決める(回が増えても、判定が進んでも、分担がずれない)
+        i, n_sh = (int(x) for x in a.shard.split("/"))
+        mine = {e for e in trs if int(e.replace("-", ""), 16) % n_sh == i}
     n = missing = 0
     for row in store.rows("analysis"):
         eid = row["episode_id"]
         if want is not None and eid not in want:
+            continue
+        if mine is not None and eid not in mine:
             continue
         if a.stale and not versions.stale((row.get("reasons") or {}).get("versions"), ("rubric",), cfg):
             continue
@@ -343,7 +349,7 @@ def cmd_z_rank(a) -> int:
         if a.rules_changed:  # 採点ルールが変わったときは、🌊(項目の点)と🎧(特徴)も、保存済みの値から計算し直す
             lang = (shows.get((episodes.get(row["episode_id"]) or {}).get("show_id")) or {}).get("lang") or "ja"
             row = pipeline.recalm(pipeline.reear(row, lang, cfg), cfg)
-            fields = {k: row.get(k) for k in ("features", "ear_star", "calm_star")}
+            fields = {k: row.get(k) for k in ("features", "ear_star", "calm_star", "calm_per_min", "interest_level", "reasons")}
             store.update("analysis", row["episode_id"], {**fields, "total_star": pipeline.restar_ai(row, cfg)})
         final, reason = pipeline.restar(row, cfg, store)
         store.update("analysis", row["episode_id"], {"final_star": final, "final_reason": reason})
@@ -466,6 +472,7 @@ def main(argv=None) -> int:
     rp.add_argument("--stale", action="store_true", help="古い基準(config/rubric.md の版が違う、または記録がない)で判定した回")
     rp.add_argument("--episodes", default="", help="回のIDをカンマ区切りで指定(確かめ用の回など)")
     rp.add_argument("--limit", type=int, default=0, help="書き出す件数の上限(0 = 無制限)")
+    rp.add_argument("--shard", default="", help="i/n。並列に判定するときの分担(回のIDで決まる。回が増えても、ずれない)")
     rp.add_argument("--pending", default="work/pending")
     rp.set_defaults(fn=cmd_repending)
     m = sub.add_parser("remeasure", help="解析済みの回の音響(音量・突発音)だけを測り直す。測る範囲や基準を変えたあとに使う")

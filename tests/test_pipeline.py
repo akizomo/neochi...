@@ -407,3 +407,93 @@ def test_transcript_is_saved_after_the_episode_exists(cfg, tmp_path):
     deps.pending_dir = str(tmp_path / "pending")
     row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, deps)
     assert store.get("transcript", row["episode_id"]) is not None
+
+
+def _calm_obs_judgement(eid):
+    return {"episode_id": eid, "version": 2,
+            "emotion": [{"min": 3, "kind": "negative", "strength": 2, "quote": "怖い話をします"}],
+            "worry": [{"min": 5, "topic": "money", "quote": "生活費が心配で"}],
+            "hook": [], "follow": [], "load": [{"from": 6, "to": 9, "quote": "数字が次々に出てきて"}],
+            "imagery": [{"from": 0, "to": 12, "quote": "朝の市場に着くと"}],
+            "content_summary": "市場を歩く話です。", "reason": "穏やかな語りです。"}
+
+
+def test_calm_observations_make_star_curve_and_moments_together(cfg, tmp_path):
+    """🌊も観察で出す形式: ★・1分ごとの線・山は、同じ観察から作る(別々に書かないので、食い違わない)。"""
+    store = JsonStore(tmp_path / "s.json")
+    deps = _deps_with_spans()
+    deps.pending_dir = str(tmp_path / "pending")
+    row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, deps)
+    new = pipeline.apply_judgement(_calm_obs_judgement(row["episode_id"]), cfg, store)
+    obs = new["reasons"]["calm_obs"]
+    assert len(obs["emotion"]) == 1 and len(obs["worry"]) == 1 and obs["load"][0]["from"] == 6
+    assert not new["reasons"].get("items")   # 4項目の点は、付けない(観察から作るので)
+    # 旧形式で判定した回を、観察で判定し直したとき、前の4項目の点は残さない
+    old = {**row, "reasons": {**(row.get("reasons") or {}), "items": {"calm": {"A": {"score": 1, "min": 2}}, "interest": None}}}
+    store.upsert("analysis", old)
+    again = pipeline.apply_judgement(_calm_obs_judgement(row["episode_id"]), cfg, store)
+    assert "items" not in again["reasons"]
+    assert new["calm_per_min"][3] > 0 and new["calm_per_min"][5] > 0 and new["calm_per_min"][0] == 0
+    assert [m["min"] for m in new["reasons"]["moments"]] == [3, 5] and new["reasons"]["moments"][0]["level"] == 2
+    assert 1.0 <= new["calm_star"] < 5.0
+    assert new["interest_level"] in ("low", "mid", "high") and new["interest_score"] is None
+
+
+def test_calm_observation_arrays_must_all_be_present():
+    import pytest
+
+    from neochi import llm
+    j = _calm_obs_judgement("x")
+    del j["load"]
+    with pytest.raises(ValueError):
+        llm.parse_judgement(json.dumps(j, ensure_ascii=False))
+
+
+def test_recalm_recomputes_everything_from_observations(cfg, tmp_path):
+    """observe.yaml の数値を変えたとき、観察から、★・線・山・🎯のレベルを計算し直す(判定はやり直さない)。"""
+    store = JsonStore(tmp_path / "s.json")
+    deps = _deps_with_spans()
+    deps.pending_dir = str(tmp_path / "pending")
+    row = pipeline.analyze_episode(SHOW, ep(1), cfg, store, deps)
+    new = pipeline.apply_judgement(_calm_obs_judgement(row["episode_id"]), cfg, store)
+    stale = {**new, "calm_star": 1.0, "calm_per_min": [9.0] * 20, "interest_level": "high"}
+    fresh = pipeline.recalm(stale, cfg)
+    assert fresh["calm_star"] == new["calm_star"] and fresh["calm_per_min"] == new["calm_per_min"]
+    assert fresh["interest_level"] == new["interest_level"]
+
+
+def test_site_calm_observations_show_gauges_and_quotes():
+    from neochi import site
+    h = site.calm_obs_body({"emotion": [{"min": 3, "kind": "negative", "strength": 2, "quote": "怖い話をします"}],
+                            "worry": [], "load": [{"from": 6, "to": 9, "quote": "数字が次々に出てきて"}]})
+    assert "怖い話をします" in h and "不安・緊迫" in h and "1件" in h and "4分 / 20分" in h and h.count('class="gauge"') == 3
+
+
+def test_repending_shard_is_stable_while_judging_progresses(cfg, tmp_path):
+    """並列に判定し直すとき、分担は文字起こしのある回の並びで決まる。判定が進んで古い回が減っても、分担はずれない。"""
+    import argparse
+
+    from neochi import cli
+    store = JsonStore(tmp_path / "s.json")
+    store.upsert("show", {"id": SHOW.id, "title": SHOW.title})
+    ids = []
+    for k in range(1, 5):
+        deps = _deps_with_spans()
+        deps.pending_dir = str(tmp_path / "p0")
+        row = pipeline.analyze_episode(SHOW, ep(k), cfg, store, deps)
+        ids.append(row["episode_id"])
+    store.save()
+    def run(shard):
+        out = tmp_path / f"out{shard.replace('/', '_')}"
+        args = argparse.Namespace(store=str(tmp_path / "s.json"), stale=True, episodes="", limit=0, pending=str(out), shard=shard)
+        assert cli.cmd_repending(args) == 0
+        return {p.stem for p in out.glob("*.json")} if out.exists() else set()
+    a, b = run("0/2"), run("1/2")
+    assert a | b == set(ids) and not (a & b)   # 分担は、回のIDだけで決まる
+    # 回が増えても、すでにある回の分担は変わらない
+    deps = _deps_with_spans()
+    deps.pending_dir = str(tmp_path / "p0")
+    pipeline.analyze_episode(SHOW, ep(9), cfg, store, deps)
+    store.save()
+    a2, b2 = run("0/2"), run("1/2")
+    assert a <= a2 and b <= b2

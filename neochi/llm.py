@@ -151,6 +151,21 @@ def parse_judgement(raw: str, cfg: dict | None = None) -> dict:
         raise ValueError("JSON が見つかりません")
     d = json.loads(m.group(0))
     reason = str(d.get("reason", "")).strip()
+    if any(k in d for k in ("emotion", "worry", "load")) and "calm" not in d and "interest" not in d:
+        # 🌊も🎯も観察(分と引用つき)で出す形式。★・1分ごとの線・山は、観察から、コードが作る(別々に書かせない)
+        from . import observe
+        ocfg = observe.load_config()
+        for k in ("emotion", "worry", "load", "hook", "follow", "imagery"):
+            if not isinstance(d.get(k), list):
+                raise ValueError(f"{k} がありません(観察がないときは、空の配列にする)")
+        obs = observe.parse_observations(json.dumps(d, ensure_ascii=False), ocfg)
+        return {"calm_star": observe.calm_star(obs, ocfg), "interest_level": observe.interest_level(obs, ocfg),
+                "interest_score": None, "reason": reason,
+                "calm_obs": {k: obs[k] for k in ("emotion", "worry", "load")},
+                "interest_obs": {k: obs[k] for k in ("hook", "follow", "imagery")},
+                "items": None, "moments": observe.calm_moments(obs, ocfg),
+                "calm_per_min": observe.calm_per_min(obs, ocfg), "content_summary": content_summary(d.get("content_summary")),
+                "content_start": content_start(d.get("content_start"))}
     if "calm" in d and any(k in d for k in ("hook", "follow", "imagery")) and "interest" not in d:
         # 🎯を観察(分と引用つき)で出す形式。点(🎯★)は、保存済みの観察から、コードが計算する
         from . import observe
