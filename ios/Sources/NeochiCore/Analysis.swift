@@ -59,6 +59,28 @@ public struct InterestObservations: Hashable, Codable, Sendable {
     }
 }
 
+/// 🌊の観察の、感情の昂り1件(1つの分と、種類と、引用)。種類は negative / conflict / excitement。
+public struct CalmEmotionObservation: Hashable, Codable, Sendable {
+    public var minute: Int
+    public var kind: String
+    public var quote: String
+    public init(minute: Int, kind: String, quote: String) { self.minute = minute; self.kind = kind; self.quote = quote }
+}
+
+/// 🌊(起伏の少なさ)の観察。観察で判定した回だけにある(旧の判定の回は nil。`neochi/observe.py`)。
+/// ★・1分ごとの線・山は、この観察から計算している。
+public struct CalmObservations: Hashable, Codable, Sendable {
+    /// 感情の昂り(不安・緊迫、対立、盛り上がり)。
+    public var emotion: [CalmEmotionObservation]
+    /// 心配の種(1つの分は fromMinute == toMinute)。
+    public var worry: [InterestObservation]
+    /// 頭の負荷が高い区間。
+    public var load: [InterestObservation]
+    public init(emotion: [CalmEmotionObservation] = [], worry: [InterestObservation] = [], load: [InterestObservation] = []) {
+        self.emotion = emotion; self.worry = worry; self.load = load
+    }
+}
+
 /// 1回ぶんの解析(★と、根拠になったデータ)。無い項目は nil(古い解析には timeline などがない)。
 public struct EpisodeAnalysis: Hashable, Codable, Sendable {
     public var episodeID: String
@@ -93,6 +115,8 @@ public struct EpisodeAnalysis: Hashable, Codable, Sendable {
     public var contentSummary: String?
     /// 🎯の観察(分と引用)。観察で判定した回だけ。旧の判定の回は nil で、interestScore と interestItems を使う。
     public var interestObs: InterestObservations?
+    /// 🌊の観察(分と引用)。観察で判定した回だけ。旧の判定の回は nil で、calmItems を使う。
+    public var calmObs: CalmObservations?
 
     public init(episodeID: String, finalStar: Double? = nil, calmStar: Double? = nil, earStar: Double? = nil,
                 interest: InterestLevel? = nil, interestScore: Int? = nil, reason: String? = nil,

@@ -220,13 +220,20 @@ actor SupabaseClient {
         let reasons: Reasons?; let features: Features?
         let calm_per_min: [Double]?; let content_summary: String?
         struct Reasons: Decodable {
-            let llm: String?; let moments: [M]?; let items: Items?; let interest_obs: InterestObs?
+            let llm: String?; let moments: [M]?; let items: Items?; let interest_obs: InterestObs?; let calm_obs: CalmObs?
             struct M: Decodable { let min: Int; let note: String; let level: Int? }
             /// 🎯の観察(観察で判定した回だけ)。hook は1つの分、follow と imagery は区間。
             struct InterestObs: Decodable {
                 let hook: [Hook]?; let follow: [Span]?; let imagery: [Span]?
                 struct Hook: Decodable { let min: Int; let quote: String }
                 struct Span: Decodable { let from: Int; let to: Int; let quote: String }
+            }
+            /// 🌊の観察(観察で判定した回だけ)。感情と心配は1つの分、頭の負荷は区間。
+            struct CalmObs: Decodable {
+                let emotion: [Emotion]?; let worry: [Worry]?; let load: [Interest]?
+                struct Emotion: Decodable { let min: Int; let kind: String; let quote: String }
+                struct Worry: Decodable { let min: Int; let quote: String }
+                typealias Interest = InterestObs.Span
             }
             struct Item: Decodable { let score: Int; let min: Int? }
             struct Items: Decodable { let interest: [String: Item]?; let calm: [String: Item]? }
@@ -270,6 +277,12 @@ actor SupabaseClient {
                     hook: (o.hook ?? []).map { InterestObservation(fromMinute: $0.min, toMinute: $0.min, quote: $0.quote) },
                     follow: (o.follow ?? []).map { InterestObservation(fromMinute: $0.from, toMinute: $0.to, quote: $0.quote) },
                     imagery: (o.imagery ?? []).map { InterestObservation(fromMinute: $0.from, toMinute: $0.to, quote: $0.quote) })
+            }
+            if let o = r.reasons?.calm_obs {
+                a.calmObs = CalmObservations(
+                    emotion: (o.emotion ?? []).map { CalmEmotionObservation(minute: $0.min, kind: $0.kind, quote: $0.quote) },
+                    worry: (o.worry ?? []).map { InterestObservation(fromMinute: $0.min, toMinute: $0.min, quote: $0.quote) },
+                    load: (o.load ?? []).map { InterestObservation(fromMinute: $0.from, toMinute: $0.to, quote: $0.quote) })
             }
             a.calmItems = Self.items(r.reasons?.items?.calm)
             a.ratePerMin = f?.timeline?.rate_per_min ?? []
