@@ -110,9 +110,9 @@ def cmd_repending(a) -> int:
     trs = {t["episode_id"]: t for t in store.rows("transcript")}
     want = set(a.episodes.split(",")) if a.episodes else None
     mine = None
-    if getattr(a, "shard", ""):   # 並列に判定するときの分担。文字起こしのある回の並びは固定なので、判定が進んでも、分担がずれない(古い回の絞り込みは、そのあとに行う)
+    if getattr(a, "shard", ""):   # 並列に判定するときの分担。回のIDだけで決める(回が増えても、判定が進んでも、分担がずれない)
         i, n_sh = (int(x) for x in a.shard.split("/"))
-        mine = {e for k, e in enumerate(sorted(trs)) if k % n_sh == i}
+        mine = {e for e in trs if int(e.replace("-", ""), 16) % n_sh == i}
     n = missing = 0
     for row in store.rows("analysis"):
         eid = row["episode_id"]
@@ -472,7 +472,7 @@ def main(argv=None) -> int:
     rp.add_argument("--stale", action="store_true", help="古い基準(config/rubric.md の版が違う、または記録がない)で判定した回")
     rp.add_argument("--episodes", default="", help="回のIDをカンマ区切りで指定(確かめ用の回など)")
     rp.add_argument("--limit", type=int, default=0, help="書き出す件数の上限(0 = 無制限)")
-    rp.add_argument("--shard", default="", help="i/n。並列に判定するときの分担(文字起こしのある回の並びで決まる)")
+    rp.add_argument("--shard", default="", help="i/n。並列に判定するときの分担(回のIDで決まる。回が増えても、ずれない)")
     rp.add_argument("--pending", default="work/pending")
     rp.set_defaults(fn=cmd_repending)
     m = sub.add_parser("remeasure", help="解析済みの回の音響(音量・突発音)だけを測り直す。測る範囲や基準を変えたあとに使う")

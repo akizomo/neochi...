@@ -489,4 +489,11 @@ def test_repending_shard_is_stable_while_judging_progresses(cfg, tmp_path):
         assert cli.cmd_repending(args) == 0
         return {p.stem for p in out.glob("*.json")} if out.exists() else set()
     a, b = run("0/2"), run("1/2")
-    assert a | b == set(ids) and not (a & b) and len(a) == 2
+    assert a | b == set(ids) and not (a & b)   # 分担は、回のIDだけで決まる
+    # 回が増えても、すでにある回の分担は変わらない
+    deps = _deps_with_spans()
+    deps.pending_dir = str(tmp_path / "p0")
+    pipeline.analyze_episode(SHOW, ep(9), cfg, store, deps)
+    store.save()
+    a2, b2 = run("0/2"), run("1/2")
+    assert a <= a2 and b <= b2
