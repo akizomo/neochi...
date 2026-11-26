@@ -57,4 +57,20 @@ final class ExplainTests: XCTestCase {
         XCTAssertEqual(spans.coveredMinutes, 8)   // 0〜6 の7分と、10 の1分
         XCTAssertEqual([InterestObservation]().coveredMinutes, 0)
     }
+
+    func testCalmObservationKindWords() {
+        XCTAssertEqual(NCString.emotionKindWord("negative"), "不安・緊迫")
+        XCTAssertEqual(NCString.emotionKindWord("conflict"), "対立")
+        XCTAssertEqual(NCString.emotionKindWord("excitement"), "盛り上がり")
+        XCTAssertEqual(NCString.emotionKindWord("other"), "other")
+    }
+
+    func testCalmObservationsLoadCoveredMinutesCountsOverlapOnce() {
+        let o = CalmObservations(
+            emotion: [CalmEmotionObservation(minute: 3, kind: "negative", quote: "怖い話をします")],
+            worry: [InterestObservation(fromMinute: 5, toMinute: 5, quote: "生活費が心配で")],
+            load: [InterestObservation(fromMinute: 6, toMinute: 9, quote: "a"), InterestObservation(fromMinute: 8, toMinute: 10, quote: "b")])
+        XCTAssertEqual(o.load.coveredMinutes, 5)
+        XCTAssertEqual(EpisodeAnalysis(episodeID: "x").calmObs, nil)
+    }
 }

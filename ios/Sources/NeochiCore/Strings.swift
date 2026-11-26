@@ -83,6 +83,19 @@ public enum NCString {
     public static let interestObsImagery = "思い浮かぶ具体的な話"
     public static let interestObsFollow = "前を覚えていないと分からない筋"
     public static let interestObsHook = "先を引っぱる場面"
+    /// 🌊を観察で判定した回の、注記と、観察の見出し。★・山・1分ごとの線は、観察の数から計算している。
+    public static let calmObsNote = "昂らせる要素が少ないほど、★が多くなります(観察の数から計算)"
+    public static let calmObsEmotion = "感情の昂り"
+    public static let calmObsWorry = "心配の種"
+    public static let calmObsLoad = "頭の負荷"
+    public static func emotionKindWord(_ kind: String) -> String {
+        switch kind {
+        case "negative": "不安・緊迫"
+        case "conflict": "対立"
+        case "excitement": "盛り上がり"
+        default: kind
+        }
+    }
     public static let interestZoneNote = "4〜6が寝落ち向き"
     public static let analyzing = "解析中"
     /// 起伏・興味の AI の判定が、まだ済んでいない観点。

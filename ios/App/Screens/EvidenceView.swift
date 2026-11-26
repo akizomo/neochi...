@@ -62,13 +62,15 @@ struct EvidenceView: View {
             if !a.calmPerMin.isEmpty {
                 Text(DetailMath.calmCurveVerdict(a.moments, minutes: a.calmPerMin.count)).ncText(NCText.body)
                 VStack(alignment: .leading, spacing: NCSpace.s1) {
-                    Text("起伏の強さ(1分ごと、AIの推定)").ncText(NCText.footnote, .textSub)
+                    Text(a.calmObs != nil ? "起伏の強さ(1分ごと、観察から計算)" : "起伏の強さ(1分ごと、AIの推定)").ncText(NCText.footnote, .textSub)
                     CalmCurveChart(values: a.calmPerMin, moments: a.moments.filter { $0.minute < a.calmPerMin.count })
                 }
             } else if !a.calmItems.isEmpty {
                 Text(Explain.calmVerdict(a.calmItems)).ncText(NCText.body)
             }
-            if !a.calmItems.isEmpty {
+            if let obs = a.calmObs {   // 観察で判定した回: 件数・分数と、引用。点は、観察の数から計算している。
+                calmObservationRows(obs)
+            } else if !a.calmItems.isEmpty {
                 itemRows(a.calmItems, labels: Explain.calmLabels)
                 Text("項目は 0〜2 点。合計が小さいほど、★が多くなります(5 − 合計×0.75)").ncText(NCText.caption, .textSub)
             }
@@ -128,6 +130,21 @@ struct EvidenceView: View {
             observationGroup(NCString.interestObsHook, value: "\(o.hook.count)件",
                              fill: Double(o.hook.count) / 3, items: o.hook)
             Text(NCString.interestObsNote).ncText(NCText.caption, .textSub)
+        }
+    }
+
+    /// 🌊の観察を、種類ごとに、横棒のゲージ(🎯と同じ作り)と、分と引用で。
+    private func calmObservationRows(_ o: CalmObservations) -> some View {
+        VStack(alignment: .leading, spacing: NCSpace.s2) {
+            observationGroup(NCString.calmObsEmotion, value: "\(o.emotion.count)件", fill: Double(o.emotion.count) / 4,
+                             items: o.emotion.map {
+                                 InterestObservation(fromMinute: $0.minute, toMinute: $0.minute,
+                                                     quote: "\(NCString.emotionKindWord($0.kind))  \($0.quote)")
+                             })
+            observationGroup(NCString.calmObsWorry, value: "\(o.worry.count)件", fill: Double(o.worry.count) / 3, items: o.worry)
+            observationGroup(NCString.calmObsLoad, value: "\(o.load.coveredMinutes)分 / 20分",
+                             fill: Double(o.load.coveredMinutes) / 10, items: o.load)
+            Text(NCString.calmObsNote).ncText(NCText.caption, .textSub)
         }
     }
 
